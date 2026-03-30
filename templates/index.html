@@ -16,7 +16,6 @@
         }
         
         .dashboard-container {
-            max-width: 1280px;
             margin: 0 auto;
             background: white;
             border-radius: 24px;
@@ -67,49 +66,92 @@
             font-size: 10px;
             color: #9ca3af;
         }
+
+        /* NOTE EDITOR HEADINGS - making H1, H2, H3 actually work with proper styling */
+        #note-editor h1 {
+            font-size: 2.25rem;
+            font-weight: 700;
+            line-height: 1.2;
+            margin-top: 1.75rem;
+            margin-bottom: 0.75rem;
+            color: #111827;
+        }
+        
+        #note-editor h2 {
+            font-size: 1.75rem;
+            font-weight: 600;
+            line-height: 1.3;
+            margin-top: 1.5rem;
+            margin-bottom: 0.5rem;
+            color: #111827;
+        }
+        
+        #note-editor h3 {
+            font-size: 1.4rem;
+            font-weight: 600;
+            line-height: 1.4;
+            margin-top: 1.25rem;
+            margin-bottom: 0.4rem;
+            color: #111827;
+        }
+
+        /* Mobile responsiveness enhancements for notes sidebar */
+        @media (max-width: 768px) {
+            #notes-sidebar {
+                box-shadow: 10px 0 20px -10px rgb(0 0 0 / 0.15);
+            }
+        }
     </style>
 </head>
-<body class="bg-slate-100 min-h-screen py-8 px-4">
-    <div class="dashboard-container mx-auto h-[calc(100vh-4rem)] flex flex-col">
+<body class="bg-slate-100">
+    <div class="dashboard-container mx-auto h-[calc(100vh-1rem)] flex flex-col">
         <!-- HEADER -->
-        <div class="px-8 py-5 border-b flex items-center justify-between bg-white">
-            <div id="header-date" class="text-3xl font-semibold text-gray-900"></div>
+        <div class="px-4 md:px-8 py-5 border-b flex items-center justify-between bg-white">
+        <div id="header-date" class="text-3xl hidden md:inline font-semibold text-gray-900"></div>
+        
+        <div class="flex border border-gray-200 rounded-2xl overflow-hidden">
+            <!-- Tasks Tab -->
+            <a href="/tasks" 
+               class="tab px-4 md:px-8 py-3 text-sm font-medium flex items-center gap-x-2 justify-center md:justify-start transition-colors {{ 'tab-active' if tab == 'tasks' else '' }}">
+                <i class="fa-solid fa-list-check text-lg"></i>
+                <span class="hidden md:inline">Tasks</span>
+            </a>
             
-            <div class="flex border border-gray-200 rounded-2xl overflow-hidden">
-                <a href="/tasks" class="tab px-8 py-3 text-sm font-medium flex items-center gap-x-2 transition-colors {{ 'tab-active' if tab == 'tasks' else '' }}">
-                    <i class="fa-solid fa-list-check"></i> Tasks
-                </a>
-                <a href="/notes" class="tab px-8 py-3 text-sm font-medium flex items-center gap-x-2 transition-colors {{ 'tab-active' if tab == 'notes' else '' }}">
-                    <i class="fa-solid fa-note-sticky"></i> Notes
-                </a>
-                <a href="/timeless" class="tab px-8 py-3 text-sm font-medium flex items-center gap-x-2 transition-colors {{ 'tab-active' if tab == 'timeless' else '' }}">
-                    <i class="fa-solid fa-infinity"></i> Timeless
-                </a>
-            </div>
+            <!-- Notes Tab -->
+            <a href="/notes" 
+               class="tab px-4 md:px-8 py-3 text-sm font-medium flex items-center gap-x-2 justify-center md:justify-start transition-colors {{ 'tab-active' if tab == 'notes' else '' }}">
+                <i class="fa-solid fa-note-sticky text-lg"></i>
+                <span class="hidden md:inline">Notes</span>
+            </a>
             
-            <div class="flex items-center gap-x-4">
-                <button onclick="showTaskHistory()" class="flex items-center gap-x-2 text-gray-500 hover:text-gray-700 text-sm font-medium">
-                    <i class="fa-solid fa-clock-rotate-left"></i>
-                    <span>Task History</span>
-                </button>
-                <div class="w-9 h-9 bg-gray-100 rounded-2xl flex items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors">
-                    <i class="fa-solid fa-user text-gray-600"></i>
-                </div>
+            <!-- Timeless Tab -->
+            <a href="/timeless" 
+               class="tab px-4 md:px-8 py-3 text-sm font-medium flex items-center gap-x-2 justify-center md:justify-start transition-colors {{ 'tab-active' if tab == 'timeless' else '' }}">
+                <i class="fa-solid fa-infinity text-lg"></i>
+                <span class="hidden md:inline">Timeless</span>
+            </a>
+        </div>
+        
+        <div class="flex items-center gap-x-4">
+            <button onclick="showTaskHistory()" class="flex items-center gap-x-2 text-gray-500 hover:text-gray-700 text-sm font-medium">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+                <span class="hidden md:inline">Task History</span>
+            </button>
+            <div class="w-9 h-9 bg-gray-100 rounded-2xl flex items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors">
+                <img src="https://i.pinimg.com/1200x/72/86/7f/72867fad6c5c548cfd2fa3170e6c8230.jpg" alt="" class="w-9 h-9 bg-gray-100 rounded-2xl flex items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors">
             </div>
         </div>
+    </div>
 
         <!-- MAIN CONTENT -->
         <div class="flex-1 flex overflow-hidden" id="main-content">
             {% if tab == 'tasks' %}
-            <div class="flex flex-1 overflow-hidden">
+            <div class="flex flex-1 overflow-hidden flex-col lg:flex-row">
                 <!-- LEFT: Timeline -->
-                <div class="flex-1 flex flex-col border-r overflow-hidden">
+                <div class="flex-1 flex flex-col border-b lg:border-r overflow-hidden relative">
                     <div class="flex-1 overflow-y-auto p-6 space-y-8" id="timeline-container"></div>
                     
-                    <div onclick="showAddTaskModal()" 
-                         class="absolute bottom-8 left-8 w-12 h-12 bg-gray-900 hover:bg-black text-white rounded-3xl flex items-center justify-center shadow-lg cursor-pointer transition-all active:scale-95">
-                        <i class="fa-solid fa-plus text-2xl"></i>
-                    </div>
+                    
                 </div>
 
                 <!-- RIGHT: Progress -->
@@ -139,10 +181,16 @@
 
             {% elif tab == 'notes' %}
 <div class="flex flex-1 overflow-hidden bg-white" id="notes-app">
-    <!-- LEFT SIDEBAR: Notes List -->
-    <div class="w-80 border-r border-gray-200 flex flex-col bg-gray-50">
+    <!-- LEFT SIDEBAR: Notes List (Mobile: hidden by default + toggle drawer) -->
+    <div id="notes-sidebar" class="w-80 border-r border-gray-200 flex flex-col bg-gray-50 fixed md:static inset-y-0 left-0 z-50 -translate-x-full md:translate-x-0 transition-transform duration-300">
         <div class="p-5 border-b border-gray-200 flex items-center justify-between bg-white">
-            <h2 class="text-xl font-semibold text-gray-900">Notes</h2>
+            <div class="flex items-center gap-x-3">
+                <!-- Mobile close button (only visible when sidebar is open on mobile) -->
+                <button onclick="toggleNotesSidebar()" class="md:hidden text-gray-700 hover:text-gray-900 w-8 h-8 flex items-center justify-center">
+                    <i class="fa-solid fa-xmark text-2xl"></i>
+                </button>
+                <h2 class="text-xl font-semibold text-gray-900">Notes</h2>
+            </div>
             <button onclick="createNewNote()" 
                     class="w-8 h-8 bg-gray-900 hover:bg-black text-white rounded-2xl flex items-center justify-center transition-all active:scale-95">
                 <i class="fa-solid fa-plus"></i>
@@ -154,62 +202,69 @@
         </div>
     </div>
 
+    <!-- Mobile backdrop for notes sidebar -->
+    <div id="notes-backdrop" onclick="toggleNotesSidebar()" class="hidden md:hidden fixed inset-0 bg-black/50 z-40"></div>
+
     <!-- RIGHT: Editor Area -->
     <div class="flex-1 flex flex-col">
         <!-- Toolbar -->
-        <div class="h-14 border-b border-gray-200 bg-white flex items-center px-6 gap-x-2 overflow-x-auto shadow-sm">
-            <!-- Headings -->
-            <select onchange="setHeading(this.value)" class="bg-transparent border border-gray-300 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:border-gray-400">
-                <option value="">Normal</option>
-                <option value="h1">Heading 1</option>
-                <option value="h2">Heading 2</option>
-                <option value="h3">Heading 3</option>
-            </select>
+        <div class="h-auto md:h-14 border-b border-gray-200 bg-white flex flex-wrap md:flex-nowrap items-center px-4 md:px-6 gap-x-2 gap-y-3 py-3 md:py-0 shadow-sm">
+    <!-- Mobile toggle button for notes list (visible only on mobile) -->
+    <button onclick="toggleNotesSidebar()" 
+            class="md:hidden px-3 py-1.5 hover:bg-gray-100 rounded-xl text-gray-700 flex items-center justify-center flex-shrink-0">
+        <i class="fa-solid fa-bars text-xl"></i>
+    </button>
 
-            <!-- Formatting -->
-            <button onclick="execCommand('bold')" class="toolbar-btn px-3 py-1.5 hover:bg-gray-100 rounded-xl" title="Bold">
-                <i class="fa-solid fa-bold"></i>
-            </button>
-            <button onclick="execCommand('italic')" class="toolbar-btn px-3 py-1.5 hover:bg-gray-100 rounded-xl" title="Italic">
-                <i class="fa-solid fa-italic"></i>
-            </button>
-            <button onclick="execCommand('underline')" class="toolbar-btn px-3 py-1.5 hover:bg-gray-100 rounded-xl" title="Underline">
-                <i class="fa-solid fa-underline"></i>
-            </button>
+    <!-- Headings -->
+    <select onchange="setHeading(this.value)" 
+            class="bg-transparent border border-gray-300 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:border-gray-400 flex-shrink-0">
+        <option value="">Normal</option>
+        <option value="h1">Heading 1</option>
+        <option value="h2">Heading 2</option>
+        <option value="h3">Heading 3</option>
+    </select>
 
-            <div class="h-6 w-px bg-gray-300 mx-4"></div>
+    <!-- Formatting -->
+    <button onclick="execCommand('bold')" class="toolbar-btn px-3 py-1.5 hover:bg-gray-100 rounded-xl flex-shrink-0" title="Bold">
+        <i class="fa-solid fa-bold"></i>
+    </button>
+    <button onclick="execCommand('italic')" class="toolbar-btn px-3 py-1.5 hover:bg-gray-100 rounded-xl flex-shrink-0" title="Italic">
+        <i class="fa-solid fa-italic"></i>
+    </button>
+    <button onclick="execCommand('underline')" class="toolbar-btn px-3 py-1.5 hover:bg-gray-100 rounded-xl flex-shrink-0" title="Underline">
+        <i class="fa-solid fa-underline"></i>
+    </button>
 
-            <!-- Lists -->
-            <button onclick="execCommand('insertUnorderedList')" class="toolbar-btn px-3 py-1.5 hover:bg-gray-100 rounded-xl" title="Bullet List">
-                <i class="fa-solid fa-list-ul"></i>
-            </button>
-            <button onclick="execCommand('insertOrderedList')" class="toolbar-btn px-3 py-1.5 hover:bg-gray-100 rounded-xl" title="Numbered List">
-                <i class="fa-solid fa-list-ol"></i>
-            </button>
+    <div class="h-6 w-px bg-gray-300 mx-2 md:mx-4 flex-shrink-0"></div>
 
-            <!-- Link -->
-            <button onclick="insertLink()" class="toolbar-btn px-3 py-1.5 hover:bg-gray-100 rounded-xl" title="Insert Link">
-                <i class="fa-solid fa-link"></i>
-            </button>
 
-            <!-- Colors -->
-            <div class="flex gap-1 ml-4">
-                <button onclick="setColor('#000000')" class="w-6 h-6 rounded-lg bg-black hover:ring-2 hover:ring-gray-300"></button>
-                <button onclick="setColor('#ef4444')" class="w-6 h-6 rounded-lg bg-red-500 hover:ring-2 hover:ring-gray-300"></button>
-                <button onclick="setColor('#eab308')" class="w-6 h-6 rounded-lg bg-yellow-500 hover:ring-2 hover:ring-gray-300"></button>
-                <button onclick="setColor('#22c55e')" class="w-6 h-6 rounded-lg bg-green-500 hover:ring-2 hover:ring-gray-300"></button>
-                <button onclick="setColor('#3b82f6')" class="w-6 h-6 rounded-lg bg-blue-500 hover:ring-2 hover:ring-gray-300"></button>
-            </div>
 
-            <button onclick="insertCodeBlock()" class="toolbar-btn px-3 py-1.5 hover:bg-gray-100 rounded-xl ml-auto" title="Code Block">
-                <i class="fa-solid fa-code"></i>
-            </button>
+    <!-- Link -->
+    <button onclick="insertLink()" class="toolbar-btn px-3 py-1.5 hover:bg-gray-100 rounded-xl flex-shrink-0" title="Insert Link">
+        <i class="fa-solid fa-link"></i>
+    </button>
 
-            <button onclick="deleteCurrentNote()" 
-                    class="toolbar-btn px-3 py-1.5 text-red-500 hover:bg-red-50 rounded-xl ml-4" title="Delete Note">
-                <i class="fa-solid fa-trash"></i>
-            </button>
-        </div>
+    <!-- Colors -->
+    <div class="flex gap-1 ml-2 md:ml-4 flex-shrink-0">
+        <button onclick="setColor('#000000')" class="w-6 h-6 rounded-lg bg-black hover:ring-2 hover:ring-gray-300"></button>
+        <button onclick="setColor('#ef4444')" class="w-6 h-6 rounded-lg bg-red-500 hover:ring-2 hover:ring-gray-300"></button>
+        <button onclick="setColor('#eab308')" class="w-6 h-6 rounded-lg bg-yellow-500 hover:ring-2 hover:ring-gray-300"></button>
+        <button onclick="setColor('#22c55e')" class="w-6 h-6 rounded-lg bg-green-500 hover:ring-2 hover:ring-gray-300"></button>
+        <button onclick="setColor('#3b82f6')" class="w-6 h-6 rounded-lg bg-blue-500 hover:ring-2 hover:ring-gray-300"></button>
+    </div>
+
+    <!-- Right side buttons (Code + Delete) -->
+    <div class="flex items-center gap-x-2 md:ml-auto flex-shrink-0 mt-2 md:mt-0">
+        <button onclick="insertCodeBlock()" class="toolbar-btn px-3 py-1.5 hover:bg-gray-100 rounded-xl" title="Code Block">
+            <i class="fa-solid fa-code"></i>
+        </button>
+
+        <button onclick="deleteCurrentNote()" 
+                class="toolbar-btn px-3 py-1.5 text-red-500 hover:bg-red-50 rounded-xl" title="Delete Note">
+            <i class="fa-solid fa-trash"></i>
+        </button>
+    </div>
+</div>
 
         <!-- Note Title -->
         <div class="px-8 pt-6 pb-3 border-b border-gray-100">
@@ -318,9 +373,11 @@
                             <span class="text-emerald-600 font-medium">Today,</span>
                             <span class="ml-2 text-gray-900 font-semibold">Task</span>
                         </div>
-                        <div class="text-sm text-gray-500">
-                            ${completedToday}/${todayTasks.length} <span class="font-medium">${todayProgress}% Done</span>
-                        </div>
+                        <div class="flex text-xs md:text-sm w-1/2 justify-center gap-5 text-gray-500">
+                            <span class="inline-block border-b border-gray-300 text-xs md:text-sm rounded bg-white text-gray-700 hover:bg-gray-50 cursor-pointer transition-colors" onclick="showAddTaskModal()"> + add </span>   
+                            <span class="text-xs md:text-sm">${completedToday}/${todayTasks.length}</span> 
+                            <span class="text-xs md:text-sm">${todayProgress}% Done</span>
+                        </div>   
                     </div>
                     <div class="space-y-px" id="today-list">
             `;
@@ -354,13 +411,13 @@
 
                 let groupHTML = `
                     <div class="relative">
-                        <div class="absolute -left-[42px] flex flex-col items-center">
-                            <div class="w-10 h-10 rounded-2xl border-2 border-gray-900 bg-white flex items-center justify-center text-sm font-semibold z-10">
+                        <div class="absolute -left-[40px] flex flex-col items-center">
+                            <div class="w-10 h-10 rounded-2xl border-2 border-gray-900 bg-white flex items-center justify-center text-lg font-semibold z-10">
                                 ${day}
                             </div>
                             ${index < sortedDates.length - 1 ? `<div class="w-px h-8 bg-gray-300 mt-1"></div>` : ''}
                         </div>
-                        <div class="text-xs uppercase font-medium text-gray-400 mb-2">${monthName}</div>
+                        <div class="text-xs  uppercase font-medium text-gray-400 mb-2">${monthName}</div>
                         <div class="space-y-px">
                 `;
 
@@ -437,7 +494,7 @@
                 `;
 
                 if (isOpen) {
-                    projectHTML += `<div class="px-6 pb-6 border-t">`;
+                    projectHTML += `<div class="px-2 pb-1 border-t">`;
                     project.subtasks.forEach(sub => {
                         const subChecked = sub.completed ? 'checked' : '';
                         const subStrike = sub.completed ? 'line-through text-gray-400' : '';
@@ -824,6 +881,7 @@
 let currentNotes = [];
 let currentNoteId = null;
 let autoSaveTimeout = null;
+let notesSidebarOpen = false;
 
 async function loadNotes() {
     try {
@@ -881,6 +939,11 @@ async function openNote(id) {
         document.getElementById('note-editor').innerHTML = note.content || '<p></p>';
     } catch (e) {
         console.error(e);
+    }
+
+    // Auto-close notes sidebar on mobile after selecting a note (highly responsive UX)
+    if (window.innerWidth < 768) {
+        toggleNotesSidebar();
     }
 }
 
@@ -959,6 +1022,25 @@ function insertCodeBlock() {
         editor.focus();
         const html = `<pre style="background:#f8fafc; padding:14px; border-radius:10px; border:1px solid #e5e7eb; overflow:auto; font-family:monospace;"><code>${code.replace(/</g, '&lt;')}</code></pre>`;
         document.execCommand('insertHTML', false, html);
+    }
+}
+
+// Mobile Notes Sidebar Toggle (highly responsive - hidden on mobile, full toggle drawer)
+function toggleNotesSidebar() {
+    notesSidebarOpen = !notesSidebarOpen;
+    const sidebar = document.getElementById('notes-sidebar');
+    const backdrop = document.getElementById('notes-backdrop');
+    
+    if (notesSidebarOpen) {
+        sidebar.classList.add('translate-x-0');
+        if (backdrop) {
+            backdrop.classList.remove('hidden');
+        }
+    } else {
+        sidebar.classList.remove('translate-x-0');
+        if (backdrop) {
+            backdrop.classList.add('hidden');
+        }
     }
 }
 

@@ -118,20 +118,98 @@ def login():
             session['authenticated'] = True
             return redirect(url_for('tasks'))
         return "<h1 style='text-align:center;margin-top:100px;color:red'>Invalid access key</h1>", 401
+
     return '''
-    <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f8fafc">
-        <div style="background:white;padding:3rem 2.5rem;border-radius:24px;box-shadow:0 10px 30px -10px rgba(0,0,0,0.1);width:100%;max-width:380px">
-            <h1 style="font-size:2rem;font-weight:600;text-align:center;margin-bottom:2rem;color:#111827">Kaeru</h1>
-            <form method="post">
-                <input type="password" name="key" placeholder="Enter Access Key" 
-                       style="width:100%;padding:1rem 1.25rem;font-size:1.1rem;border:2px solid #e5e7eb;border-radius:16px;text-align:center;outline:none">
-                <button type="submit" 
-                        style="margin-top:2rem;width:100%;background:#111827;color:white;padding:1rem;border-radius:16px;font-weight:600">
-                    Unlock Dashboard
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kaeru</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;display=swap');
+        body { font-family: 'Inter', system_ui, sans-serif; }
+        
+        .neon-text {
+            text-shadow: 0 0 8px rgb(134 239 172);
+        }
+        
+        .neon-border {
+            box-shadow: 0 0 15px -3px rgb(134 239 172);
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
+    <div class="w-full max-w-xs bg-zinc-900 border border-emerald-500/30 rounded-2xl overflow-hidden">
+        
+        <!-- Top bar - ultra minimal -->
+        <div class="px-5 pt-4 pb-1 flex items-center justify-end">
+            <a href="https://github.com/Irshad-11/Kaeru" 
+               target="_blank"
+               class="flex items-center gap-x-1 text-xs font-medium text-emerald-300 hover:text-emerald-400 transition-colors">
+                <i class="fa-brands fa-github"></i>
+                <span>Repo: Kaeru</span>
+            </a>
+        </div>
+
+        <!-- Title + Animated Version Badge -->
+        <div class="px-5 text-center -mt-1">
+            <h1 class="text-3xl font-semibold text-white tracking-tighter">Kaeru</h1>
+            
+            <!-- Animated Neon Version -->
+            <div class="inline-flex items-center gap-x-1 mt-2 px-4 py-1 text-[10px] font-medium bg-zinc-800 border border-emerald-400/40 text-emerald-300 rounded-3xl">
+                <div class="flex items-center">
+                    <!-- Pulsing green dot -->
+                    <span class="relative flex h-2 w-2">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+                    </span>
+                </div>
+                latest
+                <span class="font-semibold text-emerald-100">v4.1.0</span>
+            </div>
+        </div>
+
+        <div class="px-5 pb-6 pt-8">
+            <form method="post" class="space-y-4">
+                <!-- Input - dark neon style -->
+                <input type="password" 
+                       name="key" 
+                       placeholder="Access Protected"
+                       class="w-full px-3 py-3 text-base bg-zinc-950 border border-emerald-500/30 focus:border-emerald-400 rounded-2xl outline-none text-white text-center font-medium placeholder:text-emerald-300/60">
+
+                <!-- Button - neon glow -->
+                <button type="submit"
+                        class="w-full bg-emerald-500 hover:bg-emerald-400 transition-all text-zinc-950 text-base font-semibold py-2 rounded-lg flex items-center justify-center gap-x-2 shadow-lg shadow-emerald-500/50">
+                    Get Into
+                    <i class="fa-solid fa-arrow-right"></i>
                 </button>
             </form>
         </div>
+
+        <!-- Footer - minimal neon -->
+        <div class="px-5 py-5 border-t border-emerald-500/10 text-center text-xs">
+            <p class="text-emerald-300/60 mb-3">By Irshad Hossain</p>
+            
+            <div class="flex justify-center gap-x-5 text-2xl text-emerald-300/70 mb-4">
+                <a href="https://github.com/Irshad-11" target="_blank" class="hover:text-emerald-400 transition-colors">
+                    <i class="fa-brands fa-github"></i>
+                </a>
+                <a href="https://www.linkedin.com/in/irshad-hossain-785548323/" target="_blank" class="hover:text-emerald-400 transition-colors">
+                    <i class="fa-brands fa-linkedin"></i>
+                </a>
+                <a href="https://www.facebook.com/irshad.risad" target="_blank" class="hover:text-emerald-400 transition-colors">
+                    <i class="fa-brands fa-facebook"></i>
+                </a>
+            </div>
+            
+            <p class="text-emerald-300/50">© 2024 — Personal Use Only</p>
+        </div>
     </div>
+</body>
+</html>
     '''
 
 @app.route('/api/projects/<int:project_id>', methods=['DELETE'])
@@ -344,4 +422,4 @@ init_db()
 
 # if __name__ == '__main__':
 
-#     app.run(debug=True, port=5000)
+#     app.run(host='0.0.0.0', debug=True, port=5000)
