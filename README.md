@@ -6,7 +6,9 @@
   <br />
 
   <h1 style="font-size: 3rem; margin: 0;">Kaeru</h1>
-  <h4 style="font-size: 1rem; margin: 0;">⚠️Admin Usage Only</h4>
+
+  <h4 style="font-size: 1rem; margin: 0;">⚠️Admin Usage Only (ALSO IRSAHD-ME)</h4>
+
   <p align="center">
   <a href="irshad11.pythonanywhere.com">Kaeru</a>
 </p>
@@ -93,5 +95,6 @@ Kaeru/
   
   <p style="color: #64748b; font-size: 0.9rem;">
     Built with 💖 by <strong>Irshad</strong>
+    Improved Readme by <very-strong>Mahbub69 (Fan of Johnny S)</very-strong>
   </p>
 </div>

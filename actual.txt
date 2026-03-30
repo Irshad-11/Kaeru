@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kaeru</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:ital,wght@0,100..900;1,100..900&display=swap"
+        rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Aoboshi+One&family=Redressed&display=swap" rel="stylesheet" />
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    fontFamily: {
+                        body: ['"Roboto Condensed"', "sans-serif"],
+                        logo: ['"Aoboshi One"', '"Redressed"', "serif"],
+                    },
+                    colors: {
+                        kaeru: {
+                            dark: "#0f172a",
+                            panel: "#1e293b",
+                            accent: "#38bdf8",
+                            glow: "#0ea5e9",
+                            muted: "#64748b",
+                        },
+                    },
+                    animation: {
+                        "pulse-glow":
+                            "pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+                    },
+                    keyframes: {
+                        "pulse-glow": {
+                            "0%, 100%": { opacity: "1", boxShadow: "0 0 10px #38bdf8" },
+                            "50%": { opacity: ".8", boxShadow: "0 0 2px #38bdf8" },
+                        },
+                    },
+                },
+            },
+        };
+    </script>
+
+    <style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+
+        .transparent-input {
+            background: transparent;
+            border: none;
+            outline: none;
+            width: 100%;
+            color: inherit;
+            font-family: inherit;
+            padding: 0;
+            margin: 0;
+        }
+
+        .transparent-input:focus {
+            border-bottom: 1px solid #38bdf8;
+        }
+
+        .timeline-spoiler {
+            opacity: 0.1;
+            filter: blur(5px);
+            pointer-events: none;
+            transition: all 0.8s ease;
+        }
+
+        .timeline-active {
+            opacity: 1;
+            filter: blur(0);
+            pointer-events: all;
+        }
+
+        .tooltip-trigger:hover .custom-tooltip {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+
+<!-- NOTES OVERLAY -->
+<div id="notes-overlay" class="fixed top-0 right-0 h-full w-3/5
+         bg-kaeru-panel/40 backdrop-blur-lg
+         border-l border-slate-700
+         z-40 transform translate-x-full
+         transition-transform duration-300 flex flex-col
+         shadow-[-10px_0_30px_rgba(0,0,0,0.45)]
+         drop-shadow-[0_0_25px_rgba(56,189,248,0.15)]">
+    <div class="flex items-center justify-between p-4 border-b border-slate-700">
+        <h2 class="font-logo text-xl text-kaeru-accent">Notes</h2>
+
+        <div class="flex items-center gap-3">
+            <span id="notes-save-indicator" class="text-xs mr-10 text-green-500 hidden">✓ Saved</span>
+            <button onclick="toggleNotes()" class="text-slate-500 hover:text-red-400">✕</button>
+        </div>
+    </div>
+
+    <div class="flex-1 flex overflow-hidden">
+        <!-- Notes List -->
+        <div id="notes-list" class="w-1/4 border-r border-slate-700 p-3 overflow-y-auto">
+            <button onclick="createNote()"
+                class="w-full mb-3 text-xs border border-dashed border-slate-600 text-slate-400 rounded py-1 hover:border-kaeru-accent hover:text-kaeru-accent">
+                + New Note
+            </button>
+
+            <ul id="notes-items"></ul>
+        </div>
+
+        <!-- Editor -->
+        <div class="flex-1 p-4 flex flex-col min-h-0">
+            <input id="note-title" placeholder="Title"
+                class="transparent-input text-xl font-logo mb-3 text-kaeru-accent"
+                onblur="updateNoteTitle(this.value)" />
+
+            <div id="note-content" contenteditable="true" spellcheck="false"
+                class="flex-1 min-h-0 overflow-y-auto bg-transparent outline-none text-sm text-slate-300 whitespace-pre-wrap leading-none"
+                onfocus="enterEditMode()" oninput="handleNoteInput()" onblur="renderNotePreview()"></div>
+
+
+
+        </div>
+    </div>
+</div>
+
+
+<body
+    class="bg-kaeru-dark text-white font-body h-screen flex flex-col overflow-y-auto selection:bg-kaeru-accent selection:text-black">
+    <div id="login-overlay"
+        class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/80 backdrop-blur-md transition-opacity duration-500">
+        <h1
+            class="font-logo text-6xl mb-2 text-kaeru-accent tracking-wider drop-shadow-[0_0_10px_rgba(56,189,248,0.5)]">
+            かえる
+        </h1>
+        <h2 class="text-2xl mb-2 text-white opacity-80">
+            Kaeru <span class="text-kaeru-accent border border-kaeru-accent rounded-full px-2 py-0.5 text-base">v3.1.1 latest</span>
+        </h2>
+        <h3 class="text-lg mb-8 text-lg opacity-50 text-kaeru-accent">By Irshad Hossain</h3>
+
+        <div class="flex flex-col gap-4 w-64">
+            <input type="password" id="password-input" placeholder="Password Protected"
+                class="bg-kaeru-panel border border-slate-600 rounded px-4 py-2 text-center text-xl focus:border-kaeru-accent focus:ring-1 focus:ring-kaeru-accent outline-none transition-all placeholder-slate-600 text-kaeru-accent" />
+            <button onclick="attemptLogin()"
+                class="bg-kaeru-accent text-black font-bold py-2 rounded hover:bg-sky-300 transition-colors uppercase tracking-widest text-sm shadow-[0_0_15px_rgba(56,189,248,0.3)]">
+                Enter
+            </button>
+            <p id="login-error" class="text-red-500 text-center text-sm hidden">
+                Access Denied
+            </p>
+        </div>
+    </div>
+
+    <div id="app-container" class="timeline-spoiler flex-1 flex flex-col h-full p-6 max-w-7xl mx-auto w-full">
+        <header class="flex justify-between items-center mb-6 border-b border-slate-800 pb-4">
+            <div>
+                <h1 class="font-logo text-4xl text-kaeru-accent leading-none">
+                    Kaeru <span class="text-gray opacity-50">-</span> <span class="text-2xl opacity-50"">かえる</span> 
+          </h1>
+        </div>
+        <div class=" flex gap-4 items-center">
+                        <button onclick="addCheckpoint()"
+                            class="text-base flex items-center gap-2 bg-slate-800 hover:bg-slate-700 px-4 py-2 rounded transition-colors border border-slate-700 text-slate-300">
+                            + Checkpoint
+                        </button>
+                        <button onclick="logout()"
+                            class="text-xs text-red-500 font-bold uppercase tracking-wider pt-2 px-4 py-2 border border-red-600 rounded transition-all relative overflow-hidden hover:text-white hover:border-red-400 before:absolute before:inset-0 before:bg-red-500 before:opacity-0 before:blur-md before:transition-opacity before:duration-300 hover:before:opacity-30">
+                            Lock
+                        </button>
+
+                        <button onclick="toggleNotes()"
+                            class="w-9 h-9 flex items-center justify-center rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 transition relative"
+                            title="Notes">
+                            <img src="https://img.icons8.com/?size=100&id=OENhm99NTnV6&format=png&color=38bdf8"
+                                class="w-5 h-5" />
+                        </button>
+
+            </div>
+        </header>
+
+        <div
+            class="w-full bg-slate-900/50 rounded-2xl p-6 mb-8 border border-slate-800 relative select-none sticky top-0 z-20">
+            <div class="flex items-center justify-between w-full h-16 gap-4" id="fish-eye-container"></div>
+        </div>
+
+        <div class="flex-1 overflow-visible pb-4">
+            <div id="checkpoint-container" class="flex flex-wrap content-start gap-6 h-full px-2"></div>
+        </div>
+    </div>
+
+    <script>
+        let appData = { checkpoints: [] };
+        let userPassword = "";
+        let activeIndex = 0;
+        let index = 0;
+
+        // --- AUTH ---
+        async function attemptLogin() {
+            const password = document.getElementById('password-input').value;
+            // const password = 'komol'; // for local development bypass login
+            const res = await fetch("/api/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ password }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                userPassword = password; // store for save calls
+                document
+                    .getElementById("login-overlay")
+                    .classList.add("opacity-0", "pointer-events-none");
+                const app = document.getElementById("app-container");
+                app.classList.remove("timeline-spoiler");
+                app.classList.add("timeline-active");
+                renderApp();
+            } else {
+                document.getElementById("login-error").classList.remove("hidden");
+            }
+        }
+
+        function logout() {
+            location.reload();
+        }
+
+        // --- INITIAL DATA LOAD ---
+        async function initData() {
+            try {
+                const res = await fetch("/api/data");
+                const data = await res.json();
+                if (data.checkpoints) {
+                    appData.checkpoints = data.checkpoints;
+                    appData.checkpoints.sort(
+                        (a, b) => new Date(a.endDate) - new Date(b.endDate)
+                    );
+                } else {
+                    appData.checkpoints = [
+                        createCheckpointStructure("Phase 1: Basics", 1),
+                        createCheckpointStructure("Phase 2: Core", 3),
+                    ];
+                    await saveData();
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function createCheckpointStructure(name, durationMonths) {
+            let startDate = new Date();
+            if (appData && appData.checkpoints && appData.checkpoints.length > 0) {
+                const lastCp = appData.checkpoints[appData.checkpoints.length - 1];
+                startDate = new Date(lastCp.endDate);
+            }
+
+            const endDate = new Date(startDate);
+            endDate.setMonth(endDate.getMonth() + durationMonths);
+
+            return {
+                id: Date.now() + Math.random(),
+                name: name,
+                startDate: startDate.toISOString().split("T")[0],
+                endDate: endDate.toISOString().split("T")[0],
+                segments: [{ id: Date.now() + 1, name: "Section 1", todos: [] }],
+            };
+        }
+
+        // --- SAVE TO BACKEND ---
+
+        async function saveData() {
+            await fetch("/api/save", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ password: userPassword, data: appData }),
+            });
+            renderApp(); // keep your current rendering after save
+        }
+
+        // --- RENDER MAIN APP ---
+        function renderApp() {
+            renderFishEyeTimeline();
+            renderCards();
+        }
+
+        function renderFishEyeTimeline() {
+            const container = document.getElementById("fish-eye-container");
+            container.innerHTML = "";
+
+            const today = new Date();
+            activeIndex = appData.checkpoints.findIndex(
+                (cp) => new Date(cp.endDate) >= today
+            );
+            if (activeIndex === -1) activeIndex = appData.checkpoints.length - 1;
+
+            const pastDiv = document.createElement("div");
+            pastDiv.className = "flex items-center gap-1 opacity-50 flex-none";
+
+            const activeDiv = document.createElement("div");
+            activeDiv.className = "flex-1 relative flex items-center mx-2";
+
+            const futureDiv = document.createElement("div");
+            futureDiv.className = "flex items-center gap-1 opacity-40 flex-none";
+
+            // START node
+            const startNode = document.createElement("div");
+            startNode.className = "text-xs text-slate-600 font-mono font-bold mr-2";
+            startNode.innerText = "START";
+            pastDiv.appendChild(startNode);
+            const timelineOrder = getCardRenderOrder();
+            timelineOrder.forEach((cp, visualIndex) => {
+                const index = appData.checkpoints.findIndex(c => c.id === cp.id);
+                const cpDate = new Date(cp.endDate);
+
+                if (index < activeIndex) {
+                    pastDiv.innerHTML += `
+                    <div class="tooltip-trigger group relative cursor-help">
+                        <div class="w-3 h-3 bg-kaeru-muted rounded-sm transform rotate-45 group-hover:bg-kaeru-accent transition-colors"></div>
+                        <div class="custom-tooltip absolute -top-8 left-1/2 -translate-x-1/2 bg-black text-white text-[10px] px-2 py-1 rounded opacity-0 transition-all pointer-events-none whitespace-nowrap z-20 border border-slate-700">
+                            ${cp.name} (Done)
+                        </div>
+                    </div>
+                    <div class="w-2 h-[1px] bg-slate-700"></div>
+                `;
+                } else if (index === activeIndex) {
+                    const startDate = new Date(cp.startDate);
+                    const endDate = new Date(cp.endDate);
+
+                    const totalTime = endDate - startDate;
+                    const passedTime = today - startDate;
+                    let pct = (passedTime / totalTime) * 100;
+                    pct = Math.max(0, Math.min(100, pct));
+
+                    const daysLeft = Math.ceil(
+                        (endDate - today) / (1000 * 60 * 60 * 24)
+                    );
+
+                    activeDiv.innerHTML = `
+                    <div class="absolute -top-8 left-0 text-[13px] text-slate-500 font-mono">
+                        ${startDate.toLocaleDateString(undefined, {
+                        month: "short",
+                        day: "numeric",
+                    })}
+                    </div>
+                    <div class="w-full h-1 bg-slate-800 rounded-full overflow-visible relative">
+                        <div class="absolute top-0 left-0 h-full bg-kaeru-accent/60" style="width: ${pct}%"></div>
+                        <div class="absolute top-1/2 -translate-y-1/2 w-6 h-6 bg-kaeru-accent rounded-full shadow-[0_0_15px_#38bdf8] z-10 cursor-pointer animate-pulse-glow flex items-center justify-center" style="left: ${pct}%">
+                            <div class="w-2.5 h-2.5 bg-white rounded-full"></div>
+                            <div class="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-kaeru-panel border border-kaeru-accent text-kaeru-accent text-[10px] px-2 py-0.5 rounded font-bold whitespace-nowrap">
+                                NOW
+                            </div>
+                        </div>
+                    </div>
+                    <div class="absolute -top-6 right-0 text-xs text-kaeru-accent font-bold font-mono">
+                        HEAD: ${cp.name}
+                    </div>
+                    <div class="absolute -bottom-8 right-0 text-[13px] text-slate-500 font-mono">
+                        ${endDate.toLocaleDateString(undefined, {
+                        month: "short",
+                        day: "numeric",
+                    })}
+                    </div>
+                `;
+                } else {
+                    futureDiv.innerHTML += `
+                    <div class="w-2 h-[1px] bg-slate-800"></div>
+                    <div class="tooltip-trigger group relative">
+                        <div class="w-3 h-3 border border-slate-600 rounded-sm transform rotate-45 group-hover:border-kaeru-accent transition-colors"></div>
+                        <div class="custom-tooltip absolute -top-8 left-1/2 -translate-x-1/2 bg-black text-slate-300 text-[10px] px-2 py-1 rounded opacity-0 transition-all pointer-events-none whitespace-nowrap z-20 border border-slate-800">
+                            ${cp.name}
+                        </div>
+                    </div>
+                `;
+                }
+            });
+
+            container.appendChild(pastDiv);
+            container.appendChild(activeDiv);
+            container.appendChild(futureDiv);
+        }
+
+        function renderCards() {
+            const container = document.getElementById("checkpoint-container");
+            container.innerHTML = "";
+            const renderOrder = getCardRenderOrder();
+            renderOrder.forEach((cp, visualIndex) => {
+                const index = appData.checkpoints.findIndex(c => c.id === cp.id);
+                const card = document.createElement("div");
+                let cardClasses = `w-[350px] h-auto flex flex-col bg-kaeru-panel/40 backdrop-blur-sm border border-slate-700/50 hover:border-slate-600 transition-colors rounded-xl p-4 overflow-hidden flex-shrink-0 relative group`;
+
+                if (index === activeIndex) {
+                    cardClasses +=
+                        " w-[450px] border-2 border-kaeru-accent shadow-[0_0_10px_rgba(56,189,248,0.3)]";
+                }
+
+                card.className = cardClasses;
+
+                card.innerHTML = `
+        <div class="flex justify-between items-start mb-3 border-b border-slate-700/50 pb-2">
+            <div class="flex-1">
+                <input type="text" value="${cp.name
+                    }" onblur="updateField('name', ${index}, this.value)"
+                    class="transparent-input ${index === activeIndex ? "text-2xl" : "text-lg"
+                    } text-slate-200 placeholder-slate-600 font-logo">
+                <div class="flex items-center gap-2 ${index === activeIndex ? "text-sm" : "text-[10px]"
+                    } text-slate-500 mt-1 font-mono uppercase">
+                    <span>End:</span>
+                    <input type="date" value="${cp.endDate
+                    }" onchange="updateField('endDate', ${index}, this.value)"
+                    class="bg-transparent hover:text-white cursor-pointer w-[100px] ${index === activeIndex ? "text-sm" : "text-xs"
+                    }">
+                </div>
+            </div>
+            <button onclick="deleteCP(${index})" class="text-slate-700 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">×</button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto pr-1 space-y-3 custom-scroll">
+            ${renderSegments(cp.segments, index)}
+            <button onclick="addSegment(${index})" class="w-full py-1.5 border border-dashed border-slate-700 text-slate-500 ${index === activeIndex ? "text-sm" : "text-xs"
+                    } rounded hover:border-kaeru-accent hover:text-kaeru-accent transition-colors">
+                + Add Segment
+            </button>
+        </div>
+    `;
+                container.appendChild(card);
+            });
+        }
+
+        function renderSegments(segments, cpIndex) {
+            return segments
+                .map(
+                    (seg, sIdx) => `
+        <div class="bg-slate-900/40 rounded p-2">
+            <div class="flex justify-between mb-1">
+                <input type="text" value="${seg.name
+                        }" onblur="updateSegName(${cpIndex}, ${sIdx}, this.value)"
+                    class="transparent-input ${cpIndex === activeIndex ? "text-sm" : "text-xs"
+                        } font-bold text-kaeru-accent/80">
+                <button onclick="delSeg(${cpIndex}, ${sIdx})" class="text-slate-600 hover:text-red-400 ${cpIndex === activeIndex ? "text-xs" : "text-[10px]"
+                        }">Del</button>
+            </div>
+            <ul class="space-y-1">
+                ${seg.todos
+                            .map(
+                                (t, tIdx) => `
+                <li class="flex items-center gap-2 group/todo">
+                    <div onclick="toggleTodo(${cpIndex}, ${sIdx}, ${tIdx})" 
+                         class="w-3 h-3 border ${t.done
+                                        ? "bg-kaeru-accent border-kaeru-accent"
+                                        : "border-slate-600"
+                                    } cursor-pointer rounded-sm flex items-center justify-center">
+                    </div>
+                    <input type="text" value="${t.text
+                                    }" onblur="updateTodo(${cpIndex}, ${sIdx}, ${tIdx}, this.value)"
+                        class="transparent-input ${t.done
+                                        ? "text-slate-600 line-through"
+                                        : cpIndex === activeIndex
+                                            ? "text-sm"
+                                            : "text-xs"
+                                    }">
+                    <button onclick="delTodo(${cpIndex}, ${sIdx}, ${tIdx})" class="text-slate-700 hover:text-red-500 opacity-0 group-hover/todo:opacity-100">×</button>
+                </li>`
+                            )
+                            .join("")}
+            </ul>
+            <button onclick="addTodo(${cpIndex}, ${sIdx})" class="${cpIndex === activeIndex ? "text-xs" : "text-[10px]"
+                        } text-slate-600 hover:text-slate-300 mt-1 pl-5">+ Task</button>
+        </div>
+    `
+                )
+                .join("");
+        }
+
+
+        function getCardRenderOrder() {
+            const today = new Date();
+            const activeIndex = appData.checkpoints.findIndex(cp => new Date(cp.endDate) >= today) || appData.checkpoints.length - 1;
+
+            // Split active/future vs expired
+            const activeAndFuture = appData.checkpoints.filter(cp => new Date(cp.endDate) >= today);
+            const expired = appData.checkpoints.filter(cp => new Date(cp.endDate) < today);
+
+            return [...activeAndFuture, ...expired]; // expired at back
+        }
+
+
+        // --- CRUD FUNCTIONS ---
+        async function updateField(field, idx, val) {
+            appData.checkpoints[idx][field] = val;
+            await saveData();
+        }
+        async function addCheckpoint() {
+            appData.checkpoints.push(
+                createCheckpointStructure("New Checkpoint", 3)
+            );
+            await saveData();
+        }
+        async function deleteCP(i) {
+            if (confirm("Delete CP?")) {
+                appData.checkpoints.splice(i, 1);
+                await saveData();
+            }
+        }
+
+        async function addSegment(i) {
+            appData.checkpoints[i].segments.push({
+                id: Date.now(),
+                name: "New Segment",
+                todos: [],
+            });
+            await saveData();
+        }
+        async function delSeg(i, s) {
+            appData.checkpoints[i].segments.splice(s, 1);
+            await saveData();
+        }
+        async function updateSegName(i, s, v) {
+            appData.checkpoints[i].segments[s].name = v;
+            await saveData();
+        }
+
+        async function addTodo(i, s) {
+            appData.checkpoints[i].segments[s].todos.push({
+                text: "Task",
+                done: false,
+            });
+            await saveData();
+        }
+        async function delTodo(i, s, t) {
+            appData.checkpoints[i].segments[s].todos.splice(t, 1);
+            await saveData();
+        }
+        async function toggleTodo(i, s, t) {
+            appData.checkpoints[i].segments[s].todos[t].done =
+                !appData.checkpoints[i].segments[s].todos[t].done;
+            await saveData();
+        }
+        async function updateTodo(i, s, t, v) {
+            appData.checkpoints[i].segments[s].todos[t].text = v;
+            await saveData();
+        }
+
+        // --- INIT ---
+        initData();
+
+
+        // --- Note ---
+
+        let notes = [];
+        let activeNoteId = null;
+        let notesOpen = false;
+        let saveTimer;
+
+        // ---- TOGGLE ----
+        function toggleNotes() {
+            notesOpen = !notesOpen;
+            document
+                .getElementById("notes-overlay")
+                .classList.toggle("translate-x-full", !notesOpen);
+
+            if (notesOpen) loadNotes();
+        }
+
+
+        function renderMarkdown(text) {
+            if (!text) return "";
+
+            // Escape HTML (important for safety)
+            let html = text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;");
+
+            // H1: # Header
+            html = html.replace(
+                /^# (.+)$/gm,
+                `<span class="text-kaeru-accent font-semibold text-base">$1</span>`
+            );
+
+            // Links: [text](url)
+            html = html.replace(
+                /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+                `<a href="$2" target="_blank" class="text-kaeru-accent hover:underline">$1</a>`
+            );
+
+
+            // Auto links: https://example.com
+            html = html.replace(
+                /(https?:\/\/[^\s]+)/g,
+                `<a href="$1" target="_blank" class="text-kaeru-accent hover:underline">$1</a>`
+            );
+
+
+            return html;
+        }
+
+        let noteEditMode = false;
+
+        function handleNoteInput() {
+            if (!noteEditMode) return;
+
+            const el = document.getElementById("note-content");
+            const note = notes.find(n => n.id === activeNoteId);
+            if (!note) return;
+
+            note.content = el.innerText;
+            debounceSave(note);
+        }
+
+
+
+
+        function renderNotePreview() {
+            if (!activeNoteId) return;
+
+            const el = document.getElementById("note-content");
+            const note = notes.find(n => n.id === activeNoteId);
+            if (!note) return;
+
+            isEditing = false;
+            el.innerHTML = renderMarkdown((note.content || "").trimEnd());
+        }
+
+
+        function enterEditMode() {
+            if (!activeNoteId) return;
+
+            const note = notes.find(n => n.id === activeNoteId);
+            if (!note) return;
+
+            const el = document.getElementById("note-content");
+            noteEditMode = true;
+            el.innerText = note.content || ""; // RAW markdown
+        }
+
+
+
+        // ---- LOAD ----
+        async function loadNotes() {
+            const res = await fetch("/api/notes");
+            notes = await res.json();
+            if (notes.length) {
+                activeNoteId = notes[0].id;
+                openNote(activeNoteId);
+            }
+            renderNotesList();
+        }
+
+        // ---- CREATE ----
+        function createNote() {
+            const note = {
+                id: Date.now(),
+                title: "Untitled",
+                content: "",
+            };
+            notes.unshift(note);
+            activeNoteId = note.id;
+            renderNotesList();
+            openNote(note.id);
+            saveNote(note);
+        }
+
+        // ---- DELETE ----
+        async function deleteNote(id) {
+            if (!confirm("Delete note?")) return;
+
+            await fetch("/api/notes/delete", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ password: userPassword, id }),
+            });
+
+            notes = notes.filter((n) => n.id !== id);
+            activeNoteId = null;
+            renderNotesList();
+            clearEditor();
+        }
+
+        // ---- RENDER LIST ----
+        function renderNotesList() {
+            const ul = document.getElementById("notes-items");
+            ul.innerHTML = "";
+
+            notes.forEach(n => {
+                const li = document.createElement("li");
+
+                li.className = `
+      group flex justify-between items-center text-xs p-2 rounded cursor-pointer
+      transition-colors
+      ${n.id === activeNoteId
+                        ? "bg-kaeru-accent/20 text-kaeru-accent"
+                        : "text-slate-400 hover:bg-slate-700/40"}
+    `;
+
+
+                li.onclick = () => selectNote(n.id);
+
+                li.innerHTML = `
+      <span class="truncate pointer-events-none">
+        ${n.title}
+      </span>
+      <button
+        class="opacity-0 group-hover:opacity-100 text-red-400 ml-2"
+        onclick="event.stopPropagation(); deleteNote(${n.id})"
+      >
+        ×
+      </button>
+    `;
+
+                ul.appendChild(li);
+            });
+        }
+
+
+
+        function selectNote(id) {
+            activeNoteId = id;
+            openNote(id);
+            renderNotesList();
+        }
+
+        // ---- OPEN ----
+        function openNote(id) {
+            activeNoteId = id;
+            const note = notes.find(n => n.id === id);
+            if (!note) return;
+
+            document.getElementById("note-title").value = note.title;
+
+            const el = document.getElementById("note-content");
+            noteEditMode = false;
+            el.innerHTML = renderMarkdown((note.content || "").trimEnd());
+        }
+
+
+
+
+        // ---- REALTIME UPDATE ----
+        function updateNoteTitle(val) {
+            const note = notes.find((n) => n.id === activeNoteId);
+            if (!note) return;
+            note.title = val || "Untitled";
+            renderNotesList();
+            debounceSave(note);
+        }
+
+        function updateNoteContent(val) {
+            const note = notes.find((n) => n.id === activeNoteId);
+            if (!note) return;
+            note.content = val;
+            debounceSave(note);
+        }
+
+        // ---- SAVE ----
+        function debounceSave(note) {
+            showSaving();
+            clearTimeout(saveTimer);
+            saveTimer = setTimeout(() => saveNote(note), 500);
+        }
+
+        async function saveNote(note) {
+            await fetch("/api/notes/save", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ password: userPassword, note }),
+            });
+            showSaved();
+        }
+
+        // ---- UI FEEDBACK ----
+        function showSaving() {
+            const el = document.getElementById("notes-save-indicator");
+            el.innerText = "Saving…";
+            el.classList.remove("hidden");
+        }
+
+        function showSaved() {
+            const el = document.getElementById("notes-save-indicator");
+            el.innerText = "✓ Saved";
+            setTimeout(() => el.classList.add("hidden"), 1200);
+        }
+
+        function clearEditor() {
+            document.getElementById("note-title").value = "";
+            document.getElementById("note-content").value = "";
+        }
+
+
+
+    </script>
+</body>
+
+</html>

@@ -1,169 +1,347 @@
-import sqlite3
-import json
-from datetime import datetime
 import os
-from flask import Flask, request, jsonify, render_template
+import sqlite3
+from datetime import datetime, timedelta
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for
+from flask_cors import CORS
+
+app = Flask(__name__, template_folder="templates")
+app.secret_key = "kaeru-dev-secret-2026"
+CORS(app)  # As specified in instructions
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_FILE = os.path.join(BASE_DIR, "kaeru.db")
 PASSWORD_FILE = os.path.join(BASE_DIR, "password.txt")
 
-app = Flask(__name__, template_folder="templates")
+def get_db():
+    conn = sqlite3.connect(DB_FILE)
+    conn.row_factory = sqlite3.Row
+    return conn
 
-# ---------- PASSWORD ----------
-def get_server_password():
+def init_db():
+    with get_db() as conn:
+        # Tasks table
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS tasks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                completed INTEGER DEFAULT 0,
+                due_date TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
+        # Projects table
+        
+
+        # First, ensure the table is created (this is safe to run multiple times)
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS projects (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                added_date TEXT
+            )
+        ''')
+
+        # Then, add the column with a default timestamp (check first to avoid errors)
+        cursor = conn.execute("PRAGMA table_info(projects);")
+        columns = [row[1] for row in cursor.fetchall()]
+        if 'last_updated' not in columns:
+            conn.execute('''
+                ALTER TABLE projects ADD COLUMN last_updated TEXT DEFAULT CURRENT_TIMESTAMP
+            ''')
+            conn.commit()   
+        
+        # Subtasks table
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS subtasks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                project_id INTEGER,
+                title TEXT NOT NULL,
+                completed INTEGER DEFAULT 0,
+                FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE
+            )
+        ''')
+
+        
+        # Seed sample data exactly matching the screenshot (March 28, 2026)
+        if conn.execute("SELECT COUNT(*) FROM tasks").fetchone()[0] == 0:
+            today = "2026-03-28"
+            conn.executemany(
+                "INSERT INTO tasks (title, completed, due_date) VALUES (?, ?, ?)",
+                [
+                    ("Code Force Contest 17", 0, today),
+                    ("Leet Code Biweekly 233", 0, today),
+                    ("Academic Assignment 455", 1, today),
+                    ("Real Madrid vs Barcelona 28 March", 0, today),
+                    ("SE exam 1st chapter and 2nd chapter", 0, "2026-03-29"),
+                    ("System Design Online Class", 0, "2026-03-29"),
+                    ("Bus Ticket", 1, "2026-03-29"),
+                    ("Mid Term Exam will start", 0, "2026-03-30"),
+                ]
+            )
+
+        
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS notes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL DEFAULT 'Untitled Note',
+                content TEXT DEFAULT '',
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
+        # Seed projects exactly as in screenshot
+        
+        
+        conn.commit()
+
+def get_password():
     if not os.path.exists(PASSWORD_FILE):
-        return "admin"
-    with open(PASSWORD_FILE, "r") as f:
+        with open(PASSWORD_FILE, 'w') as f:
+            f.write("kaeru2026")  # default access key
+    with open(PASSWORD_FILE, 'r') as f:
         return f.read().strip()
 
-# ---------- DATABASE ----------
-def init_db():
-    with sqlite3.connect(DB_FILE) as conn:
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS timeline (
-                id INTEGER PRIMARY KEY,
-                data TEXT NOT NULL
-            )
-        """)
-        conn.execute("""
-            INSERT OR IGNORE INTO timeline (id, data)
-            VALUES (1, ?)
-        """, (json.dumps({"checkpoints": []}),))
+@app.before_request
+def check_auth():
+    if request.path.startswith(('/static', '/login')) or request.path in ['/favicon.ico']:
+        return
+    if 'authenticated' not in session:
+        return redirect(url_for('login'))
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        key = request.form.get('key')
+        if key == get_password():
+            session['authenticated'] = True
+            return redirect(url_for('tasks'))
+        return "<h1 style='text-align:center;margin-top:100px;color:red'>Invalid access key</h1>", 401
+    return '''
+    <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f8fafc">
+        <div style="background:white;padding:3rem 2.5rem;border-radius:24px;box-shadow:0 10px 30px -10px rgba(0,0,0,0.1);width:100%;max-width:380px">
+            <h1 style="font-size:2rem;font-weight:600;text-align:center;margin-bottom:2rem;color:#111827">Kaeru</h1>
+            <form method="post">
+                <input type="password" name="key" placeholder="Enter Access Key" 
+                       style="width:100%;padding:1rem 1.25rem;font-size:1.1rem;border:2px solid #e5e7eb;border-radius:16px;text-align:center;outline:none">
+                <button type="submit" 
+                        style="margin-top:2rem;width:100%;background:#111827;color:white;padding:1rem;border-radius:16px;font-weight:600">
+                    Unlock Dashboard
+                </button>
+            </form>
+        </div>
+    </div>
+    '''
+
+@app.route('/api/projects/<int:project_id>', methods=['DELETE'])
+def delete_project(project_id):
+    with get_db() as conn:
+        # Delete subtasks first (due to foreign key with CASCADE)
+        conn.execute("DELETE FROM subtasks WHERE project_id = ?", (project_id,))
+        # Then delete the project
+        conn.execute("DELETE FROM projects WHERE id = ?", (project_id,))
+        conn.commit()
+    return jsonify({"success": True})
+
+
+@app.route('/tasks')
+def tasks():
+    init_db()
+    return render_template('index.html', tab='tasks')
+
+@app.route('/notes')
+def notes():
+    init_db()
+    return render_template('index.html', tab='notes')
+
+@app.route('/timeless')
+def timeless():
+    init_db()
+    return render_template('index.html', tab='timeless')
+
+# ====================== API ENDPOINTS ======================
+
+@app.route('/api/tasks', methods=['GET'])
+def get_tasks():
+    with get_db() as conn:
+        rows = conn.execute("SELECT * FROM tasks ORDER BY due_date ASC, id ASC").fetchall()
+        return jsonify([dict(row) for row in rows])
+
+@app.route('/api/tasks', methods=['POST'])
+def add_task():
+    data = request.get_json()
+    title = data.get('title')
+    due_date = data.get('due_date')
+    with get_db() as conn:
+        conn.execute("INSERT INTO tasks (title, due_date) VALUES (?, ?)", (title, due_date))
+        conn.commit()
+    return jsonify({"success": True})
+
+@app.route('/api/tasks/<int:task_id>/toggle', methods=['POST'])
+def toggle_task(task_id):
+    with get_db() as conn:
+        conn.execute("UPDATE tasks SET completed = NOT completed WHERE id = ?", (task_id,))
+        conn.commit()
+    return jsonify({"success": True})
+
+@app.route('/api/tasks/<int:task_id>', methods=['DELETE'])
+def delete_task(task_id):
+    with get_db() as conn:
+        conn.execute("DELETE FROM tasks WHERE id = ?", (task_id,))
+        conn.commit()
+    return jsonify({"success": True})
+
+@app.route('/api/tasks/<int:task_id>', methods=['PUT'])
+def edit_task(task_id):
+    data = request.get_json()
+    title = data.get('title')
+    with get_db() as conn:
+        conn.execute("UPDATE tasks SET title = ? WHERE id = ?", (title, task_id))
+        conn.commit()
+    return jsonify({"success": True})
+
+@app.route('/api/projects', methods=['GET'])
+def get_projects():
+    with get_db() as conn:
+        projects = []
+        rows = conn.execute("SELECT * FROM projects").fetchall()
+        for row in rows:
+            p = dict(row)
+            subs = conn.execute(
+                "SELECT * FROM subtasks WHERE project_id = ? ORDER BY id",
+                (p['id'],)
+            ).fetchall()
+            sub_list = [dict(s) for s in subs]
+            completed_count = sum(1 for s in sub_list if s['completed'] == 1)
+            total = len(sub_list) or 1
+            progress = round((completed_count / total) * 100)
+            p['subtasks'] = sub_list
+            p['completed_count'] = completed_count
+            p['total'] = total
+            p['progress'] = progress
+            projects.append(p)
+        return jsonify(projects)
+
+@app.route('/api/tasks/history', methods=['GET'])
+def get_task_history():
+    with get_db() as conn:
+        # Get completed tasks from last 30 days
+        thirty_days_ago = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
         
+        rows = conn.execute('''
+            SELECT id, title, due_date, completed, 
+                   created_at,
+                   CURRENT_TIMESTAMP as completed_at
+            FROM tasks 
+            WHERE completed = 1 
+              AND due_date >= ? 
+            ORDER BY due_date DESC, id DESC
+        ''', (thirty_days_ago,)).fetchall()
+        
+        return jsonify([dict(row) for row in rows])
+    
+# Delete subtask
+@app.route('/api/subtasks/<int:sub_id>', methods=['DELETE'])
+def delete_subtask(sub_id):
+    with get_db() as conn:
+        conn.execute("DELETE FROM subtasks WHERE id = ?", (sub_id,))
+        conn.commit()
+    return jsonify({"success": True})
+
+# Edit subtask
+@app.route('/api/subtasks/<int:sub_id>', methods=['PUT'])
+def edit_subtask(sub_id):
+    data = request.get_json()
+    title = data.get('title')
+    with get_db() as conn:
+        conn.execute("UPDATE subtasks SET title = ?, last_updated = CURRENT_TIMESTAMP WHERE id = ?", 
+                     (title, sub_id))
+        conn.commit()
+    return jsonify({"success": True})
+
+@app.route('/api/projects', methods=['POST'])
+def add_project():
+    data = request.get_json()
+    title = data.get('title')
+    added_date = datetime.now().strftime("%Y-%m-%d")
+    with get_db() as conn:
+        conn.execute("INSERT INTO projects (title, added_date) VALUES (?, ?)", (title, added_date))
+        conn.commit()
+    return jsonify({"success": True})
+
+@app.route('/api/projects/<int:project_id>/subtasks', methods=['POST'])
+def add_subtask(project_id):
+    data = request.get_json()
+    title = data.get('title')
+    with get_db() as conn:
+        conn.execute("INSERT INTO subtasks (project_id, title) VALUES (?, ?)", (project_id, title))
+        conn.commit()
+    return jsonify({"success": True})
+
+@app.route('/api/subtasks/<int:sub_id>/toggle', methods=['POST'])
+def toggle_subtask(sub_id):
+    with get_db() as conn:
+        conn.execute("UPDATE subtasks SET completed = NOT completed WHERE id = ?", (sub_id,))
+        conn.commit()
+    return jsonify({"success": True})
+
+@app.route('/')
+def index():
+    return redirect(url_for('tasks'))
+
+
+# ====================== NOTES API ======================
+
+@app.route('/api/notes', methods=['GET'])
+def get_notes():
+    with get_db() as conn:
+        rows = conn.execute("SELECT id, title, created_at, updated_at FROM notes ORDER BY updated_at DESC").fetchall()
+        return jsonify([dict(row) for row in rows])
+
+@app.route('/api/notes', methods=['POST'])
+def create_note():
+    data = request.get_json() or {}
+    title = data.get('title', 'Untitled Note')
+    with get_db() as conn:
+        conn.execute("INSERT INTO notes (title) VALUES (?)", (title,))
+        note_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+        conn.commit()
+    return jsonify({"id": note_id, "success": True})
+
+@app.route('/api/notes/<int:note_id>', methods=['GET'])
+def get_note(note_id):
+    with get_db() as conn:
+        row = conn.execute("SELECT * FROM notes WHERE id = ?", (note_id,)).fetchone()
+        if row:
+            return jsonify(dict(row))
+        return jsonify({"error": "Note not found"}), 404
+
+@app.route('/api/notes/<int:note_id>', methods=['PUT'])
+def update_note(note_id):
+    data = request.get_json()
+    title = data.get('title')
+    content = data.get('content')
+    with get_db() as conn:
         conn.execute("""
-            CREATE TABLE IF NOT EXISTS notes (
-                id INTEGER PRIMARY KEY,
-                title TEXT,
-                content TEXT,
-                updated_at TEXT
-            )
-        """)
+            UPDATE notes 
+            SET title = COALESCE(?, title),
+                content = COALESCE(?, content),
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        """, (title, content, note_id))
+        conn.commit()
+    return jsonify({"success": True})
+
+@app.route('/api/notes/<int:note_id>', methods=['DELETE'])
+def delete_note(note_id):
+    with get_db() as conn:
+        conn.execute("DELETE FROM notes WHERE id = ?", (note_id,))
+        conn.commit()
+    return jsonify({"success": True})
 
 init_db()
 
-# ---------- ROUTES ----------
-@app.route("/")
-def home():
-    return render_template("index.html")
+# if __name__ == '__main__':
 
-@app.route("/api/login", methods=["POST"])
-def login():
-    password = request.json.get("password", "")
-    if password == get_server_password():
-        return jsonify({"success": True})
-    return jsonify({"success": False}), 403
-
-@app.route("/api/data", methods=["GET"])
-def load_data():
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cur = conn.execute("SELECT data FROM timeline WHERE id=1")
-            row = cur.fetchone()
-
-            if row is None:
-                # self-heal database
-                empty_data = {"checkpoints": []}
-                conn.execute(
-                    "INSERT OR REPLACE INTO timeline (id, data) VALUES (1, ?)",
-                    (json.dumps(empty_data),)
-                )
-                return jsonify(empty_data)
-
-            return jsonify(json.loads(row[0]))
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route("/api/save", methods=["POST"])
-def save_data():
-    try:
-        payload = request.get_json(force=True)
-
-        if payload.get("password") != get_server_password():
-            return jsonify({"success": False}), 403
-
-        data = payload.get("data")
-        if data is None:
-            return jsonify({"error": "No data provided"}), 400
-
-        with sqlite3.connect(DB_FILE) as conn:
-            conn.execute(
-                "UPDATE timeline SET data=? WHERE id=1",
-                (json.dumps(data),)
-            )
-
-        return jsonify({"success": True})
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route("/api/migrate", methods=["POST"])
-def migrate():
-    payload = request.json
-    if payload.get("password") != get_server_password():
-        return jsonify({"success": False}), 403
-
-    with sqlite3.connect(DB_FILE) as conn:
-        conn.execute(
-            "UPDATE timeline SET data=? WHERE id=1",
-            (json.dumps(payload["data"]),)
-        )
-    return jsonify({"success": True, "message": "Migration completed"})
-
-
-@app.route("/api/notes", methods=["GET"])
-def get_notes():
-    with sqlite3.connect(DB_FILE) as conn:
-        cur = conn.execute(
-            "SELECT id, title, content, updated_at FROM notes ORDER BY updated_at DESC"
-        )
-        notes = [
-            {
-                "id": r[0],
-                "title": r[1],
-                "content": r[2],
-                "updated": r[3],
-            }
-            for r in cur.fetchall()
-        ]
-    return jsonify(notes)
-
-
-@app.route("/api/notes/save", methods=["POST"])
-def save_note():
-    payload = request.json
-    if payload.get("password") != get_server_password():
-        return jsonify({"success": False}), 403
-
-    note = payload["note"]
-    now = datetime.utcnow().isoformat()
-
-    with sqlite3.connect(DB_FILE) as conn:
-        conn.execute("""
-            INSERT INTO notes (id, title, content, updated_at)
-            VALUES (?, ?, ?, ?)
-            ON CONFLICT(id) DO UPDATE SET
-              title=excluded.title,
-              content=excluded.content,
-              updated_at=excluded.updated_at
-        """, (note["id"], note["title"], note["content"], now))
-
-    return jsonify({"success": True})
-
-
-@app.route("/api/notes/delete", methods=["POST"])
-def delete_note():
-    payload = request.json
-    if payload.get("password") != get_server_password():
-        return jsonify({"success": False}), 403
-
-    with sqlite3.connect(DB_FILE) as conn:
-        conn.execute("DELETE FROM notes WHERE id=?", (payload["id"],))
-
-    return jsonify({"success": True})
-
-
-# if __name__ == "__main__":
-#     app.run(debug=True)
-# Uncomment the above lines to run the app directly.
+#     app.run(debug=True, port=5000)

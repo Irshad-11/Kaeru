@@ -1,811 +1,974 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
-
+<html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Kaeru</title>
-
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:ital,wght@0,100..900;1,100..900&display=swap"
-        rel="stylesheet" />
-    <link href="https://fonts.googleapis.com/css2?family=Aoboshi+One&family=Redressed&display=swap" rel="stylesheet" />
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kaeru • Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: "class",
-            theme: {
-                extend: {
-                    fontFamily: {
-                        body: ['"Roboto Condensed"', "sans-serif"],
-                        logo: ['"Aoboshi One"', '"Redressed"', "serif"],
-                    },
-                    colors: {
-                        kaeru: {
-                            dark: "#0f172a",
-                            panel: "#1e293b",
-                            accent: "#38bdf8",
-                            glow: "#0ea5e9",
-                            muted: "#64748b",
-                        },
-                    },
-                    animation: {
-                        "pulse-glow":
-                            "pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
-                    },
-                    keyframes: {
-                        "pulse-glow": {
-                            "0%, 100%": { opacity: "1", boxShadow: "0 0 10px #38bdf8" },
-                            "50%": { opacity: ".8", boxShadow: "0 0 2px #38bdf8" },
-                        },
-                    },
-                },
-            },
-        };
-    </script>
-
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
+    
     <style>
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+        
+        :root {
+            font-family: 'Inter', system_ui, sans-serif;
         }
-
-        ::-webkit-scrollbar-track {
-            background: #0f172a;
+        
+        .dashboard-container {
+            max-width: 1280px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 10px 30px -10px rgb(0 0 0 / 0.1);
+            overflow: hidden;
+            border: 1px solid #e5e7eb;
         }
-
-        ::-webkit-scrollbar-thumb {
-            background: #334155;
-            border-radius: 4px;
+        
+        .tab-active {
+            background-color: #f8fafc;
+            border-bottom: 3px solid #111827;
+            font-weight: 600;
         }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: #475569;
+        
+        .timeline-line {
+            position: relative;
         }
-
-        .transparent-input {
-            background: transparent;
-            border: none;
-            outline: none;
-            width: 100%;
-            color: inherit;
-            font-family: inherit;
-            padding: 0;
-            margin: 0;
+        
+        .timeline-line::before {
+            content: '';
+            position: absolute;
+            left: 20px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #e5e7eb;
         }
-
-        .transparent-input:focus {
-            border-bottom: 1px solid #38bdf8;
+        
+        .modal {
+            animation: modalPop 0.2s ease forwards;
         }
-
-        .timeline-spoiler {
-            opacity: 0.1;
-            filter: blur(5px);
-            pointer-events: none;
-            transition: all 0.8s ease;
+        
+        @keyframes modalPop {
+            0% { transform: scale(0.95); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
         }
-
-        .timeline-active {
+        
+        .task-item:hover .action-icons,
+        .subtask-item:hover .subtask-actions {
             opacity: 1;
-            filter: blur(0);
-            pointer-events: all;
         }
-
-        .tooltip-trigger:hover .custom-tooltip {
-            opacity: 1;
-            transform: translateY(0);
+        
+        .progress-ring {
+            transition: stroke-dashoffset 0.35s;
+        }
+        
+        .metadata {
+            font-size: 10px;
+            color: #9ca3af;
         }
     </style>
 </head>
+<body class="bg-slate-100 min-h-screen py-8 px-4">
+    <div class="dashboard-container mx-auto h-[calc(100vh-4rem)] flex flex-col">
+        <!-- HEADER -->
+        <div class="px-8 py-5 border-b flex items-center justify-between bg-white">
+            <div id="header-date" class="text-3xl font-semibold text-gray-900"></div>
+            
+            <div class="flex border border-gray-200 rounded-2xl overflow-hidden">
+                <a href="/tasks" class="tab px-8 py-3 text-sm font-medium flex items-center gap-x-2 transition-colors {{ 'tab-active' if tab == 'tasks' else '' }}">
+                    <i class="fa-solid fa-list-check"></i> Tasks
+                </a>
+                <a href="/notes" class="tab px-8 py-3 text-sm font-medium flex items-center gap-x-2 transition-colors {{ 'tab-active' if tab == 'notes' else '' }}">
+                    <i class="fa-solid fa-note-sticky"></i> Notes
+                </a>
+                <a href="/timeless" class="tab px-8 py-3 text-sm font-medium flex items-center gap-x-2 transition-colors {{ 'tab-active' if tab == 'timeless' else '' }}">
+                    <i class="fa-solid fa-infinity"></i> Timeless
+                </a>
+            </div>
+            
+            <div class="flex items-center gap-x-4">
+                <button onclick="showTaskHistory()" class="flex items-center gap-x-2 text-gray-500 hover:text-gray-700 text-sm font-medium">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                    <span>Task History</span>
+                </button>
+                <div class="w-9 h-9 bg-gray-100 rounded-2xl flex items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors">
+                    <i class="fa-solid fa-user text-gray-600"></i>
+                </div>
+            </div>
+        </div>
 
-<!-- NOTES OVERLAY -->
-<div id="notes-overlay" class="fixed top-0 right-0 h-full w-3/5
-         bg-kaeru-panel/40 backdrop-blur-lg
-         border-l border-slate-700
-         z-40 transform translate-x-full
-         transition-transform duration-300 flex flex-col
-         shadow-[-10px_0_30px_rgba(0,0,0,0.45)]
-         drop-shadow-[0_0_25px_rgba(56,189,248,0.15)]">
-    <div class="flex items-center justify-between p-4 border-b border-slate-700">
-        <h2 class="font-logo text-xl text-kaeru-accent">Notes</h2>
+        <!-- MAIN CONTENT -->
+        <div class="flex-1 flex overflow-hidden" id="main-content">
+            {% if tab == 'tasks' %}
+            <div class="flex flex-1 overflow-hidden">
+                <!-- LEFT: Timeline -->
+                <div class="flex-1 flex flex-col border-r overflow-hidden">
+                    <div class="flex-1 overflow-y-auto p-6 space-y-8" id="timeline-container"></div>
+                    
+                    <div onclick="showAddTaskModal()" 
+                         class="absolute bottom-8 left-8 w-12 h-12 bg-gray-900 hover:bg-black text-white rounded-3xl flex items-center justify-center shadow-lg cursor-pointer transition-all active:scale-95">
+                        <i class="fa-solid fa-plus text-2xl"></i>
+                    </div>
+                </div>
 
-        <div class="flex items-center gap-3">
-            <span id="notes-save-indicator" class="text-xs mr-10 text-green-500 hidden">✓ Saved</span>
-            <button onclick="toggleNotes()" class="text-slate-500 hover:text-red-400">✕</button>
+                <!-- RIGHT: Progress -->
+                <div class="flex-1 flex flex-col overflow-hidden">
+                    <div class="px-6 py-4 border-b flex items-center justify-between bg-white">
+                        <h2 class="text-lg font-semibold text-gray-900">Progress</h2>
+                        <button onclick="showAddProjectModal()" 
+                                class="flex items-center justify-center w-8 h-8 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-2xl transition-colors">
+                            <i class="fa-solid fa-plus"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="flex-1 overflow-y-auto p-6 space-y-4" id="progress-container">
+                        <!-- Rendered by JS -->
+                    </div>
+                </div>
+            </div>
+
+
+<!-- ========================================================== -->
+
+                <!-- note@kaeru NOTE SECTION -->
+
+<!-- ========================================================== -->
+
+
+
+            {% elif tab == 'notes' %}
+<div class="flex flex-1 overflow-hidden bg-white" id="notes-app">
+    <!-- LEFT SIDEBAR: Notes List -->
+    <div class="w-80 border-r border-gray-200 flex flex-col bg-gray-50">
+        <div class="p-5 border-b border-gray-200 flex items-center justify-between bg-white">
+            <h2 class="text-xl font-semibold text-gray-900">Notes</h2>
+            <button onclick="createNewNote()" 
+                    class="w-8 h-8 bg-gray-900 hover:bg-black text-white rounded-2xl flex items-center justify-center transition-all active:scale-95">
+                <i class="fa-solid fa-plus"></i>
+            </button>
+        </div>
+        
+        <div class="flex-1 overflow-y-auto p-3 space-y-1" id="notes-list">
+            <!-- Populated by JS -->
         </div>
     </div>
 
-    <div class="flex-1 flex overflow-hidden">
-        <!-- Notes List -->
-        <div id="notes-list" class="w-1/4 border-r border-slate-700 p-3 overflow-y-auto">
-            <button onclick="createNote()"
-                class="w-full mb-3 text-xs border border-dashed border-slate-600 text-slate-400 rounded py-1 hover:border-kaeru-accent hover:text-kaeru-accent">
-                + New Note
+    <!-- RIGHT: Editor Area -->
+    <div class="flex-1 flex flex-col">
+        <!-- Toolbar -->
+        <div class="h-14 border-b border-gray-200 bg-white flex items-center px-6 gap-x-2 overflow-x-auto shadow-sm">
+            <!-- Headings -->
+            <select onchange="setHeading(this.value)" class="bg-transparent border border-gray-300 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:border-gray-400">
+                <option value="">Normal</option>
+                <option value="h1">Heading 1</option>
+                <option value="h2">Heading 2</option>
+                <option value="h3">Heading 3</option>
+            </select>
+
+            <!-- Formatting -->
+            <button onclick="execCommand('bold')" class="toolbar-btn px-3 py-1.5 hover:bg-gray-100 rounded-xl" title="Bold">
+                <i class="fa-solid fa-bold"></i>
+            </button>
+            <button onclick="execCommand('italic')" class="toolbar-btn px-3 py-1.5 hover:bg-gray-100 rounded-xl" title="Italic">
+                <i class="fa-solid fa-italic"></i>
+            </button>
+            <button onclick="execCommand('underline')" class="toolbar-btn px-3 py-1.5 hover:bg-gray-100 rounded-xl" title="Underline">
+                <i class="fa-solid fa-underline"></i>
             </button>
 
-            <ul id="notes-items"></ul>
+            <div class="h-6 w-px bg-gray-300 mx-4"></div>
+
+            <!-- Lists -->
+            <button onclick="execCommand('insertUnorderedList')" class="toolbar-btn px-3 py-1.5 hover:bg-gray-100 rounded-xl" title="Bullet List">
+                <i class="fa-solid fa-list-ul"></i>
+            </button>
+            <button onclick="execCommand('insertOrderedList')" class="toolbar-btn px-3 py-1.5 hover:bg-gray-100 rounded-xl" title="Numbered List">
+                <i class="fa-solid fa-list-ol"></i>
+            </button>
+
+            <!-- Link -->
+            <button onclick="insertLink()" class="toolbar-btn px-3 py-1.5 hover:bg-gray-100 rounded-xl" title="Insert Link">
+                <i class="fa-solid fa-link"></i>
+            </button>
+
+            <!-- Colors -->
+            <div class="flex gap-1 ml-4">
+                <button onclick="setColor('#000000')" class="w-6 h-6 rounded-lg bg-black hover:ring-2 hover:ring-gray-300"></button>
+                <button onclick="setColor('#ef4444')" class="w-6 h-6 rounded-lg bg-red-500 hover:ring-2 hover:ring-gray-300"></button>
+                <button onclick="setColor('#eab308')" class="w-6 h-6 rounded-lg bg-yellow-500 hover:ring-2 hover:ring-gray-300"></button>
+                <button onclick="setColor('#22c55e')" class="w-6 h-6 rounded-lg bg-green-500 hover:ring-2 hover:ring-gray-300"></button>
+                <button onclick="setColor('#3b82f6')" class="w-6 h-6 rounded-lg bg-blue-500 hover:ring-2 hover:ring-gray-300"></button>
+            </div>
+
+            <button onclick="insertCodeBlock()" class="toolbar-btn px-3 py-1.5 hover:bg-gray-100 rounded-xl ml-auto" title="Code Block">
+                <i class="fa-solid fa-code"></i>
+            </button>
+
+            <button onclick="deleteCurrentNote()" 
+                    class="toolbar-btn px-3 py-1.5 text-red-500 hover:bg-red-50 rounded-xl ml-4" title="Delete Note">
+                <i class="fa-solid fa-trash"></i>
+            </button>
+        </div>
+
+        <!-- Note Title -->
+        <div class="px-8 pt-6 pb-3 border-b border-gray-100">
+            <input id="note-title" 
+                   type="text" 
+                   onblur="saveCurrentNote()"
+                   class="w-full bg-transparent text-3xl font-semibold outline-none placeholder-gray-400">
         </div>
 
         <!-- Editor -->
-        <div class="flex-1 p-4 flex flex-col min-h-0">
-            <input id="note-title" placeholder="Title"
-                class="transparent-input text-xl font-logo mb-3 text-kaeru-accent"
-                onblur="updateNoteTitle(this.value)" />
-
-            <div id="note-content" contenteditable="true" spellcheck="false"
-                class="flex-1 min-h-0 overflow-y-auto bg-transparent outline-none text-sm text-slate-300 whitespace-pre-wrap leading-none"
-                onfocus="enterEditMode()" oninput="handleNoteInput()" onblur="renderNotePreview()"></div>
-
-
-
+        <div id="note-editor" 
+             contenteditable="true"
+             oninput="autoSaveCurrentNote()"
+             class="flex-1 px-8 py-6 overflow-y-auto focus:outline-none text-[15.8px] leading-relaxed text-gray-800"
+             style="background: white; caret-color: #111827;">
         </div>
     </div>
 </div>
-
-
-<body
-    class="bg-kaeru-dark text-white font-body h-screen flex flex-col overflow-y-auto selection:bg-kaeru-accent selection:text-black">
-    <div id="login-overlay"
-        class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/80 backdrop-blur-md transition-opacity duration-500">
-        <h1
-            class="font-logo text-6xl mb-2 text-kaeru-accent tracking-wider drop-shadow-[0_0_10px_rgba(56,189,248,0.5)]">
-            かえる
-        </h1>
-        <h2 class="text-2xl mb-2 text-white opacity-80">
-            Kaeru <span class="text-kaeru-accent border border-kaeru-accent rounded-full px-2 py-0.5 text-base">v3.1.1 latest</span>
-        </h2>
-        <h3 class="text-lg mb-8 text-lg opacity-50 text-kaeru-accent">By Irshad Hossain</h3>
-
-        <div class="flex flex-col gap-4 w-64">
-            <input type="password" id="password-input" placeholder="Password Protected"
-                class="bg-kaeru-panel border border-slate-600 rounded px-4 py-2 text-center text-xl focus:border-kaeru-accent focus:ring-1 focus:ring-kaeru-accent outline-none transition-all placeholder-slate-600 text-kaeru-accent" />
-            <button onclick="attemptLogin()"
-                class="bg-kaeru-accent text-black font-bold py-2 rounded hover:bg-sky-300 transition-colors uppercase tracking-widest text-sm shadow-[0_0_15px_rgba(56,189,248,0.3)]">
-                Enter
-            </button>
-            <p id="login-error" class="text-red-500 text-center text-sm hidden">
-                Access Denied
-            </p>
+{% endif %}
         </div>
     </div>
 
-    <div id="app-container" class="timeline-spoiler flex-1 flex flex-col h-full p-6 max-w-7xl mx-auto w-full">
-        <header class="flex justify-between items-center mb-6 border-b border-slate-800 pb-4">
-            <div>
-                <h1 class="font-logo text-4xl text-kaeru-accent leading-none">
-                    Kaeru <span class="text-gray opacity-50">-</span> <span class="text-2xl opacity-50"">かえる</span> 
-          </h1>
-        </div>
-        <div class=" flex gap-4 items-center">
-                        <button onclick="addCheckpoint()"
-                            class="text-base flex items-center gap-2 bg-slate-800 hover:bg-slate-700 px-4 py-2 rounded transition-colors border border-slate-700 text-slate-300">
-                            + Checkpoint
-                        </button>
-                        <button onclick="logout()"
-                            class="text-xs text-red-500 font-bold uppercase tracking-wider pt-2 px-4 py-2 border border-red-600 rounded transition-all relative overflow-hidden hover:text-white hover:border-red-400 before:absolute before:inset-0 before:bg-red-500 before:opacity-0 before:blur-md before:transition-opacity before:duration-300 hover:before:opacity-30">
-                            Lock
-                        </button>
-
-                        <button onclick="toggleNotes()"
-                            class="w-9 h-9 flex items-center justify-center rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 transition relative"
-                            title="Notes">
-                            <img src="https://img.icons8.com/?size=100&id=OENhm99NTnV6&format=png&color=38bdf8"
-                                class="w-5 h-5" />
-                        </button>
-
+    <!-- ADD TASK MODAL -->
+    <div onclick="if(event.target.id === 'task-modal')hideTaskModal()" id="task-modal"
+         class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+        <div onclick="event.stopImmediatePropagation()" class="modal bg-white w-full max-w-md mx-4 rounded-3xl p-8 shadow-2xl">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-semibold">New Task</h3>
+                <button onclick="hideTaskModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fa-solid fa-xmark text-2xl"></i>
+                </button>
             </div>
-        </header>
-
-        <div
-            class="w-full bg-slate-900/50 rounded-2xl p-6 mb-8 border border-slate-800 relative select-none sticky top-0 z-20">
-            <div class="flex items-center justify-between w-full h-16 gap-4" id="fish-eye-container"></div>
+            <input id="task-input" type="text" placeholder="What needs to be done?" 
+                   class="w-full px-5 py-4 text-lg border border-gray-200 focus:border-gray-400 rounded-2xl outline-none">
+            <div class="flex justify-between text-xs text-gray-400 mt-2 px-1">
+                <span>Press <span class="font-mono bg-gray-100 px-1.5 rounded">Enter</span> to save</span>
+                <span>Esc to cancel</span>
+            </div>
+            <input type="date" id="task-due-date" class="mt-6 w-full px-5 py-3 text-sm border border-gray-200 rounded-2xl outline-none">
         </div>
+    </div>
 
-        <div class="flex-1 overflow-visible pb-4">
-            <div id="checkpoint-container" class="flex flex-wrap content-start gap-6 h-full px-2"></div>
+    <!-- ADD PROJECT MODAL -->
+    <div onclick="if(event.target.id === 'project-modal')hideProjectModal()" id="project-modal"
+         class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+        <div onclick="event.stopImmediatePropagation()" class="modal bg-white w-full max-w-md mx-4 rounded-3xl p-8 shadow-2xl">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-semibold">New Project</h3>
+                <button onclick="hideProjectModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fa-solid fa-xmark text-2xl"></i>
+                </button>
+            </div>
+            <input id="project-input" type="text" placeholder="Project name" 
+                   class="w-full px-5 py-4 text-lg border border-gray-200 focus:border-gray-400 rounded-2xl outline-none">
+            <button onclick="addNewProject()" 
+                    class="mt-8 w-full bg-emerald-600 hover:bg-emerald-700 text-white py-4 rounded-2xl font-medium">
+                Create Project
+            </button>
         </div>
     </div>
 
     <script>
-        let appData = { checkpoints: [] };
-        let userPassword = "";
-        let activeIndex = 0;
-        let index = 0;
+        let currentTasks = [];
+        let currentProjects = [];
+        let todayDateStr = new Date().toISOString().split('T')[0];
 
-        // --- AUTH ---
-        async function attemptLogin() {
-            const password = document.getElementById('password-input').value;
-            // const password = 'komol'; // for local development bypass login
-            const res = await fetch("/api/login", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ password }),
-            });
-            const data = await res.json();
-            if (data.success) {
-                userPassword = password; // store for save calls
-                document
-                    .getElementById("login-overlay")
-                    .classList.add("opacity-0", "pointer-events-none");
-                const app = document.getElementById("app-container");
-                app.classList.remove("timeline-spoiler");
-                app.classList.add("timeline-active");
-                renderApp();
-            } else {
-                document.getElementById("login-error").classList.remove("hidden");
-            }
+        function formatHeaderDate() {
+            const dateEl = document.getElementById('header-date');
+            const date = new Date();
+            const options = { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' };
+            dateEl.textContent = date.toLocaleDateString('en-US', options).replace(',', '');
         }
 
-        function logout() {
-            location.reload();
-        }
-
-        // --- INITIAL DATA LOAD ---
-        async function initData() {
+        async function loadTasks() {
             try {
-                const res = await fetch("/api/data");
-                const data = await res.json();
-                if (data.checkpoints) {
-                    appData.checkpoints = data.checkpoints;
-                    appData.checkpoints.sort(
-                        (a, b) => new Date(a.endDate) - new Date(b.endDate)
-                    );
-                } else {
-                    appData.checkpoints = [
-                        createCheckpointStructure("Phase 1: Basics", 1),
-                        createCheckpointStructure("Phase 2: Core", 3),
-                    ];
-                    await saveData();
-                }
-            } catch (err) {
-                console.error(err);
+                const res = await fetch('/api/tasks');
+                currentTasks = await res.json();
+                renderTimeline();
+            } catch (e) {
+                console.error('Failed to load tasks', e);
             }
         }
 
-        function createCheckpointStructure(name, durationMonths) {
-            let startDate = new Date();
-            if (appData && appData.checkpoints && appData.checkpoints.length > 0) {
-                const lastCp = appData.checkpoints[appData.checkpoints.length - 1];
-                startDate = new Date(lastCp.endDate);
+        async function loadProjects() {
+            try {
+                const res = await fetch('/api/projects');
+                currentProjects = await res.json();
+                renderProgress();
+            } catch (e) {
+                console.error('Failed to load projects', e);
             }
-
-            const endDate = new Date(startDate);
-            endDate.setMonth(endDate.getMonth() + durationMonths);
-
-            return {
-                id: Date.now() + Math.random(),
-                name: name,
-                startDate: startDate.toISOString().split("T")[0],
-                endDate: endDate.toISOString().split("T")[0],
-                segments: [{ id: Date.now() + 1, name: "Section 1", todos: [] }],
-            };
         }
 
-        // --- SAVE TO BACKEND ---
+        function renderTimeline() {
+            const container = document.getElementById('timeline-container');
+            container.innerHTML = '';
 
-        async function saveData() {
-            await fetch("/api/save", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ password: userPassword, data: appData }),
-            });
-            renderApp(); // keep your current rendering after save
-        }
+            const todayTasks = currentTasks.filter(t => t.due_date === todayDateStr);
+            const completedToday = todayTasks.filter(t => t.completed).length;
+            const todayProgress = todayTasks.length ? Math.round((completedToday / todayTasks.length) * 100) : 0;
 
-        // --- RENDER MAIN APP ---
-        function renderApp() {
-            renderFishEyeTimeline();
-            renderCards();
-        }
-
-        function renderFishEyeTimeline() {
-            const container = document.getElementById("fish-eye-container");
-            container.innerHTML = "";
-
-            const today = new Date();
-            activeIndex = appData.checkpoints.findIndex(
-                (cp) => new Date(cp.endDate) >= today
-            );
-            if (activeIndex === -1) activeIndex = appData.checkpoints.length - 1;
-
-            const pastDiv = document.createElement("div");
-            pastDiv.className = "flex items-center gap-1 opacity-50 flex-none";
-
-            const activeDiv = document.createElement("div");
-            activeDiv.className = "flex-1 relative flex items-center mx-2";
-
-            const futureDiv = document.createElement("div");
-            futureDiv.className = "flex items-center gap-1 opacity-40 flex-none";
-
-            // START node
-            const startNode = document.createElement("div");
-            startNode.className = "text-xs text-slate-600 font-mono font-bold mr-2";
-            startNode.innerText = "START";
-            pastDiv.appendChild(startNode);
-            const timelineOrder = getCardRenderOrder();
-            timelineOrder.forEach((cp, visualIndex) => {
-                const index = appData.checkpoints.findIndex(c => c.id === cp.id);
-                const cpDate = new Date(cp.endDate);
-
-                if (index < activeIndex) {
-                    pastDiv.innerHTML += `
-                    <div class="tooltip-trigger group relative cursor-help">
-                        <div class="w-3 h-3 bg-kaeru-muted rounded-sm transform rotate-45 group-hover:bg-kaeru-accent transition-colors"></div>
-                        <div class="custom-tooltip absolute -top-8 left-1/2 -translate-x-1/2 bg-black text-white text-[10px] px-2 py-1 rounded opacity-0 transition-all pointer-events-none whitespace-nowrap z-20 border border-slate-700">
-                            ${cp.name} (Done)
+            let html = `
+                <div>
+                    <div class="flex items-baseline justify-between mb-4">
+                        <div>
+                            <span class="text-emerald-600 font-medium">Today,</span>
+                            <span class="ml-2 text-gray-900 font-semibold">Task</span>
+                        </div>
+                        <div class="text-sm text-gray-500">
+                            ${completedToday}/${todayTasks.length} <span class="font-medium">${todayProgress}% Done</span>
                         </div>
                     </div>
-                    <div class="w-2 h-[1px] bg-slate-700"></div>
+                    <div class="space-y-px" id="today-list">
+            `;
+
+            todayTasks.forEach(task => html += createTaskRow(task, true));
+            html += '</div></div>';
+
+            html += `
+                <div class="mt-8">
+                    <div class="text-gray-500 text-sm font-medium mb-4">Upcoming</div>
+                    <div class="timeline-line pl-10 space-y-8" id="upcoming-list"></div>
+                </div>
+            `;
+
+            container.innerHTML = html;
+
+            const upcoming = currentTasks.filter(t => t.due_date && t.due_date > todayDateStr);
+            const grouped = {};
+            upcoming.forEach(task => {
+                if (!grouped[task.due_date]) grouped[task.due_date] = [];
+                grouped[task.due_date].push(task);
+            });
+
+            const sortedDates = Object.keys(grouped).sort();
+            const upcomingContainer = document.getElementById('upcoming-list');
+
+            sortedDates.forEach((date, index) => {
+                const dateObj = new Date(date);
+                const day = dateObj.getDate();
+                const monthName = dateObj.toLocaleString('default', { month: 'short' });
+
+                let groupHTML = `
+                    <div class="relative">
+                        <div class="absolute -left-[42px] flex flex-col items-center">
+                            <div class="w-10 h-10 rounded-2xl border-2 border-gray-900 bg-white flex items-center justify-center text-sm font-semibold z-10">
+                                ${day}
+                            </div>
+                            ${index < sortedDates.length - 1 ? `<div class="w-px h-8 bg-gray-300 mt-1"></div>` : ''}
+                        </div>
+                        <div class="text-xs uppercase font-medium text-gray-400 mb-2">${monthName}</div>
+                        <div class="space-y-px">
                 `;
-                } else if (index === activeIndex) {
-                    const startDate = new Date(cp.startDate);
-                    const endDate = new Date(cp.endDate);
 
-                    const totalTime = endDate - startDate;
-                    const passedTime = today - startDate;
-                    let pct = (passedTime / totalTime) * 100;
-                    pct = Math.max(0, Math.min(100, pct));
+                grouped[date].forEach(task => groupHTML += createTaskRow(task, false));
+                groupHTML += '</div></div>';
+                upcomingContainer.innerHTML += groupHTML;
+            });
 
-                    const daysLeft = Math.ceil(
-                        (endDate - today) / (1000 * 60 * 60 * 24)
-                    );
+            if (sortedDates.length === 0) {
+                upcomingContainer.innerHTML = `<div class="text-gray-400 text-sm italic pl-6">No upcoming tasks</div>`;
+            }
+        }
 
-                    activeDiv.innerHTML = `
-                    <div class="absolute -top-8 left-0 text-[13px] text-slate-500 font-mono">
-                        ${startDate.toLocaleDateString(undefined, {
-                        month: "short",
-                        day: "numeric",
-                    })}
+        function createTaskRow(task, isToday) {
+            const checked = task.completed ? 'checked' : '';
+            const strike = task.completed ? 'line-through text-gray-400' : '';
+            return `
+                <div class="task-item group flex items-center gap-x-3 px-4 py-3 rounded-2xl hover:bg-gray-50 transition-colors">
+                    <input type="checkbox" ${checked} onclick="toggleTask(${task.id})" class="w-5 h-5 accent-gray-900 cursor-pointer">
+                    <span onclick="editTaskInline(this, ${task.id})" class="flex-1 ${strike} cursor-text">${task.title}</span>
+                    <div class="action-icons opacity-0 group-hover:opacity-100 flex items-center gap-x-1">
+                        <button onclick="deleteTask(${task.id}); event.stopImmediatePropagation()" 
+                                class="text-gray-400 hover:text-red-500 w-7 h-7 flex items-center justify-center">
+                            <i class="fa-solid fa-trash text-sm"></i>
+                        </button>
                     </div>
-                    <div class="w-full h-1 bg-slate-800 rounded-full overflow-visible relative">
-                        <div class="absolute top-0 left-0 h-full bg-kaeru-accent/60" style="width: ${pct}%"></div>
-                        <div class="absolute top-1/2 -translate-y-1/2 w-6 h-6 bg-kaeru-accent rounded-full shadow-[0_0_15px_#38bdf8] z-10 cursor-pointer animate-pulse-glow flex items-center justify-center" style="left: ${pct}%">
-                            <div class="w-2.5 h-2.5 bg-white rounded-full"></div>
-                            <div class="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-kaeru-panel border border-kaeru-accent text-kaeru-accent text-[10px] px-2 py-0.5 rounded font-bold whitespace-nowrap">
-                                NOW
+                </div>
+            `;
+        }
+
+        function renderProgress() {
+            const container = document.getElementById('progress-container');
+            container.innerHTML = '';
+
+            currentProjects.forEach(project => {
+                const isOpen = project.isOpen || false;
+
+                const createdDate = project.added_date ? new Date(project.added_date).toLocaleDateString('en-US', {month:'short', day:'numeric'}) : '—';
+                const updatedDate = project.last_updated ? new Date(project.last_updated).toLocaleDateString('en-US', {month:'short', day:'numeric'}) : '—';
+
+                let projectHTML = `
+                    <div class="bg-white border border-gray-200 rounded-3xl overflow-hidden">
+                        <div onclick="toggleProject(${project.id})" class="px-6 py-4 flex items-center justify-between cursor-pointer hover:bg-slate-50">
+                            <div class="flex items-center gap-x-3">
+                                <i onclick="event.stopImmediatePropagation(); toggleProject(${project.id})" 
+                                   class="fa-solid ${isOpen ? 'fa-chevron-down' : 'fa-chevron-right'} text-gray-400"></i>
+                                <span class="font-semibold text-gray-900">${project.title}</span>
+                            </div>
+                            
+                            <div class="flex items-center gap-x-4">
+                                <div class="text-xs text-gray-400">
+                                    ${project.completed_count}/${project.total}
+                                </div>
+                                <div class="relative w-10 h-10 flex-shrink-0">
+                                    <svg class="w-10 h-10 -rotate-90" viewBox="0 0 36 36">
+                                        <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#e5e7eb" stroke-width="3" />
+                                        <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#10b981" stroke-width="3" 
+                                              stroke-dasharray="${project.progress}, 100" class="progress-ring" />
+                                    </svg>
+                                    <div class="absolute inset-0 flex items-center justify-center text-[10px] font-semibold text-gray-900">
+                                        ${project.progress}%
+                                    </div>
+                                </div>
+                                <button onclick="event.stopImmediatePropagation(); deleteProject(${project.id})" 
+                                        class="text-red-400 hover:text-red-500 text-xs font-medium">delete</button>
                             </div>
                         </div>
-                    </div>
-                    <div class="absolute -top-6 right-0 text-xs text-kaeru-accent font-bold font-mono">
-                        HEAD: ${cp.name}
-                    </div>
-                    <div class="absolute -bottom-8 right-0 text-[13px] text-slate-500 font-mono">
-                        ${endDate.toLocaleDateString(undefined, {
-                        month: "short",
-                        day: "numeric",
-                    })}
-                    </div>
-                `;
-                } else {
-                    futureDiv.innerHTML += `
-                    <div class="w-2 h-[1px] bg-slate-800"></div>
-                    <div class="tooltip-trigger group relative">
-                        <div class="w-3 h-3 border border-slate-600 rounded-sm transform rotate-45 group-hover:border-kaeru-accent transition-colors"></div>
-                        <div class="custom-tooltip absolute -top-8 left-1/2 -translate-x-1/2 bg-black text-slate-300 text-[10px] px-2 py-1 rounded opacity-0 transition-all pointer-events-none whitespace-nowrap z-20 border border-slate-800">
-                            ${cp.name}
+
+                        <!-- Metadata -->
+                        <div class="px-6 pb-2 metadata flex gap-4 text-[10px]">
+                            <div>Created: ${createdDate}</div>
+                            <div>Last updated: ${updatedDate}</div>
                         </div>
+                `;
+
+                if (isOpen) {
+                    projectHTML += `<div class="px-6 pb-6 border-t">`;
+                    project.subtasks.forEach(sub => {
+                        const subChecked = sub.completed ? 'checked' : '';
+                        const subStrike = sub.completed ? 'line-through text-gray-400' : '';
+                        projectHTML += `
+                            <div class="subtask-item group flex items-center gap-x-3 px-4 py-3 rounded-2xl hover:bg-gray-50 transition-colors">
+                                <input type="checkbox" ${subChecked} onclick="toggleSubtask(${sub.id})" class="w-4 h-4 accent-gray-900 cursor-pointer">
+                                <span onclick="editSubtaskInline(this, ${sub.id})" class="flex-1 text-sm ${subStrike} cursor-text">${sub.title}</span>
+                                <div class="subtask-actions opacity-0 group-hover:opacity-100 flex items-center gap-x-1">
+                                    <button onclick="deleteSubtask(${sub.id}); event.stopImmediatePropagation()" 
+                                            class="text-gray-400 hover:text-red-500 w-6 h-6 flex items-center justify-center">
+                                        <i class="fa-solid fa-trash text-xs"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    projectHTML += `
+                        <div onclick="addSubtaskPrompt(${project.id})" 
+                             class="mt-3 flex items-center justify-center text-emerald-600 text-sm font-medium cursor-pointer hover:underline">
+                            <i class="fa-solid fa-plus mr-1"></i> Add sub-task
+                        </div>
+                    </div>`;
+                }
+
+                projectHTML += `</div>`;
+                container.innerHTML += projectHTML;
+            });
+
+            if (currentProjects.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12 text-gray-400">
+                        <i class="fa-solid fa-folder-open text-4xl mb-3"></i>
+                        <p>No projects yet.<br>Click + to create one.</p>
                     </div>
                 `;
-                }
-            });
-
-            container.appendChild(pastDiv);
-            container.appendChild(activeDiv);
-            container.appendChild(futureDiv);
-        }
-
-        function renderCards() {
-            const container = document.getElementById("checkpoint-container");
-            container.innerHTML = "";
-            const renderOrder = getCardRenderOrder();
-            renderOrder.forEach((cp, visualIndex) => {
-                const index = appData.checkpoints.findIndex(c => c.id === cp.id);
-                const card = document.createElement("div");
-                let cardClasses = `w-[350px] h-auto flex flex-col bg-kaeru-panel/40 backdrop-blur-sm border border-slate-700/50 hover:border-slate-600 transition-colors rounded-xl p-4 overflow-hidden flex-shrink-0 relative group`;
-
-                if (index === activeIndex) {
-                    cardClasses +=
-                        " w-[450px] border-2 border-kaeru-accent shadow-[0_0_10px_rgba(56,189,248,0.3)]";
-                }
-
-                card.className = cardClasses;
-
-                card.innerHTML = `
-        <div class="flex justify-between items-start mb-3 border-b border-slate-700/50 pb-2">
-            <div class="flex-1">
-                <input type="text" value="${cp.name
-                    }" onblur="updateField('name', ${index}, this.value)"
-                    class="transparent-input ${index === activeIndex ? "text-2xl" : "text-lg"
-                    } text-slate-200 placeholder-slate-600 font-logo">
-                <div class="flex items-center gap-2 ${index === activeIndex ? "text-sm" : "text-[10px]"
-                    } text-slate-500 mt-1 font-mono uppercase">
-                    <span>End:</span>
-                    <input type="date" value="${cp.endDate
-                    }" onchange="updateField('endDate', ${index}, this.value)"
-                    class="bg-transparent hover:text-white cursor-pointer w-[100px] ${index === activeIndex ? "text-sm" : "text-xs"
-                    }">
-                </div>
-            </div>
-            <button onclick="deleteCP(${index})" class="text-slate-700 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">×</button>
-        </div>
-
-        <div class="flex-1 overflow-y-auto pr-1 space-y-3 custom-scroll">
-            ${renderSegments(cp.segments, index)}
-            <button onclick="addSegment(${index})" class="w-full py-1.5 border border-dashed border-slate-700 text-slate-500 ${index === activeIndex ? "text-sm" : "text-xs"
-                    } rounded hover:border-kaeru-accent hover:text-kaeru-accent transition-colors">
-                + Add Segment
-            </button>
-        </div>
-    `;
-                container.appendChild(card);
-            });
-        }
-
-        function renderSegments(segments, cpIndex) {
-            return segments
-                .map(
-                    (seg, sIdx) => `
-        <div class="bg-slate-900/40 rounded p-2">
-            <div class="flex justify-between mb-1">
-                <input type="text" value="${seg.name
-                        }" onblur="updateSegName(${cpIndex}, ${sIdx}, this.value)"
-                    class="transparent-input ${cpIndex === activeIndex ? "text-sm" : "text-xs"
-                        } font-bold text-kaeru-accent/80">
-                <button onclick="delSeg(${cpIndex}, ${sIdx})" class="text-slate-600 hover:text-red-400 ${cpIndex === activeIndex ? "text-xs" : "text-[10px]"
-                        }">Del</button>
-            </div>
-            <ul class="space-y-1">
-                ${seg.todos
-                            .map(
-                                (t, tIdx) => `
-                <li class="flex items-center gap-2 group/todo">
-                    <div onclick="toggleTodo(${cpIndex}, ${sIdx}, ${tIdx})" 
-                         class="w-3 h-3 border ${t.done
-                                        ? "bg-kaeru-accent border-kaeru-accent"
-                                        : "border-slate-600"
-                                    } cursor-pointer rounded-sm flex items-center justify-center">
-                    </div>
-                    <input type="text" value="${t.text
-                                    }" onblur="updateTodo(${cpIndex}, ${sIdx}, ${tIdx}, this.value)"
-                        class="transparent-input ${t.done
-                                        ? "text-slate-600 line-through"
-                                        : cpIndex === activeIndex
-                                            ? "text-sm"
-                                            : "text-xs"
-                                    }">
-                    <button onclick="delTodo(${cpIndex}, ${sIdx}, ${tIdx})" class="text-slate-700 hover:text-red-500 opacity-0 group-hover/todo:opacity-100">×</button>
-                </li>`
-                            )
-                            .join("")}
-            </ul>
-            <button onclick="addTodo(${cpIndex}, ${sIdx})" class="${cpIndex === activeIndex ? "text-xs" : "text-[10px]"
-                        } text-slate-600 hover:text-slate-300 mt-1 pl-5">+ Task</button>
-        </div>
-    `
-                )
-                .join("");
-        }
-
-
-        function getCardRenderOrder() {
-            const today = new Date();
-            const activeIndex = appData.checkpoints.findIndex(cp => new Date(cp.endDate) >= today) || appData.checkpoints.length - 1;
-
-            // Split active/future vs expired
-            const activeAndFuture = appData.checkpoints.filter(cp => new Date(cp.endDate) >= today);
-            const expired = appData.checkpoints.filter(cp => new Date(cp.endDate) < today);
-
-            return [...activeAndFuture, ...expired]; // expired at back
-        }
-
-
-        // --- CRUD FUNCTIONS ---
-        async function updateField(field, idx, val) {
-            appData.checkpoints[idx][field] = val;
-            await saveData();
-        }
-        async function addCheckpoint() {
-            appData.checkpoints.push(
-                createCheckpointStructure("New Checkpoint", 3)
-            );
-            await saveData();
-        }
-        async function deleteCP(i) {
-            if (confirm("Delete CP?")) {
-                appData.checkpoints.splice(i, 1);
-                await saveData();
             }
         }
 
-        async function addSegment(i) {
-            appData.checkpoints[i].segments.push({
-                id: Date.now(),
-                name: "New Segment",
-                todos: [],
-            });
-            await saveData();
-        }
-        async function delSeg(i, s) {
-            appData.checkpoints[i].segments.splice(s, 1);
-            await saveData();
-        }
-        async function updateSegName(i, s, v) {
-            appData.checkpoints[i].segments[s].name = v;
-            await saveData();
+        // ================== CRUD FUNCTIONS ==================
+
+        async function toggleTask(id) {
+            await fetch(`/api/tasks/${id}/toggle`, { method: 'POST' });
+            await loadTasks();
         }
 
-        async function addTodo(i, s) {
-            appData.checkpoints[i].segments[s].todos.push({
-                text: "Task",
-                done: false,
-            });
-            await saveData();
-        }
-        async function delTodo(i, s, t) {
-            appData.checkpoints[i].segments[s].todos.splice(t, 1);
-            await saveData();
-        }
-        async function toggleTodo(i, s, t) {
-            appData.checkpoints[i].segments[s].todos[t].done =
-                !appData.checkpoints[i].segments[s].todos[t].done;
-            await saveData();
-        }
-        async function updateTodo(i, s, t, v) {
-            appData.checkpoints[i].segments[s].todos[t].text = v;
-            await saveData();
-        }
-
-        // --- INIT ---
-        initData();
-
-
-        // --- Note ---
-
-        let notes = [];
-        let activeNoteId = null;
-        let notesOpen = false;
-        let saveTimer;
-
-        // ---- TOGGLE ----
-        function toggleNotes() {
-            notesOpen = !notesOpen;
-            document
-                .getElementById("notes-overlay")
-                .classList.toggle("translate-x-full", !notesOpen);
-
-            if (notesOpen) loadNotes();
-        }
-
-
-        function renderMarkdown(text) {
-            if (!text) return "";
-
-            // Escape HTML (important for safety)
-            let html = text
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;");
-
-            // H1: # Header
-            html = html.replace(
-                /^# (.+)$/gm,
-                `<span class="text-kaeru-accent font-semibold text-base">$1</span>`
-            );
-
-            // Links: [text](url)
-            html = html.replace(
-                /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
-                `<a href="$2" target="_blank" class="text-kaeru-accent hover:underline">$1</a>`
-            );
-
-
-            // Auto links: https://example.com
-            html = html.replace(
-                /(https?:\/\/[^\s]+)/g,
-                `<a href="$1" target="_blank" class="text-kaeru-accent hover:underline">$1</a>`
-            );
-
-
-            return html;
-        }
-
-        let noteEditMode = false;
-
-        function handleNoteInput() {
-            if (!noteEditMode) return;
-
-            const el = document.getElementById("note-content");
-            const note = notes.find(n => n.id === activeNoteId);
-            if (!note) return;
-
-            note.content = el.innerText;
-            debounceSave(note);
-        }
-
-
-
-
-        function renderNotePreview() {
-            if (!activeNoteId) return;
-
-            const el = document.getElementById("note-content");
-            const note = notes.find(n => n.id === activeNoteId);
-            if (!note) return;
-
-            isEditing = false;
-            el.innerHTML = renderMarkdown((note.content || "").trimEnd());
-        }
-
-
-        function enterEditMode() {
-            if (!activeNoteId) return;
-
-            const note = notes.find(n => n.id === activeNoteId);
-            if (!note) return;
-
-            const el = document.getElementById("note-content");
-            noteEditMode = true;
-            el.innerText = note.content || ""; // RAW markdown
-        }
-
-
-
-        // ---- LOAD ----
-        async function loadNotes() {
-            const res = await fetch("/api/notes");
-            notes = await res.json();
-            if (notes.length) {
-                activeNoteId = notes[0].id;
-                openNote(activeNoteId);
+        async function deleteTask(id) {
+            if (confirm('Delete this task?')) {
+                await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
+                await loadTasks();
             }
-            renderNotesList();
         }
 
-        // ---- CREATE ----
-        function createNote() {
-            const note = {
-                id: Date.now(),
-                title: "Untitled",
-                content: "",
+        function editTaskInline(el, id) { /* same as before */ 
+            // ... (unchanged for brevity - keep your original logic)
+            const originalText = el.textContent;
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = originalText;
+            input.className = 'flex-1 px-2 py-1 border border-gray-300 rounded-xl text-sm outline-none';
+            el.replaceWith(input);
+            input.focus();
+            input.select();
+
+            const save = async () => {
+                if (input.value.trim() && input.value !== originalText) {
+                    await fetch(`/api/tasks/${id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ title: input.value.trim() })
+                    });
+                    await loadTasks();
+                } else {
+                    input.replaceWith(el);
+                }
             };
-            notes.unshift(note);
-            activeNoteId = note.id;
-            renderNotesList();
-            openNote(note.id);
-            saveNote(note);
-        }
 
-        // ---- DELETE ----
-        async function deleteNote(id) {
-            if (!confirm("Delete note?")) return;
-
-            await fetch("/api/notes/delete", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ password: userPassword, id }),
-            });
-
-            notes = notes.filter((n) => n.id !== id);
-            activeNoteId = null;
-            renderNotesList();
-            clearEditor();
-        }
-
-        // ---- RENDER LIST ----
-        function renderNotesList() {
-            const ul = document.getElementById("notes-items");
-            ul.innerHTML = "";
-
-            notes.forEach(n => {
-                const li = document.createElement("li");
-
-                li.className = `
-      group flex justify-between items-center text-xs p-2 rounded cursor-pointer
-      transition-colors
-      ${n.id === activeNoteId
-                        ? "bg-kaeru-accent/20 text-kaeru-accent"
-                        : "text-slate-400 hover:bg-slate-700/40"}
-    `;
-
-
-                li.onclick = () => selectNote(n.id);
-
-                li.innerHTML = `
-      <span class="truncate pointer-events-none">
-        ${n.title}
-      </span>
-      <button
-        class="opacity-0 group-hover:opacity-100 text-red-400 ml-2"
-        onclick="event.stopPropagation(); deleteNote(${n.id})"
-      >
-        ×
-      </button>
-    `;
-
-                ul.appendChild(li);
+            input.addEventListener('blur', save);
+            input.addEventListener('keydown', e => {
+                if (e.key === 'Enter') save();
+                if (e.key === 'Escape') input.replaceWith(el);
             });
         }
 
-
-
-        function selectNote(id) {
-            activeNoteId = id;
-            openNote(id);
-            renderNotesList();
+        function toggleProject(id) {
+            const project = currentProjects.find(p => p.id === id);
+            if (project) {
+                project.isOpen = !project.isOpen;
+                renderProgress();   // Only re-render, no full reload
+            }
         }
 
-        // ---- OPEN ----
-        function openNote(id) {
-            activeNoteId = id;
-            const note = notes.find(n => n.id === id);
-            if (!note) return;
-
-            document.getElementById("note-title").value = note.title;
-
-            const el = document.getElementById("note-content");
-            noteEditMode = false;
-            el.innerHTML = renderMarkdown((note.content || "").trimEnd());
+        async function toggleSubtask(id) {
+            await fetch(`/api/subtasks/${id}/toggle`, { method: 'POST' });
+            
+            // IMPORTANT: Reload data but PRESERVE open/closed state
+            await preserveAndReloadProjects();
         }
 
-
-
-
-        // ---- REALTIME UPDATE ----
-        function updateNoteTitle(val) {
-            const note = notes.find((n) => n.id === activeNoteId);
-            if (!note) return;
-            note.title = val || "Untitled";
-            renderNotesList();
-            debounceSave(note);
+        async function deleteSubtask(sub_id) {
+            if (confirm('Delete this subtask?')) {
+                await fetch(`/api/subtasks/${sub_id}`, { method: 'DELETE' });
+                await preserveAndReloadProjects();
+            }
         }
 
-        function updateNoteContent(val) {
-            const note = notes.find((n) => n.id === activeNoteId);
-            if (!note) return;
-            note.content = val;
-            debounceSave(note);
-        }
+        function editSubtaskInline(el, id) {
+            const original = el.textContent;
+            const input = document.createElement('input');
+            input.value = original;
+            input.className = 'flex-1 text-sm px-2 py-1 border border-gray-300 rounded-xl outline-none';
+            el.replaceWith(input);
+            input.focus();
 
-        // ---- SAVE ----
-        function debounceSave(note) {
-            showSaving();
-            clearTimeout(saveTimer);
-            saveTimer = setTimeout(() => saveNote(note), 500);
-        }
+            const save = async () => {
+                if (input.value.trim() && input.value !== original) {
+                    await fetch(`/api/subtasks/${id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ title: input.value.trim() })
+                    });
+                    await loadProjects();
+                } else {
+                    input.replaceWith(el);
+                }
+            };
 
-        async function saveNote(note) {
-            await fetch("/api/notes/save", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ password: userPassword, note }),
+            input.addEventListener('blur', save);
+            input.addEventListener('keydown', e => {
+                if (e.key === 'Enter') save();
+                if (e.key === 'Escape') input.replaceWith(el);
             });
-            showSaved();
         }
 
-        // ---- UI FEEDBACK ----
-        function showSaving() {
-            const el = document.getElementById("notes-save-indicator");
-            el.innerText = "Saving…";
-            el.classList.remove("hidden");
+        // Modals (unchanged except minor improvements)
+                function showAddTaskModal() {
+            const modal = document.getElementById('task-modal');
+            const input = document.getElementById('task-input');
+            const dueInput = document.getElementById('task-due-date');
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            input.focus();
+            input.value = '';           // Clear previous input
+            dueInput.value = todayDateStr;   // Default to today
+
+            // Remove any previous listeners to prevent duplicates
+            input.onkeydown = null;
+
+            // Add fresh keydown listener for Enter / Escape
+            input.onkeydown = async function(e) {
+                if (e.key === 'Enter') {
+                    const title = input.value.trim();
+                    if (title) {
+                        const due_date = dueInput.value || todayDateStr;
+                        
+                        try {
+                            await fetch('/api/tasks', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ title, due_date })
+                            });
+                            
+                            hideTaskModal();
+                            await loadTasks();        // Refresh the task list
+                        } catch (err) {
+                            console.error("Failed to add task", err);
+                            alert("Failed to save task. Please try again.");
+                        }
+                    }
+                } 
+                else if (e.key === 'Escape') {
+                    hideTaskModal();
+                }
+            };
         }
 
-        function showSaved() {
-            const el = document.getElementById("notes-save-indicator");
-            el.innerText = "✓ Saved";
-            setTimeout(() => el.classList.add("hidden"), 1200);
+        function hideTaskModal() {
+            const modal = document.getElementById('task-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+
+            const input = document.getElementById('task-input');
+            input.value = '';
+            input.onkeydown = null;   // Clean up listener
         }
 
-        function clearEditor() {
-            document.getElementById("note-title").value = "";
-            document.getElementById("note-content").value = "";
+        function showAddProjectModal() {
+            const modal = document.getElementById('project-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            document.getElementById('project-input').focus();
+        }
+
+        function hideProjectModal() {
+            const modal = document.getElementById('project-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        async function addNewProject() {
+            const title = document.getElementById('project-input').value.trim();
+            if (title) {
+                await fetch('/api/projects', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title })
+                });
+                hideProjectModal();
+                await loadProjects();
+            }
+        }
+
+        async function addSubtaskPrompt(projectId) {
+        const title = prompt('New sub-task title:');
+        if (title && title.trim()) {
+            await fetch(`/api/projects/${projectId}/subtasks`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title: title.trim() })
+            });
+            await preserveAndReloadProjects();
+        }
+    }
+
+        // Helper: Reload projects while keeping expanded/collapsed state
+        async function preserveAndReloadProjects() {
+            // Step 1: Remember which projects were open
+            const openProjectIds = currentProjects
+                .filter(p => p.isOpen)
+                .map(p => p.id);
+
+            // Step 2: Load fresh data from server
+            const res = await fetch('/api/projects');
+            currentProjects = await res.json();
+
+            // Step 3: Restore open state for projects that were previously open
+            currentProjects.forEach(project => {
+                if (openProjectIds.includes(project.id)) {
+                    project.isOpen = true;
+                } else {
+                    project.isOpen = false;   // optional: keep closed if it was closed
+                }
+            });
+
+            // Step 4: Re-render
+            renderProgress();
+        }
+
+        // Delete entire project
+        async function deleteProject(id) {
+            if (confirm('Delete this entire project and all its sub-tasks?')) {
+                try {
+                    await fetch(`/api/projects/${id}`, { 
+                        method: 'DELETE' 
+                    });
+                    
+                    // After deletion, reload projects (preserving open state of remaining projects)
+                    await preserveAndReloadProjects();
+                    
+                } catch (e) {
+                    console.error('Failed to delete project', e);
+                    alert('Failed to delete project. Please try again.');
+                }
+            }
+        }
+
+        async function showTaskHistory() {
+            try {
+                // Fetch tasks from the last 30 days
+                const res = await fetch('/api/tasks/history');
+                const historyTasks = await res.json();
+
+                let html = `
+                    <div class="max-w-2xl w-full mx-4 bg-white rounded-3xl shadow-2xl overflow-hidden">
+                        <!-- Modal Header -->
+                        <div class="px-8 py-6 border-b flex items-center justify-between bg-gray-50">
+                            <div>
+                                <h3 class="text-2xl font-semibold text-gray-900">Task History</h3>
+                                <p class="text-sm text-gray-500 mt-1">Past 30 days summary</p>
+                            </div>
+                            <button onclick="hideHistoryModal()" 
+                                    class="text-gray-400 hover:text-gray-600 transition-colors">
+                                <i class="fa-solid fa-xmark text-3xl"></i>
+                            </button>
+                        </div>
+                        
+                        <!-- Content -->
+                        <div class="p-8 max-h-[70vh] overflow-y-auto">
+                `;
+
+                if (historyTasks.length === 0) {
+                    html += `
+                        <div class="text-center py-16 text-gray-400">
+                            <i class="fa-solid fa-clock-rotate-left text-6xl mb-4"></i>
+                            <p class="text-lg">No tasks completed in the past 30 days</p>
+                        </div>
+                    `;
+                } else {
+                    // Group by date
+                    const grouped = {};
+                    historyTasks.forEach(task => {
+                        const date = task.completed_at ? task.completed_at.split('T')[0] : task.due_date;
+                        if (!grouped[date]) grouped[date] = [];
+                        grouped[date].push(task);
+                    });
+
+                    // Sort dates descending (newest first)
+                    const sortedDates = Object.keys(grouped).sort().reverse();
+
+                    sortedDates.forEach(date => {
+                        const dateObj = new Date(date);
+                        const displayDate = dateObj.toLocaleDateString('en-US', { 
+                            weekday: 'long', 
+                            month: 'long', 
+                            day: 'numeric' 
+                        });
+
+                        html += `
+                            <div class="mb-8">
+                                <div class="flex items-center gap-3 mb-4">
+                                    <div class="w-2.5 h-2.5 bg-emerald-500 rounded-full"></div>
+                                    <span class="font-semibold text-gray-900">${displayDate}</span>
+                                    <span class="text-xs text-gray-400 ml-auto">${grouped[date].length} tasks</span>
+                                </div>
+                                <div class="space-y-2 pl-6">
+                        `;
+
+                        grouped[date].forEach(task => {
+                            html += `
+                                <div class="flex items-center gap-3 bg-gray-50 px-5 py-3.5 rounded-2xl">
+                                    <i class="fa-solid fa-check text-emerald-500"></i>
+                                    <span class="flex-1 text-gray-700">${task.title}</span>
+                                    <span class="text-xs text-gray-400 font-mono">${task.due_date || ''}</span>
+                                </div>
+                            `;
+                        });
+
+                        html += `</div></div>`;
+                    });
+                }
+
+                html += `</div></div>`;
+
+                // Create and show modal
+                let modal = document.getElementById('history-modal');
+                if (!modal) {
+                    modal = document.createElement('div');
+                    modal.id = 'history-modal';
+                    modal.className = 'fixed inset-0 bg-black/70 flex items-center justify-center z-[100]';
+                    document.body.appendChild(modal);
+                }
+
+                modal.innerHTML = html;
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+
+            } catch (e) {
+                console.error('Failed to load history', e);
+                alert('Failed to load task history. Please try again.');
+            }
+        }
+
+        function hideHistoryModal() {
+            const modal = document.getElementById('history-modal');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+        }
+
+        async function initializeDashboard() {
+            formatHeaderDate();
+            if ('{{ tab }}' === 'tasks') {
+                await loadTasks();
+                await loadProjects();
+            }
+            console.log('%c✅ Kaeru Dashboard updated successfully', 'color:#10b981; font-family:monospace');
         }
 
 
+        // ====================== NOTES FUNCTIONALITY (Light Theme + Improved) ======================
 
+let currentNotes = [];
+let currentNoteId = null;
+let autoSaveTimeout = null;
+
+async function loadNotes() {
+    try {
+        const res = await fetch('/api/notes');
+        currentNotes = await res.json();
+        renderNotesList();
+    } catch (e) {
+        console.error('Failed to load notes', e);
+    }
+}
+
+function renderNotesList() {
+    const container = document.getElementById('notes-list');
+    if (!container) return;
+    
+    let html = '';
+    currentNotes.forEach(note => {
+        const isActive = note.id === currentNoteId ? 'bg-white shadow-sm border border-gray-200' : 'hover:bg-white';
+        html += `
+            <div onclick="openNote(${note.id})" 
+                 class="px-4 py-3.5 rounded-2xl cursor-pointer transition-all ${isActive}">
+                <div class="font-medium text-gray-900 line-clamp-1">${note.title || 'Untitled Note'}</div>
+                <div class="text-xs text-gray-500 mt-1">${new Date(note.updated_at).toLocaleDateString('en-US', {month:'short', day:'numeric'})}</div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html || `<div class="p-8 text-center text-gray-400">No notes yet.<br>Click + to create one</div>`;
+}
+
+async function createNewNote() {
+    try {
+        const res = await fetch('/api/notes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({})
+        });
+        const data = await res.json();
+        await loadNotes();
+        openNote(data.id);
+    } catch (e) {
+        alert('Failed to create note');
+    }
+}
+
+async function openNote(id) {
+    currentNoteId = id;
+    renderNotesList();
+    
+    try {
+        const res = await fetch(`/api/notes/${id}`);
+        const note = await res.json();
+        
+        document.getElementById('note-title').value = note.title || 'Untitled Note';
+        document.getElementById('note-editor').innerHTML = note.content || '<p></p>';
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+function autoSaveCurrentNote() {
+    clearTimeout(autoSaveTimeout);
+    autoSaveTimeout = setTimeout(saveCurrentNote, 800);
+}
+
+async function saveCurrentNote() {
+    if (!currentNoteId) return;
+    
+    const title = document.getElementById('note-title').value.trim() || 'Untitled Note';
+    const content = document.getElementById('note-editor').innerHTML;
+    
+    try {
+        await fetch(`/api/notes/${currentNoteId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title, content })
+        });
+        await loadNotes();
+    } catch (e) {
+        console.error('Save failed', e);
+    }
+}
+
+async function deleteCurrentNote() {
+    if (!currentNoteId || !confirm('Delete this note permanently?')) return;
+    
+    try {
+        await fetch(`/api/notes/${currentNoteId}`, { method: 'DELETE' });
+        currentNoteId = null;
+        await loadNotes();
+        document.getElementById('note-title').value = '';
+        document.getElementById('note-editor').innerHTML = '';
+    } catch (e) {
+        alert('Failed to delete note');
+    }
+}
+
+// Toolbar Functions
+function execCommand(command) {
+    const editor = document.getElementById('note-editor');
+    editor.focus();
+    document.execCommand(command, false, null);
+}
+
+function setHeading(level) {
+    const editor = document.getElementById('note-editor');
+    editor.focus();
+    if (level === 'h1') document.execCommand('formatBlock', false, 'h1');
+    else if (level === 'h2') document.execCommand('formatBlock', false, 'h2');
+    else if (level === 'h3') document.execCommand('formatBlock', false, 'h3');
+    else document.execCommand('formatBlock', false, 'p');
+}
+
+function setColor(color) {
+    const editor = document.getElementById('note-editor');
+    editor.focus();
+    document.execCommand('foreColor', false, color);
+}
+
+function insertLink() {
+    const url = prompt("Enter the URL:", "https://");
+    if (url && url !== "https://") {
+        const editor = document.getElementById('note-editor');
+        editor.focus();
+        document.execCommand('createLink', false, url);
+    }
+}
+
+function insertCodeBlock() {
+    const code = prompt("Paste or type your code here:");
+    if (code) {
+        const editor = document.getElementById('note-editor');
+        editor.focus();
+        const html = `<pre style="background:#f8fafc; padding:14px; border-radius:10px; border:1px solid #e5e7eb; overflow:auto; font-family:monospace;"><code>${code.replace(/</g, '&lt;')}</code></pre>`;
+        document.execCommand('insertHTML', false, html);
+    }
+}
+
+// Initialize when Notes tab is active
+if ('{{ tab }}' === 'notes') {
+    window.addEventListener('load', loadNotes);
+}
+
+
+        window.onload = initializeDashboard;
     </script>
 </body>
-
 </html>
