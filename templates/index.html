@@ -1,1056 +1,2265 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kaeru • Dashboard</title>
+    <title>Kaeru</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
-    
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- GSAP for animations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
-        
-        :root {
-            font-family: 'Inter', system_ui, sans-serif;
+        :root[data-theme="dark"] {
+            --bg: #0d0d0f; --bg2: #131316; --bg3: #1a1a1f; --bg4: #222228;
+            --border: #2a2a32; --border2: #333340;
+            --text: #f0f0f5; --text2: #a8a8bc; --text3: #6b6b80;
+            --accent: #10b981; --accent2: #059669;
+            --accent-bg: rgba(16,185,129,0.08); --accent-border: rgba(16,185,129,0.25);
+            --red: #ef4444; --red-bg: rgba(239,68,68,0.08);
+            --yellow: #f59e0b; --blue: #3b82f6;
+            --shadow: 0 4px 24px rgba(0,0,0,0.4); --shadow2: 0 2px 8px rgba(0,0,0,0.3);
         }
-        
-        .dashboard-container {
-            margin: 0 auto;
-            background: white;
-            border-radius: 24px;
-            box-shadow: 0 10px 30px -10px rgb(0 0 0 / 0.1);
-            overflow: hidden;
-            border: 1px solid #e5e7eb;
+        :root[data-theme="light"] {
+            --bg: #f8f9fb; --bg2: #ffffff; --bg3: #f1f3f7; --bg4: #e8eaf0;
+            --border: #dde1ea; --border2: #c8cdd8;
+            --text: #0f1117; --text2: #4a5065; --text3: #8a90a5;
+            --accent: #059669; --accent2: #047857;
+            --accent-bg: rgba(5,150,105,0.07); --accent-border: rgba(5,150,105,0.25);
+            --red: #dc2626; --red-bg: rgba(220,38,38,0.06);
+            --yellow: #d97706; --blue: #2563eb;
+            --shadow: 0 4px 24px rgba(0,0,0,0.08); --shadow2: 0 2px 8px rgba(0,0,0,0.05);
         }
-        
-        .tab-active {
-            background-color: #f8fafc;
-            border-bottom: 3px solid #111827;
-            font-weight: 600;
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { height: 100%; overflow: hidden; }
+        body { font-family: 'Sora', sans-serif; background: var(--bg); color: var(--text); font-size: 13px; line-height: 1.5; }
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+
+        /* LAYOUT */
+        .app { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        .topbar {
+            display: flex; align-items: center; gap: 8px;
+            padding: 0 16px; height: 48px; min-height: 48px;
+            background: var(--bg2); border-bottom: 1px solid var(--border);
+            flex-shrink: 0; z-index: 20;
         }
-        
-        .timeline-line {
-            position: relative;
+        .main { flex: 1; display: flex; overflow: hidden; }
+
+        /* TABS */
+        .tab-nav { display: flex; align-items: center; gap: 1px; }
+        .tab-btn {
+            display: flex; align-items: center; gap: 6px;
+            padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 500;
+            color: var(--text3); cursor: pointer; border: none; background: none;
+            transition: all 0.15s; white-space: nowrap;
         }
-        
-        .timeline-line::before {
-            content: '';
-            position: absolute;
-            left: 20px;
-            top: 0;
-            bottom: 0;
-            width: 2px;
-            background: #e5e7eb;
+        .tab-btn:hover { background: var(--bg3); color: var(--text2); }
+        .tab-btn.active { background: var(--accent-bg); color: var(--accent); }
+        .tab-btn i { font-size: 11px; }
+
+        /* SYNC */
+        .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); transition: all 0.3s; }
+        .sync-dot.syncing { background: var(--yellow); animation: pulse 0.8s infinite; }
+        .sync-dot.error { background: var(--red); }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+        /* ICON BUTTONS */
+        .icon-btn {
+            width: 30px; height: 30px; border-radius: 8px; border: none;
+            background: none; color: var(--text3); cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 12px; transition: all 0.15s;
         }
-        
-        .modal {
-            animation: modalPop 0.2s ease forwards;
+        .icon-btn:hover { background: var(--bg3); color: var(--text2); }
+        .icon-btn.danger:hover { background: var(--red-bg); color: var(--red); }
+
+        /* PANELS */
+        .panel { display: flex; flex-direction: column; overflow: hidden; }
+        .panel-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 10px 16px; border-bottom: 1px solid var(--border);
+            flex-shrink: 0; background: var(--bg2);
         }
-        
-        @keyframes modalPop {
-            0% { transform: scale(0.95); opacity: 0; }
-            100% { transform: scale(1); opacity: 1; }
+        .panel-title { font-size: 12px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.06em; }
+        .panel-body { flex: 1; overflow-y: auto; padding: 12px; }
+
+        /* INLINE INPUT */
+        .inline-input {
+            width: 100%; padding: 6px 10px;
+            background: var(--bg3); border: 1px solid var(--border2);
+            border-radius: 8px; color: var(--text); font-size: 13px;
+            font-family: 'Sora', sans-serif; outline: none; transition: border-color 0.15s;
         }
-        
-        .task-item:hover .action-icons,
-        .subtask-item:hover .subtask-actions {
-            opacity: 1;
+        .inline-input:focus { border-color: var(--accent); }
+        .inline-input::placeholder { color: var(--text3); }
+
+        /* TASK ROW */
+        .task-row {
+            display: flex; align-items: center; gap: 8px;
+            padding: 7px 10px; border-radius: 9px;
+            transition: background 0.1s; cursor: default;
         }
-        
-        .progress-ring {
-            transition: stroke-dashoffset 0.35s;
-        }
-        
-        .metadata {
-            font-size: 10px;
-            color: #9ca3af;
+        .task-row:hover { background: var(--bg3); }
+        .task-row:hover .row-actions { opacity: 1; }
+        .row-actions { display: flex; gap: 2px; opacity: 0; transition: opacity 0.15s; flex-shrink: 0; }
+        .task-check { width: 15px; height: 15px; border-radius: 4px; flex-shrink: 0; accent-color: var(--accent); cursor: pointer; }
+        .task-title { flex: 1; font-size: 13px; color: var(--text); }
+        .task-title.done { text-decoration: line-through; color: var(--text3); }
+        .edit-field {
+            flex: 1; padding: 3px 8px;
+            background: var(--bg4); border: 1px solid var(--accent);
+            border-radius: 6px; color: var(--text); font-size: 13px;
+            font-family: 'Sora', sans-serif; outline: none;
         }
 
-        /* NOTE EDITOR HEADINGS - making H1, H2, H3 actually work with proper styling */
-        #note-editor h1 {
-            font-size: 2.25rem;
-            font-weight: 700;
-            line-height: 1.2;
-            margin-top: 1.75rem;
-            margin-bottom: 0.75rem;
-            color: #111827;
+        /* ADD ROW */
+        .add-row {
+            display: flex; align-items: center; gap: 8px;
+            padding: 7px 10px; border-radius: 9px; cursor: text;
+            color: var(--text3); font-size: 12px; transition: background 0.1s;
         }
-        
-        #note-editor h2 {
-            font-size: 1.75rem;
-            font-weight: 600;
-            line-height: 1.3;
-            margin-top: 1.5rem;
-            margin-bottom: 0.5rem;
-            color: #111827;
+        .add-row:hover { background: var(--bg3); color: var(--text2); }
+        .add-row-input {
+            flex: 1; background: none; border: none; outline: none;
+            color: var(--text); font-size: 13px; font-family: 'Sora', sans-serif;
         }
-        
-        #note-editor h3 {
-            font-size: 1.4rem;
-            font-weight: 600;
-            line-height: 1.4;
-            margin-top: 1.25rem;
-            margin-bottom: 0.4rem;
-            color: #111827;
+        .add-row-input::placeholder { color: var(--text3); }
+
+        /* DATE GROUP */
+        .date-label {
+            display: flex; align-items: center; gap: 8px;
+            padding: 10px 10px 4px; font-size: 11px; font-weight: 600;
+            color: var(--text3); text-transform: uppercase; letter-spacing: 0.07em;
+        }
+        .date-label .today-badge {
+            padding: 2px 6px; border-radius: 4px;
+            background: var(--accent-bg); color: var(--accent); font-size: 10px;
+        }
+        .date-divider { height: 1px; background: var(--border); margin: 4px 10px; }
+
+        /* UPCOMING TIMELINE LAYOUT */
+        .upcoming-timeline { position: relative; padding-left: 0; }
+        .upcoming-date-row {
+            display: flex; align-items: flex-start; gap: 12px;
+            margin-bottom: 12px; position: relative;
+        }
+        .upcoming-date-row::before {
+            content: ''; position: absolute; left: 50px; top: 20px; bottom: -12px;
+            width: 1px; background: var(--border);
+        }
+        .upcoming-date-row:last-child::before { display: none; }
+        .date-badge {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            width: 44px; min-width: 44px; padding: 5px 4px;
+            background: var(--bg3); border: 1px solid var(--border2);
+            border-radius: 8px; font-size: 10px; font-weight: 600; color: var(--text2);
+            flex-shrink: 0; text-align: center; z-index: 1;
+        }
+        .date-badge .day-num { font-size: 15px; font-weight: 700; color: var(--text); line-height: 1; }
+        .date-badge .month-name { font-size: 9px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.06em; }
+        .upcoming-tasks-col { flex: 1; min-width: 0; }
+        .tomorrow-badge { background: var(--accent-bg); border-color: var(--accent-border); }
+        .tomorrow-badge .day-num { color: var(--accent); }
+
+        /* PROJECT CARD */
+        .project-card { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 8px; transition: border-color 0.15s; }
+        .project-card:hover { border-color: var(--border2); }
+        .project-header {
+            display: flex; align-items: center; gap: 8px;
+            padding: 10px 12px; cursor: pointer;
+            background: var(--bg2); transition: background 0.1s;
+        }
+        .project-header:hover { background: var(--bg3); }
+        .project-chevron { color: var(--text3); font-size: 10px; transition: transform 0.25s; flex-shrink: 0; }
+        .project-chevron.open { transform: rotate(90deg); }
+        .project-name { flex: 1; font-weight: 500; font-size: 13px; }
+        .project-meta { font-size: 11px; color: var(--text3); flex-shrink: 0; }
+        .project-body-wrapper { overflow: hidden; }
+        .project-body { background: var(--bg); padding-bottom: 4px; }
+
+        /* CIRCULAR PROGRESS */
+        .circ-progress { position: relative; width: 28px; height: 28px; flex-shrink: 0; }
+        .circ-progress svg { transform: rotate(-90deg); }
+        .circ-progress .track { fill: none; stroke: var(--bg4); stroke-width: 3; }
+        .circ-progress .fill { fill: none; stroke: var(--accent); stroke-width: 3; stroke-linecap: round; transition: stroke-dashoffset 0.5s cubic-bezier(0.4,0,0.2,1); }
+
+        /* PROJECT META */
+        .project-meta-row {
+            display: flex; gap: 10px; padding: 6px 14px 2px;
+            font-size: 10px; color: var(--text3);
+        }
+        .project-meta-row span { display: flex; align-items: center; gap: 3px; }
+
+        /* SUBTASK */
+        .subtask-row {
+            display: flex; align-items: center; gap: 8px;
+            padding: 6px 14px; transition: background 0.1s;
+        }
+        .subtask-row:hover { background: var(--bg3); }
+        .subtask-row:hover .row-actions { opacity: 1; }
+
+        /* COLLAPSIBLE SECTION (Tasks Tab mobile) */
+        .section-collapse-btn {
+            display: flex; align-items: center; gap: 6px;
+            background: none; border: none; cursor: pointer;
+            color: var(--text2); font-size: 11px; font-weight: 600;
+            text-transform: uppercase; letter-spacing: 0.06em;
+            padding: 0; transition: color 0.15s;
+        }
+        .section-collapse-btn:hover { color: var(--accent); }
+        .section-collapse-btn i { font-size: 9px; transition: transform 0.25s; }
+        .section-collapse-btn.collapsed i { transform: rotate(-90deg); }
+        .section-content { overflow: hidden; flex: 1; display: flex; flex-direction: column; }
+
+        /* SPLIT LAYOUT */
+        .split-left { flex: 1; overflow: hidden; border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+        .split-right { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+
+        /* NOTES */
+        .notes-sidebar {
+            width: 220px; min-width: 220px; border-right: 1px solid var(--border);
+            display: flex; flex-direction: column; background: var(--bg2);
+            transition: transform 0.25s;
+        }
+        .note-item {
+            padding: 9px 12px; border-radius: 8px; cursor: pointer;
+            transition: background 0.1s; border: 1px solid transparent; position: relative;
+        }
+        .note-item:hover { background: var(--bg3); }
+        .note-item.active { background: var(--accent-bg); border-color: var(--accent-border); }
+        .note-item-title { font-size: 12px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .note-item-date { font-size: 10px; color: var(--text3); margin-top: 2px; }
+        .note-pin-icon { position: absolute; top: 8px; right: 8px; font-size: 9px; color: var(--accent); }
+
+        /* NOTE EDITOR - REDESIGNED */
+        .editor-toolbar {
+            display: flex; flex-wrap: wrap; gap: 2px; align-items: center;
+            padding: 6px 12px; border-bottom: 1px solid var(--border);
+            background: var(--bg2); flex-shrink: 0;
+        }
+        .tb-btn {
+            padding: 4px 8px; border-radius: 6px; border: none; background: none;
+            color: var(--text2); font-size: 12px; cursor: pointer;
+            transition: all 0.1s; display: flex; align-items: center; position: relative;
+        }
+        .tb-btn:hover { background: var(--bg3); color: var(--text); }
+        .tb-btn.active { background: var(--accent-bg); color: var(--accent); }
+        .tb-sep { width: 1px; height: 18px; background: var(--border); margin: 0 3px; flex-shrink: 0; }
+        .tb-select {
+            padding: 3px 6px; border-radius: 6px;
+            background: var(--bg3); border: 1px solid var(--border);
+            color: var(--text2); font-size: 11px; font-family: 'Sora', sans-serif;
+            outline: none; cursor: pointer;
+        }
+        .color-dot { width: 16px; height: 16px; border-radius: 4px; cursor: pointer; border: 2px solid transparent; transition: border-color 0.1s, transform 0.1s; }
+        .color-dot:hover { border-color: var(--text2); transform: scale(1.15); }
+
+        #note-title-input {
+            width: 100%; padding: 14px 16px 8px;
+            background: none; border: none; border-bottom: 1px solid var(--border);
+            color: var(--text); font-size: 18px; font-weight: 600;
+            font-family: 'Sora', sans-serif; outline: none;
+        }
+        #note-title-input::placeholder { color: var(--text3); }
+
+        /* NEW RICH TEXT EDITOR - iframe based for stability */
+        #note-editor-wrap { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+        #note-editor {
+            flex: 1; padding: 12px 16px; overflow-y: auto;
+            outline: none; color: var(--text); font-size: 13.5px;
+            line-height: 1.75; caret-color: var(--accent); min-height: 0;
+            font-family: 'Sora', sans-serif;
+        }
+        /* Scoped editor styles */
+        #note-editor h1 { font-size: 22px; font-weight: 700; margin: 16px 0 8px; color: var(--text); }
+        #note-editor h2 { font-size: 18px; font-weight: 600; margin: 14px 0 6px; color: var(--text); }
+        #note-editor h3 { font-size: 15px; font-weight: 600; margin: 12px 0 4px; color: var(--text); }
+        #note-editor p { margin: 4px 0; min-height: 1.2em; }
+        #note-editor ul { padding-left: 22px; margin: 6px 0; list-style-type: disc !important; }
+        #note-editor ol { padding-left: 22px; margin: 6px 0; list-style-type: decimal !important; }
+        #note-editor li { margin: 3px 0; display: list-item !important; }
+        #note-editor ul li { list-style-type: disc !important; }
+        #note-editor ol li { list-style-type: decimal !important; }
+        #note-editor blockquote { border-left: 3px solid var(--accent); padding-left: 12px; color: var(--text2); margin: 8px 0; font-style: italic; }
+        #note-editor code { background: var(--bg4); padding: 1px 5px; border-radius: 4px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--accent); }
+        #note-editor pre { background: var(--bg4); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin: 8px 0; overflow-x: auto; }
+        #note-editor pre code { background: none; padding: 0; color: var(--text); }
+        #note-editor a { color: var(--blue); text-decoration: underline; cursor: pointer; }
+        #note-editor hr { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
+        #note-editor table { border-collapse: collapse; width: 100%; margin: 8px 0; }
+        #note-editor td, #note-editor th { border: 1px solid var(--border); padding: 6px 10px; font-size: 12px; }
+        #note-editor th { background: var(--bg3); font-weight: 600; }
+
+        /* TIMELESS - REDESIGNED VIRTUALIZED TIMELINE */
+        .tl-outer { display: flex; flex: 1; overflow: hidden; position: relative; }
+        .tl-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .tl-search-bar {
+            padding: 8px 12px; border-bottom: 1px solid var(--border);
+            display: flex; gap: 8px; align-items: center; background: var(--bg2); flex-shrink: 0;
+        }
+        .tl-search-input {
+            flex: 1; padding: 5px 10px; background: var(--bg3); border: 1px solid var(--border);
+            border-radius: 8px; color: var(--text); font-size: 12px;
+            font-family: 'Sora', sans-serif; outline: none; transition: border-color 0.15s;
+        }
+        .tl-search-input:focus { border-color: var(--accent); }
+        .tl-search-input::placeholder { color: var(--text3); }
+        .tl-tags-bar {
+            padding: 6px 12px; border-bottom: 1px solid var(--border);
+            display: flex; gap: 5px; align-items: center; flex-wrap: wrap;
+            background: var(--bg2); flex-shrink: 0;
+        }
+        .tag-chip {
+            padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 500;
+            background: var(--bg3); border: 1px solid var(--border2); color: var(--text2);
+            cursor: pointer; transition: all 0.15s; white-space: nowrap;
+        }
+        .tag-chip:hover { border-color: var(--accent); color: var(--accent); }
+        .tag-chip.active { background: var(--accent-bg); border-color: var(--accent); color: var(--accent); }
+        .tag-chip.reset { color: var(--red); border-color: transparent; background: var(--red-bg); }
+        .tag-chip.reset:hover { border-color: var(--red); }
+
+        /* VIRTUAL SCROLL CONTAINER */
+        #tl-scroll { flex: 1; overflow-y: auto; position: relative; }
+        #tl-inner { position: relative; }
+
+        /* DESKTOP: centered vertical timeline with year left, title right */
+        .tl-desktop-row {
+            display: flex; align-items: flex-start; gap: 0;
+            position: absolute; width: 100%; left: 0;
+        }
+        .tl-year-col {
+            width: 120px; min-width: 120px; text-align: right;
+            padding: 0 16px 0 8px; padding-top: 2px;
+            flex-shrink: 0;
+        }
+        .tl-year-hijri { font-size: 18px; font-weight: 700; color: var(--text); font-family: 'JetBrains Mono', monospace; line-height: 1.2; }
+        .tl-year-greg { font-size: 10px; color: var(--text3); font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
+        .tl-center-line {
+            display: flex; flex-direction: column; align-items: center;
+            width: 24px; min-width: 24px; flex-shrink: 0;
+        }
+        .tl-node-dot {
+            width: 12px; height: 12px; border-radius: 50%;
+            background: var(--accent); border: 2px solid var(--bg);
+            box-shadow: 0 0 0 3px var(--accent-border);
+            cursor: pointer; transition: all 0.2s; flex-shrink: 0; margin-top: 3px;
+            z-index: 1; position: relative;
+        }
+        .tl-node-dot:hover { transform: scale(1.3); }
+        .tl-node-dot.selected { background: var(--yellow); box-shadow: 0 0 0 3px rgba(245,158,11,0.3); }
+        .tl-title-col { flex: 1; min-width: 0; padding: 0 12px 0 10px; }
+        .tl-node-card {
+            padding: 8px 12px; border-radius: 10px; cursor: pointer;
+            background: var(--bg2); border: 1px solid var(--border);
+            transition: all 0.15s; margin-bottom: 0;
+        }
+        .tl-node-card:hover { border-color: var(--border2); background: var(--bg3); }
+        .tl-node-card.selected { border-color: var(--accent); background: var(--accent-bg); }
+        .tl-node-title { font-size: 13px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .tl-node-tags { display: flex; gap: 4px; margin-top: 4px; flex-wrap: wrap; }
+        .tl-tag { font-size: 9px; padding: 1px 6px; border-radius: 10px; background: var(--bg3); color: var(--text3); border: 1px solid var(--border); }
+
+        /* DETAIL PANEL */
+        .detail-panel {
+            width: 340px; min-width: 340px; border-left: 1px solid var(--border);
+            background: var(--bg2); display: flex; flex-direction: column; overflow: hidden;
+        }
+        .detail-content { flex: 1; overflow-y: auto; padding: 14px; font-size: 13px; }
+        .detail-label { font-size: 10px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+        .detail-value { color: var(--text2); margin-bottom: 12px; line-height: 1.6; }
+        .detail-desc { color: var(--text2); margin-bottom: 12px; line-height: 1.75; }
+        .detail-desc a { color: var(--blue); text-decoration: underline; }
+        .source-link {
+            display: flex; align-items: center; gap: 6px;
+            padding: 5px 8px; border-radius: 6px;
+            background: var(--bg3); border: 1px solid var(--border);
+            margin-bottom: 4px; font-size: 12px; color: var(--blue);
+            text-decoration: none; transition: border-color 0.1s;
+        }
+        .source-link:hover { border-color: var(--blue); }
+
+        /* MOBILE OVERLAY DETAIL */
+        .tl-mobile-overlay {
+            display: none; position: fixed; inset: 48px 0 0;
+            background: var(--bg2); z-index: 60;
+            flex-direction: column; overflow: hidden;
+        }
+        .tl-mobile-overlay.open { display: flex; }
+
+        /* MODAL */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 100; padding: 16px; backdrop-filter: blur(4px);
+        }
+        .modal-box {
+            background: var(--bg2); border: 1px solid var(--border2);
+            border-radius: 16px; width: 100%; max-width: 460px;
+            box-shadow: var(--shadow); animation: modalIn 0.2s ease;
+        }
+        @keyframes modalIn { from{opacity:0;transform:scale(0.96)} to{opacity:1;transform:scale(1)} }
+        .modal-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 14px 16px 10px; border-bottom: 1px solid var(--border);
+        }
+        .modal-title { font-size: 14px; font-weight: 600; }
+        .modal-body { padding: 14px 16px; }
+        .modal-footer { padding: 10px 16px 14px; display: flex; gap: 8px; justify-content: flex-end; }
+        .field-label { font-size: 11px; font-weight: 500; color: var(--text3); margin-bottom: 4px; }
+        .field-group { margin-bottom: 10px; }
+        .field-input {
+            width: 100%; padding: 8px 10px;
+            background: var(--bg3); border: 1px solid var(--border);
+            border-radius: 8px; color: var(--text); font-size: 13px;
+            font-family: 'Sora', sans-serif; outline: none; transition: border-color 0.15s;
+        }
+        .field-input:focus { border-color: var(--accent); }
+        .field-textarea {
+            width: 100%; padding: 8px 10px;
+            background: var(--bg3); border: 1px solid var(--border);
+            border-radius: 8px; color: var(--text); font-size: 13px;
+            font-family: 'Sora', sans-serif; outline: none; resize: none;
+            transition: border-color 0.15s; min-height: 70px;
+        }
+        .field-textarea:focus { border-color: var(--accent); }
+        .btn-primary {
+            padding: 7px 16px; background: var(--accent); color: #fff;
+            border: none; border-radius: 8px; font-size: 12px; font-weight: 600;
+            cursor: pointer; font-family: 'Sora', sans-serif; transition: all 0.15s;
+        }
+        .btn-primary:hover { background: var(--accent2); }
+        .btn-secondary {
+            padding: 7px 14px; background: none; color: var(--text2);
+            border: 1px solid var(--border); border-radius: 8px; font-size: 12px;
+            cursor: pointer; font-family: 'Sora', sans-serif; transition: all 0.15s;
+        }
+        .btn-secondary:hover { background: var(--bg3); }
+        .btn-danger {
+            padding: 7px 14px; background: none; color: var(--red);
+            border: 1px solid transparent; border-radius: 8px; font-size: 12px;
+            cursor: pointer; font-family: 'Sora', sans-serif; transition: all 0.15s;
+        }
+        .btn-danger:hover { background: var(--red-bg); border-color: var(--red); }
+
+        /* NODE RICH TEXT EDITOR */
+        .node-desc-editor {
+            min-height: 80px; padding: 8px 10px;
+            background: var(--bg3); border: 1px solid var(--border);
+            border-radius: 8px; color: var(--text); font-size: 13px;
+            font-family: 'Sora', sans-serif; outline: none;
+            transition: border-color 0.15s; line-height: 1.6;
+        }
+        .node-desc-editor:focus { border-color: var(--accent); }
+        .node-desc-editor a { color: var(--blue); text-decoration: underline; }
+
+        /* DRAG */
+        .drag-handle { cursor: grab; color: var(--text3); font-size: 10px; }
+        .drag-handle:active { cursor: grabbing; }
+        .note-item.drag-over { border: 1px dashed var(--accent); }
+
+        /* HISTORY */
+        .history-item {
+            display: flex; align-items: center; gap: 8px;
+            padding: 7px 10px; border-radius: 8px; border: 1px solid var(--border);
+            margin-bottom: 4px;
         }
 
-        /* Mobile responsiveness enhancements for notes sidebar */
+        /* TOAST */
+        #toast {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            background: var(--bg4); border: 1px solid var(--border2); border-radius: 8px;
+            padding: 8px 14px; font-size: 12px; color: var(--text2);
+            opacity: 0; transition: opacity 0.2s; z-index: 999; pointer-events: none;
+        }
+        #toast.show { opacity: 1; }
+
+        /* MOBILE MENU DRAWER */
+        .mobile-drawer {
+            display: none; position: fixed; top: 0; right: 0; bottom: 0;
+            width: 220px; background: var(--bg2); border-left: 1px solid var(--border);
+            z-index: 200; flex-direction: column; padding: 16px;
+            box-shadow: var(--shadow); animation: drawerIn 0.2s ease;
+        }
+        .mobile-drawer.open { display: flex; }
+        @keyframes drawerIn { from{transform:translateX(100%)} to{transform:translateX(0)} }
+        .drawer-backdrop {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.5); z-index: 199;
+        }
+        .drawer-backdrop.open { display: block; }
+        .drawer-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 12px; border-radius: 8px; cursor: pointer;
+            color: var(--text2); font-size: 13px; transition: background 0.1s;
+            border: none; background: none; width: 100%; text-align: left;
+        }
+        .drawer-item:hover { background: var(--bg3); color: var(--text); }
+        .drawer-item.danger { color: var(--red); }
+        .drawer-item.danger:hover { background: var(--red-bg); }
+
+        /* SEARCH RESULTS */
+        .search-result-item {
+            display: flex; align-items: center; gap: 8px;
+            padding: 8px 10px; border-radius: 8px; cursor: pointer;
+            transition: background 0.1s; border: 1px solid var(--border);
+            margin-bottom: 4px;
+        }
+        .search-result-item:hover { background: var(--bg3); border-color: var(--accent-border); }
+
+        /* RESPONSIVE */
         @media (max-width: 768px) {
-            #notes-sidebar {
-                box-shadow: 10px 0 20px -10px rgb(0 0 0 / 0.15);
+            .notes-sidebar {
+                position: fixed; top: 48px; left: 0; bottom: 0;
+                z-index: 50; transform: translateX(-100%);
+                width: 260px; min-width: 260px;
             }
+            .notes-sidebar.open { transform: translateX(0); }
+            .detail-panel { display: none !important; }
+            .tl-year-col { width: 80px; min-width: 80px; }
+            .tl-year-hijri { font-size: 14px; }
+            .tasks-mobile-stack { flex-direction: column !important; }
+            .tasks-mobile-stack .split-left,
+            .tasks-mobile-stack .split-right { border-right: none !important; border-bottom: 1px solid var(--border); }
+            .tasks-mobile-stack .split-right { border-bottom: none; }
+            .mobile-actions-visible { display: flex !important; }
+            .desktop-only-actions { display: none !important; }
         }
+        @media (min-width: 769px) {
+            .notes-sidebar { transform: none !important; }
+            .mobile-only { display: none !important; }
+        }
+
+        /* DATE PICKER */
+        input[type="date"] {
+            padding: 5px 8px; background: var(--bg3);
+            border: 1px solid var(--border); border-radius: 6px;
+            color: var(--text); font-size: 11px; font-family: 'Sora', sans-serif;
+            outline: none; cursor: pointer; transition: border-color 0.15s;
+        }
+        input[type="date"]:focus { border-color: var(--accent); }
+        input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); cursor: pointer; }
+
+        /* TAG INPUT */
+        .tag-input-wrap { position: relative; }
+        .tag-suggestions {
+            position: absolute; top: 100%; left: 0; right: 0; z-index: 10;
+            background: var(--bg2); border: 1px solid var(--border2); border-radius: 8px;
+            margin-top: 2px; max-height: 120px; overflow-y: auto;
+            box-shadow: var(--shadow2);
+        }
+        .tag-sug-item {
+            padding: 5px 10px; cursor: pointer; font-size: 12px; color: var(--text2);
+            transition: background 0.1s;
+        }
+        .tag-sug-item:hover { background: var(--bg3); color: var(--text); }
+        .tags-preview { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+        .tag-pill {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 2px 8px; border-radius: 20px; font-size: 10px;
+            background: var(--accent-bg); border: 1px solid var(--accent-border);
+            color: var(--accent);
+        }
+        .tag-pill button { background: none; border: none; cursor: pointer; color: var(--accent); font-size: 9px; padding: 0; }
+
+        /* LINK MODAL */
+        #link-modal .modal-box { max-width: 380px; }
     </style>
 </head>
-<body class="bg-slate-100">
-    <div class="dashboard-container mx-auto h-[calc(100vh-1rem)] flex flex-col">
-        <!-- HEADER -->
-        <div class="px-4 md:px-8 py-5 border-b flex items-center justify-between bg-white">
-        <div id="header-date" class="text-3xl hidden md:inline font-semibold text-gray-900"></div>
-        
-        <div class="flex border border-gray-200 rounded-2xl overflow-hidden">
-            <!-- Tasks Tab -->
-            <a href="/tasks" 
-               class="tab px-4 md:px-8 py-3 text-sm font-medium flex items-center gap-x-2 justify-center md:justify-start transition-colors {{ 'tab-active' if tab == 'tasks' else '' }}">
-                <i class="fa-solid fa-list-check text-lg"></i>
-                <span class="hidden md:inline">Tasks</span>
-            </a>
-            
-            <!-- Notes Tab -->
-            <a href="/notes" 
-               class="tab px-4 md:px-8 py-3 text-sm font-medium flex items-center gap-x-2 justify-center md:justify-start transition-colors {{ 'tab-active' if tab == 'notes' else '' }}">
-                <i class="fa-solid fa-note-sticky text-lg"></i>
-                <span class="hidden md:inline">Notes</span>
-            </a>
-            
-            <!-- Timeless Tab -->
-            <a href="/timeless" 
-               class="tab px-4 md:px-8 py-3 text-sm font-medium flex items-center gap-x-2 justify-center md:justify-start transition-colors {{ 'tab-active' if tab == 'timeless' else '' }}">
-                <i class="fa-solid fa-infinity text-lg"></i>
-                <span class="hidden md:inline">Timeless</span>
-            </a>
+<body>
+<div class="app">
+    <!-- TOPBAR -->
+    <div class="topbar">
+        <div style="display:flex;align-items:center;gap:6px;margin-right:8px">
+            <i class="fa-solid fa-frog" style="color:var(--accent);font-size:14px"></i>
+            <span style="font-size:13px;font-weight:700;color:var(--text)">Kaeru</span>
         </div>
-        
-        <div class="flex items-center gap-x-4">
-            <button onclick="showTaskHistory()" class="flex items-center gap-x-2 text-gray-500 hover:text-gray-700 text-sm font-medium">
-                <i class="fa-solid fa-clock-rotate-left"></i>
-                <span class="hidden md:inline">Task History</span>
-            </button>
-            <div class="w-9 h-9 bg-gray-100 rounded-2xl flex items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors">
-                <img src="https://i.pinimg.com/1200x/72/86/7f/72867fad6c5c548cfd2fa3170e6c8230.jpg" alt="" class="w-9 h-9 bg-gray-100 rounded-2xl flex items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors">
-            </div>
-        </div>
-    </div>
 
-        <!-- MAIN CONTENT -->
-        <div class="flex-1 flex overflow-hidden" id="main-content">
+        <div class="tab-nav">
+            <button class="tab-btn {% if tab == 'tasks' %}active{% endif %}" onclick="location.href='/tasks'">
+                <i class="fa-solid fa-list-check"></i><span>Tasks</span>
+            </button>
+            <button class="tab-btn {% if tab == 'notes' %}active{% endif %}" onclick="location.href='/notes'">
+                <i class="fa-solid fa-note-sticky"></i><span>Notes</span>
+            </button>
+            <button class="tab-btn {% if tab == 'timeless' %}active{% endif %}" onclick="location.href='/timeless'">
+                <i class="fa-solid fa-infinity"></i><span>Timeless</span>
+            </button>
+        </div>
+
+        <div style="flex:1"></div>
+
+        <span id="clock" style="font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace;white-space:nowrap"></span>
+
+        <div style="display:flex;align-items:center;gap:5px;padding:0 6px">
+            <div class="sync-dot" id="sync-dot"></div>
+            <span id="sync-label" style="font-size:10px;color:var(--text3)">Synced</span>
+        </div>
+
+        <!-- Desktop controls -->
+        <div class="desktop-only-actions" style="display:flex;align-items:center;gap:2px">
+            <button class="icon-btn" onclick="toggleTheme()" title="Toggle theme">
+                <i class="fa-solid fa-circle-half-stroke" id="theme-icon"></i>
+            </button>
             {% if tab == 'tasks' %}
-            <div class="flex flex-1 overflow-hidden flex-col lg:flex-row">
-                <!-- LEFT: Timeline -->
-                <div class="flex-1 flex flex-col border-b lg:border-r overflow-hidden relative">
-                    <div class="flex-1 overflow-y-auto p-6 space-y-8" id="timeline-container"></div>
-                    
-                    
-                </div>
-
-                <!-- RIGHT: Progress -->
-                <div class="flex-1 flex flex-col overflow-hidden">
-                    <div class="px-6 py-4 border-b flex items-center justify-between bg-white">
-                        <h2 class="text-lg font-semibold text-gray-900">Progress</h2>
-                        <button onclick="showAddProjectModal()" 
-                                class="flex items-center justify-center w-8 h-8 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-2xl transition-colors">
-                            <i class="fa-solid fa-plus"></i>
-                        </button>
-                    </div>
-                    
-                    <div class="flex-1 overflow-y-auto p-6 space-y-4" id="progress-container">
-                        <!-- Rendered by JS -->
-                    </div>
-                </div>
-            </div>
-
-
-<!-- ========================================================== -->
-
-                <!-- note@kaeru NOTE SECTION -->
-
-<!-- ========================================================== -->
-
-
-
-            {% elif tab == 'notes' %}
-<div class="flex flex-1 overflow-hidden bg-white" id="notes-app">
-    <!-- LEFT SIDEBAR: Notes List (Mobile: hidden by default + toggle drawer) -->
-    <div id="notes-sidebar" class="w-80 border-r border-gray-200 flex flex-col bg-gray-50 fixed md:static inset-y-0 left-0 z-50 -translate-x-full md:translate-x-0 transition-transform duration-300">
-        <div class="p-5 border-b border-gray-200 flex items-center justify-between bg-white">
-            <div class="flex items-center gap-x-3">
-                <!-- Mobile close button (only visible when sidebar is open on mobile) -->
-                <button onclick="toggleNotesSidebar()" class="md:hidden text-gray-700 hover:text-gray-900 w-8 h-8 flex items-center justify-center">
-                    <i class="fa-solid fa-xmark text-2xl"></i>
-                </button>
-                <h2 class="text-xl font-semibold text-gray-900">Notes</h2>
-            </div>
-            <button onclick="createNewNote()" 
-                    class="w-8 h-8 bg-gray-900 hover:bg-black text-white rounded-2xl flex items-center justify-center transition-all active:scale-95">
-                <i class="fa-solid fa-plus"></i>
+            <button class="icon-btn" onclick="showHistory()" title="Task history" style="font-size:11px">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+            </button>
+            {% endif %}
+            <button class="icon-btn danger" onclick="location.href='/logout'" title="Logout">
+                <i class="fa-solid fa-right-from-bracket"></i>
             </button>
         </div>
-        
-        <div class="flex-1 overflow-y-auto p-3 space-y-1" id="notes-list">
-            <!-- Populated by JS -->
+
+        <!-- Mobile hamburger -->
+        <button class="icon-btn mobile-only" onclick="openDrawer()" style="display:none">
+            <i class="fa-solid fa-bars"></i>
+        </button>
+    </div>
+
+    <!-- MOBILE DRAWER BACKDROP -->
+    <div class="drawer-backdrop" id="drawer-backdrop" onclick="closeDrawer()"></div>
+    <!-- MOBILE DRAWER -->
+    <div class="mobile-drawer" id="mobile-drawer">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+            <span style="font-size:13px;font-weight:600;color:var(--text)">Menu</span>
+            <button class="icon-btn" onclick="closeDrawer()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <button class="drawer-item" onclick="toggleTheme();closeDrawer()">
+            <i class="fa-solid fa-circle-half-stroke" id="theme-icon-mobile"></i>
+            <span id="theme-label-mobile">Toggle Theme</span>
+        </button>
+        {% if tab == 'tasks' %}
+        <button class="drawer-item" onclick="showHistory();closeDrawer()">
+            <i class="fa-solid fa-clock-rotate-left"></i> Task History
+        </button>
+        {% endif %}
+        <div style="flex:1"></div>
+        <button class="drawer-item danger" onclick="location.href='/logout'">
+            <i class="fa-solid fa-right-from-bracket"></i> Logout
+        </button>
+    </div>
+
+    <!-- MAIN -->
+    <div class="main">
+
+    {% if tab == 'tasks' %}
+    <!-- TASKS TAB -->
+    <div style="display:flex;flex:1;overflow:hidden" class="tasks-mobile-stack" id="tasks-layout">
+        <!-- Left: Timeline Tasks -->
+        <div class="panel split-left" id="tasks-panel">
+            <div class="panel-header">
+                <button class="section-collapse-btn" id="tasks-collapse-btn" onclick="toggleSection('tasks')">
+                    <i class="fa-solid fa-chevron-down"></i>
+                    <span>Tasks</span>
+                </button>
+                <div style="display:flex;align-items:center;gap:6px">
+                    <span id="today-stat" style="font-size:11px;color:var(--text3)"></span>
+                    <!-- Quick-add date picker -->
+                    <input type="date" id="global-date-picker" title="Pick date to add task" onchange="focusDateInput(this.value)">
+                </div>
+            </div>
+            <div class="section-content" id="tasks-section-content">
+                <div class="panel-body" id="timeline-body"></div>
+            </div>
+        </div>
+        <!-- Right: Projects -->
+        <div class="panel split-right" id="projects-panel">
+            <div class="panel-header">
+                <button class="section-collapse-btn" id="projects-collapse-btn" onclick="toggleSection('projects')">
+                    <i class="fa-solid fa-chevron-down"></i>
+                    <span>Projects</span>
+                </button>
+                <button class="icon-btn" onclick="showAddProjectModal()" title="Add project" style="color:var(--accent)">
+                    <i class="fa-solid fa-plus"></i>
+                </button>
+            </div>
+            <div class="section-content" id="projects-section-content">
+                <div class="panel-body" id="projects-body"></div>
+            </div>
         </div>
     </div>
 
-    <!-- Mobile backdrop for notes sidebar -->
-    <div id="notes-backdrop" onclick="toggleNotesSidebar()" class="hidden md:hidden fixed inset-0 bg-black/50 z-40"></div>
+    {% elif tab == 'notes' %}
+    <!-- NOTES TAB -->
+    <div id="notes-sidebar" class="notes-sidebar">
+        <div class="panel-header" style="padding:10px 12px">
+            <span class="panel-title">Notes</span>
+            <button class="icon-btn" onclick="createNote()" title="New note" style="color:var(--accent)"><i class="fa-solid fa-plus"></i></button>
+        </div>
+        <div style="flex:1;overflow-y:auto;padding:8px" id="notes-list"></div>
+    </div>
+    <div id="notes-backdrop" onclick="closeSidebar()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:49"></div>
 
-    <!-- RIGHT: Editor Area -->
-    <div class="flex-1 flex flex-col">
+    <div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
         <!-- Toolbar -->
-        <div class="h-auto md:h-14 border-b border-gray-200 bg-white flex flex-wrap md:flex-nowrap items-center px-4 md:px-6 gap-x-2 gap-y-3 py-3 md:py-0 shadow-sm">
-    <!-- Mobile toggle button for notes list (visible only on mobile) -->
-    <button onclick="toggleNotesSidebar()" 
-            class="md:hidden px-3 py-1.5 hover:bg-gray-100 rounded-xl text-gray-700 flex items-center justify-center flex-shrink-0">
-        <i class="fa-solid fa-bars text-xl"></i>
-    </button>
-
-    <!-- Headings -->
-    <select onchange="setHeading(this.value)" 
-            class="bg-transparent border border-gray-300 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:border-gray-400 flex-shrink-0">
-        <option value="">Normal</option>
-        <option value="h1">Heading 1</option>
-        <option value="h2">Heading 2</option>
-        <option value="h3">Heading 3</option>
-    </select>
-
-    <!-- Formatting -->
-    <button onclick="execCommand('bold')" class="toolbar-btn px-3 py-1.5 hover:bg-gray-100 rounded-xl flex-shrink-0" title="Bold">
-        <i class="fa-solid fa-bold"></i>
-    </button>
-    <button onclick="execCommand('italic')" class="toolbar-btn px-3 py-1.5 hover:bg-gray-100 rounded-xl flex-shrink-0" title="Italic">
-        <i class="fa-solid fa-italic"></i>
-    </button>
-    <button onclick="execCommand('underline')" class="toolbar-btn px-3 py-1.5 hover:bg-gray-100 rounded-xl flex-shrink-0" title="Underline">
-        <i class="fa-solid fa-underline"></i>
-    </button>
-
-    <div class="h-6 w-px bg-gray-300 mx-2 md:mx-4 flex-shrink-0"></div>
-
-
-
-    <!-- Link -->
-    <button onclick="insertLink()" class="toolbar-btn px-3 py-1.5 hover:bg-gray-100 rounded-xl flex-shrink-0" title="Insert Link">
-        <i class="fa-solid fa-link"></i>
-    </button>
-
-    <!-- Colors -->
-    <div class="flex gap-1 ml-2 md:ml-4 flex-shrink-0">
-        <button onclick="setColor('#000000')" class="w-6 h-6 rounded-lg bg-black hover:ring-2 hover:ring-gray-300"></button>
-        <button onclick="setColor('#ef4444')" class="w-6 h-6 rounded-lg bg-red-500 hover:ring-2 hover:ring-gray-300"></button>
-        <button onclick="setColor('#eab308')" class="w-6 h-6 rounded-lg bg-yellow-500 hover:ring-2 hover:ring-gray-300"></button>
-        <button onclick="setColor('#22c55e')" class="w-6 h-6 rounded-lg bg-green-500 hover:ring-2 hover:ring-gray-300"></button>
-        <button onclick="setColor('#3b82f6')" class="w-6 h-6 rounded-lg bg-blue-500 hover:ring-2 hover:ring-gray-300"></button>
+        <div class="editor-toolbar">
+            <button class="tb-btn mobile-only" onclick="document.getElementById('notes-sidebar').classList.toggle('open');document.getElementById('notes-backdrop').style.display='block'" id="sidebar-toggle" style="display:none"><i class="fa-solid fa-bars"></i></button>
+            <select class="tb-select" id="heading-select" onchange="applyHeading(this.value)">
+                <option value="">Normal</option>
+                <option value="h1">H1</option>
+                <option value="h2">H2</option>
+                <option value="h3">H3</option>
+            </select>
+            <div class="tb-sep"></div>
+            <button class="tb-btn" id="tb-bold" onclick="execFmt('bold')" title="Bold"><i class="fa-solid fa-bold"></i></button>
+            <button class="tb-btn" id="tb-italic" onclick="execFmt('italic')" title="Italic"><i class="fa-solid fa-italic"></i></button>
+            <button class="tb-btn" id="tb-underline" onclick="execFmt('underline')" title="Underline"><i class="fa-solid fa-underline"></i></button>
+            <button class="tb-btn" id="tb-strike" onclick="execFmt('strikeThrough')" title="Strike"><i class="fa-solid fa-strikethrough"></i></button>
+            <div class="tb-sep"></div>
+            <button class="tb-btn" id="tb-ul" onclick="execList('ul')" title="Bullet list"><i class="fa-solid fa-list-ul"></i></button>
+            <button class="tb-btn" id="tb-ol" onclick="execList('ol')" title="Numbered list"><i class="fa-solid fa-list-ol"></i></button>
+            <button class="tb-btn" onclick="execFmt('outdent')" title="Outdent"><i class="fa-solid fa-outdent"></i></button>
+            <button class="tb-btn" onclick="execFmt('indent')" title="Indent"><i class="fa-solid fa-indent"></i></button>
+            <div class="tb-sep"></div>
+            <button class="tb-btn" onclick="insertQuote()" title="Blockquote"><i class="fa-solid fa-quote-left"></i></button>
+            <button class="tb-btn" onclick="insertHR()" title="Divider"><i class="fa-solid fa-minus"></i></button>
+            <button class="tb-btn" onclick="insertCode()" title="Code"><i class="fa-solid fa-code"></i></button>
+            <button class="tb-btn" onclick="showLinkModal()" title="Link"><i class="fa-solid fa-link"></i></button>
+            <div class="tb-sep"></div>
+            <div style="display:flex;gap:3px;align-items:center">
+                <div class="color-dot" style="background:#f0f0f5;border:1px solid #555" onclick="applyColor('#f0f0f5')" title="Default"></div>
+                <div class="color-dot" style="background:#ef4444" onclick="applyColor('#ef4444')" title="Red"></div>
+                <div class="color-dot" style="background:#f59e0b" onclick="applyColor('#f59e0b')" title="Yellow"></div>
+                <div class="color-dot" style="background:#10b981" onclick="applyColor('#10b981')" title="Green"></div>
+                <div class="color-dot" style="background:#3b82f6" onclick="applyColor('#3b82f6')" title="Blue"></div>
+                <div class="color-dot" style="background:#a855f7" onclick="applyColor('#a855f7')" title="Purple"></div>
+            </div>
+            <div style="flex:1"></div>
+            <button class="tb-btn" onclick="togglePinNote()" title="Pin note" id="pin-btn"><i class="fa-solid fa-thumbtack"></i></button>
+            <button class="tb-btn" onclick="deleteNote()" title="Delete note" style="color:var(--red)"><i class="fa-solid fa-trash"></i></button>
+        </div>
+        <input type="text" id="note-title-input" placeholder="Note title…" oninput="debounceSave()" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('note-editor').focus()}">
+        <div id="note-editor-wrap">
+            <div id="note-editor" contenteditable="true" spellcheck="true"></div>
+        </div>
     </div>
 
-    <!-- Right side buttons (Code + Delete) -->
-    <div class="flex items-center gap-x-2 md:ml-auto flex-shrink-0 mt-2 md:mt-0">
-        <button onclick="insertCodeBlock()" class="toolbar-btn px-3 py-1.5 hover:bg-gray-100 rounded-xl" title="Code Block">
-            <i class="fa-solid fa-code"></i>
-        </button>
+    {% elif tab == 'timeless' %}
+    <!-- TIMELESS TAB -->
+    <div class="tl-outer">
+        <div class="tl-main">
+            <!-- Search + Tags bar -->
+            <div class="tl-search-bar">
+                <i class="fa-solid fa-magnifying-glass" style="color:var(--text3);font-size:11px"></i>
+                <input class="tl-search-input" id="tl-search" placeholder="Search nodes by title, tags…" oninput="tlSearch(this.value)">
+                <button class="icon-btn" onclick="showNodeModal()" style="color:var(--accent)" title="Add node">
+                    <i class="fa-solid fa-plus"></i>
+                </button>
+            </div>
+            <div class="tl-tags-bar" id="tl-tags-bar" style="display:none"></div>
 
-        <button onclick="deleteCurrentNote()" 
-                class="toolbar-btn px-3 py-1.5 text-red-500 hover:bg-red-50 rounded-xl" title="Delete Note">
-            <i class="fa-solid fa-trash"></i>
-        </button>
+            <!-- Search Results -->
+            <div id="tl-search-results" style="display:none;padding:8px 12px;overflow-y:auto;max-height:200px;border-bottom:1px solid var(--border);background:var(--bg2)"></div>
+
+            <!-- Virtual scroll timeline -->
+            <div id="tl-scroll">
+                <div id="tl-inner" style="position:relative;padding:12px 0">
+                    <!-- Center line -->
+                    <div id="tl-center-axis" style="position:absolute;left:120px;top:0;bottom:0;width:2px;background:var(--border2);z-index:0"></div>
+                    <div id="tl-rows-container"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Desktop Detail Panel -->
+        <div class="detail-panel" id="tl-detail" style="display:none">
+            <div class="panel-header">
+                <span class="panel-title">Detail</span>
+                <div style="display:flex;gap:2px">
+                    <button class="icon-btn" onclick="editSelectedNode()" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                    <button class="icon-btn danger" onclick="deleteSelectedNode()" title="Delete"><i class="fa-solid fa-trash"></i></button>
+                    <button class="icon-btn" onclick="closeDetail()" title="Close"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+            </div>
+            <div class="detail-content" id="tl-detail-body"></div>
+        </div>
+
+        <!-- Mobile Overlay Detail -->
+        <div class="tl-mobile-overlay" id="tl-mobile-overlay">
+            <div class="panel-header">
+                <span class="panel-title">Detail</span>
+                <div style="display:flex;gap:2px">
+                    <button class="icon-btn" onclick="editSelectedNode()" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                    <button class="icon-btn danger" onclick="deleteSelectedNode()" title="Delete"><i class="fa-solid fa-trash"></i></button>
+                    <button class="icon-btn" onclick="closeMobileOverlay()" title="Close"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+            </div>
+            <div class="detail-content" id="tl-mobile-detail-body"></div>
+        </div>
+    </div>
+
+    {% endif %}
+
+    </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- ========== MODALS ========== -->
+
+<!-- Add Project Modal -->
+<div class="modal-overlay" id="project-modal" style="display:none" onclick="if(event.target===this)closeProjectModal()">
+    <div class="modal-box">
+        <div class="modal-header">
+            <span class="modal-title" id="project-modal-title">New Project</span>
+            <button class="icon-btn" onclick="closeProjectModal()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body">
+            <div class="field-group">
+                <div class="field-label">Project Name</div>
+                <input class="field-input" id="project-name-input" placeholder="Enter project name…" onkeydown="if(event.key==='Enter')saveProject()">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="closeProjectModal()">Cancel</button>
+            <button class="btn-primary" onclick="saveProject()">Save Project</button>
+        </div>
     </div>
 </div>
 
-        <!-- Note Title -->
-        <div class="px-8 pt-6 pb-3 border-b border-gray-100">
-            <input id="note-title" 
-                   type="text" 
-                   onblur="saveCurrentNote()"
-                   class="w-full bg-transparent text-3xl font-semibold outline-none placeholder-gray-400">
+<!-- Timeless Node Modal -->
+<div class="modal-overlay" id="node-modal" style="display:none" onclick="if(event.target===this)closeNodeModal()">
+    <div class="modal-box" style="max-width:540px;max-height:92vh;overflow-y:auto">
+        <div class="modal-header">
+            <span class="modal-title" id="node-modal-title">New Node</span>
+            <button class="icon-btn" onclick="closeNodeModal()"><i class="fa-solid fa-xmark"></i></button>
         </div>
-
-        <!-- Editor -->
-        <div id="note-editor" 
-             contenteditable="true"
-             oninput="autoSaveCurrentNote()"
-             class="flex-1 px-8 py-6 overflow-y-auto focus:outline-none text-[15.8px] leading-relaxed text-gray-800"
-             style="background: white; caret-color: #111827;">
+        <div class="modal-body">
+            <div class="field-group">
+                <div class="field-label">Title *</div>
+                <input class="field-input" id="node-title" placeholder="Event title…">
+            </div>
+            <div class="field-group">
+                <div class="field-label">Description <span style="color:var(--text3);font-size:10px">(supports clickable links)</span></div>
+                <div class="node-desc-editor" id="node-desc-editor" contenteditable="true" spellcheck="true"></div>
+                <div style="display:flex;gap:4px;margin-top:4px">
+                    <button onclick="nodeDescCmd('bold')" style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--text2);padding:2px 6px;font-size:10px;cursor:pointer"><b>B</b></button>
+                    <button onclick="nodeDescCmd('italic')" style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--text2);padding:2px 6px;font-size:10px;cursor:pointer"><i>I</i></button>
+                    <button onclick="insertNodeLink()" style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--blue);padding:2px 6px;font-size:10px;cursor:pointer"><i class="fa-solid fa-link"></i></button>
+                </div>
+            </div>
+            <div style="display:flex;gap:10px">
+                <div class="field-group" style="flex:1">
+                    <div class="field-label">Gregorian Year</div>
+                    <input class="field-input" id="node-greg" type="number" placeholder="e.g. 610" oninput="autoConvertYear('greg')">
+                </div>
+                <div class="field-group" style="flex:1">
+                    <div class="field-label">Hijri Year</div>
+                    <input class="field-input" id="node-hijri" type="number" placeholder="e.g. 1 AH" oninput="autoConvertYear('hijri')">
+                </div>
+            </div>
+            <div class="field-group">
+                <div class="field-label">Tags <span style="color:var(--text3);font-size:10px">(add unique tags)</span></div>
+                <div class="tag-input-wrap">
+                    <input class="field-input" id="node-tag-input" placeholder="Type tag and press Enter…"
+                        onkeydown="handleTagInput(event)" oninput="showTagSuggestions(this.value)">
+                    <div class="tag-suggestions" id="tag-suggestions" style="display:none"></div>
+                </div>
+                <div class="tags-preview" id="tags-preview"></div>
+            </div>
+            <div class="field-group">
+                <div class="field-label">Side Note</div>
+                <input class="field-input" id="node-sidenote" placeholder="Short note…">
+            </div>
+            <div class="field-group">
+                <div class="field-label">Sources <span style="color:var(--text3);font-size:10px">(display text + URL)</span></div>
+                <div id="sources-list"></div>
+                <button onclick="addSourceField()" style="margin-top:6px;font-size:11px;color:var(--accent);background:none;border:none;cursor:pointer"><i class="fa-solid fa-plus"></i> Add source</button>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="closeNodeModal()">Cancel</button>
+            <button class="btn-primary" onclick="saveNode()">Save Node</button>
         </div>
     </div>
 </div>
-{% endif %}
+
+<!-- History Modal -->
+<div class="modal-overlay" id="history-modal" style="display:none" onclick="if(event.target===this)closeHistory()">
+    <div class="modal-box" style="max-width:520px">
+        <div class="modal-header">
+            <span class="modal-title">Task History <span style="color:var(--text3);font-size:11px;font-weight:400">· last 30 days</span></span>
+            <button class="icon-btn" onclick="closeHistory()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div id="history-body" style="padding:12px 16px;max-height:60vh;overflow-y:auto"></div>
+    </div>
+</div>
+
+<!-- Link Modal (for notes editor) -->
+<div class="modal-overlay" id="link-modal" style="display:none" onclick="if(event.target===this)closeLinkModal()">
+    <div class="modal-box" style="max-width:380px">
+        <div class="modal-header">
+            <span class="modal-title">Insert Link</span>
+            <button class="icon-btn" onclick="closeLinkModal()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body">
+            <div class="field-group">
+                <div class="field-label">Display Text</div>
+                <input class="field-input" id="link-display-text" placeholder="Link text…">
+            </div>
+            <div class="field-group">
+                <div class="field-label">URL</div>
+                <input class="field-input" id="link-url" placeholder="https://…" onkeydown="if(event.key==='Enter')confirmInsertLink()">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="closeLinkModal()">Cancel</button>
+            <button class="btn-primary" onclick="confirmInsertLink()">Insert Link</button>
         </div>
     </div>
+</div>
 
-    <!-- ADD TASK MODAL -->
-    <div onclick="if(event.target.id === 'task-modal')hideTaskModal()" id="task-modal"
-         class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-        <div onclick="event.stopImmediatePropagation()" class="modal bg-white w-full max-w-md mx-4 rounded-3xl p-8 shadow-2xl">
-            <div class="flex justify-between items-center mb-6">
-                <h3 class="text-xl font-semibold">New Task</h3>
-                <button onclick="hideTaskModal()" class="text-gray-400 hover:text-gray-600">
-                    <i class="fa-solid fa-xmark text-2xl"></i>
-                </button>
+<!-- Add task date-specific modal -->
+<div class="modal-overlay" id="addtask-modal" style="display:none" onclick="if(event.target===this)closeAddTaskModal()">
+    <div class="modal-box" style="max-width:400px">
+        <div class="modal-header">
+            <span class="modal-title" id="addtask-modal-title">Add Task</span>
+            <button class="icon-btn" onclick="closeAddTaskModal()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body">
+            <div class="field-group">
+                <div class="field-label">Task Title</div>
+                <input class="field-input" id="addtask-title" placeholder="What needs to be done…" onkeydown="if(event.key==='Enter')confirmAddTask()">
             </div>
-            <input id="task-input" type="text" placeholder="What needs to be done?" 
-                   class="w-full px-5 py-4 text-lg border border-gray-200 focus:border-gray-400 rounded-2xl outline-none">
-            <div class="flex justify-between text-xs text-gray-400 mt-2 px-1">
-                <span>Press <span class="font-mono bg-gray-100 px-1.5 rounded">Enter</span> to save</span>
-                <span>Esc to cancel</span>
+            <div class="field-group">
+                <div class="field-label">Date</div>
+                <input class="field-input" type="date" id="addtask-date">
             </div>
-            <input type="date" id="task-due-date" class="mt-6 w-full px-5 py-3 text-sm border border-gray-200 rounded-2xl outline-none">
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="closeAddTaskModal()">Cancel</button>
+            <button class="btn-primary" onclick="confirmAddTask()">Add Task</button>
         </div>
     </div>
+</div>
 
-    <!-- ADD PROJECT MODAL -->
-    <div onclick="if(event.target.id === 'project-modal')hideProjectModal()" id="project-modal"
-         class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-        <div onclick="event.stopImmediatePropagation()" class="modal bg-white w-full max-w-md mx-4 rounded-3xl p-8 shadow-2xl">
-            <div class="flex justify-between items-center mb-6">
-                <h3 class="text-xl font-semibold">New Project</h3>
-                <button onclick="hideProjectModal()" class="text-gray-400 hover:text-gray-600">
-                    <i class="fa-solid fa-xmark text-2xl"></i>
-                </button>
-            </div>
-            <input id="project-input" type="text" placeholder="Project name" 
-                   class="w-full px-5 py-4 text-lg border border-gray-200 focus:border-gray-400 rounded-2xl outline-none">
-            <button onclick="addNewProject()" 
-                    class="mt-8 w-full bg-emerald-600 hover:bg-emerald-700 text-white py-4 rounded-2xl font-medium">
-                Create Project
-            </button>
-        </div>
-    </div>
+<script>
+// ============================================================
+// GLOBALS
+// ============================================================
+let tasks = [], projects = [], notes = [], timelessNodes = [], allTags = [];
+let currentNoteId = null;
+let currentNodeId = null;
+let editingProjectId = null;
+let editingNodeId = null;
+let saveTimeout = null;
+let noteEditorSavedSel = null;
+let tab = '{{ tab }}';
+let isDark = true;
+let sectionState = { tasks: true, projects: true }; // true = expanded
+let tlFilterTag = null;
+let tlSearchQuery = '';
+let nodeTags = []; // tags for current node being edited
 
-    <script>
-        let currentTasks = [];
-        let currentProjects = [];
-        let todayDateStr = new Date().toISOString().split('T')[0];
+// ============================================================
+// THEME
+// ============================================================
+function initTheme() {
+    const saved = localStorage.getItem('kaeru-theme') || 'dark';
+    isDark = saved === 'dark';
+    applyTheme();
+}
+function applyTheme() {
+    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+    const ico = isDark ? 'fa-sun' : 'fa-moon';
+    const el = document.getElementById('theme-icon');
+    if (el) el.className = `fa-solid ${ico}`;
+    const el2 = document.getElementById('theme-icon-mobile');
+    if (el2) el2.className = `fa-solid ${ico}`;
+}
+function toggleTheme() {
+    isDark = !isDark;
+    localStorage.setItem('kaeru-theme', isDark ? 'dark' : 'light');
+    applyTheme();
+}
 
-        function formatHeaderDate() {
-            const dateEl = document.getElementById('header-date');
-            const date = new Date();
-            const options = { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' };
-            dateEl.textContent = date.toLocaleDateString('en-US', options).replace(',', '');
-        }
+// ============================================================
+// CLOCK
+// ============================================================
+function updateClock() {
+    const now = new Date();
+    const bst = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Dhaka' }));
+    const d = bst.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' });
+    const t = bst.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    document.getElementById('clock').textContent = `${d} ${t}`;
+}
 
-        async function loadTasks() {
-            try {
-                const res = await fetch('/api/tasks');
-                currentTasks = await res.json();
-                renderTimeline();
-            } catch (e) {
-                console.error('Failed to load tasks', e);
-            }
-        }
+// ============================================================
+// SYNC
+// ============================================================
+let syncTimer = null;
+function syncStart() {
+    const dot = document.getElementById('sync-dot');
+    const lbl = document.getElementById('sync-label');
+    if (dot) dot.className = 'sync-dot syncing';
+    if (lbl) lbl.textContent = 'Saving…';
+    clearTimeout(syncTimer);
+}
+function syncOK() {
+    const dot = document.getElementById('sync-dot');
+    const lbl = document.getElementById('sync-label');
+    if (dot) dot.className = 'sync-dot';
+    if (lbl) lbl.textContent = 'Synced';
+}
+function syncFail() {
+    const dot = document.getElementById('sync-dot');
+    const lbl = document.getElementById('sync-label');
+    if (dot) dot.className = 'sync-dot error';
+    if (lbl) lbl.textContent = 'Error';
+    syncTimer = setTimeout(syncOK, 3000);
+}
 
-        async function loadProjects() {
-            try {
-                const res = await fetch('/api/projects');
-                currentProjects = await res.json();
-                renderProgress();
-            } catch (e) {
-                console.error('Failed to load projects', e);
-            }
-        }
+async function api(url, method = 'GET', body = null) {
+    syncStart();
+    try {
+        const opts = { method, headers: { 'Content-Type': 'application/json' } };
+        if (body) opts.body = JSON.stringify(body);
+        const r = await fetch(url, opts);
+        const data = await r.json();
+        syncOK();
+        return data;
+    } catch (e) { syncFail(); throw e; }
+}
 
-        function renderTimeline() {
-            const container = document.getElementById('timeline-container');
-            container.innerHTML = '';
+// ============================================================
+// TOAST
+// ============================================================
+function toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2000);
+}
 
-            const todayTasks = currentTasks.filter(t => t.due_date === todayDateStr);
-            const completedToday = todayTasks.filter(t => t.completed).length;
-            const todayProgress = todayTasks.length ? Math.round((completedToday / todayTasks.length) * 100) : 0;
+// ============================================================
+// MOBILE DRAWER
+// ============================================================
+function openDrawer() {
+    document.getElementById('mobile-drawer').classList.add('open');
+    document.getElementById('drawer-backdrop').classList.add('open');
+}
+function closeDrawer() {
+    document.getElementById('mobile-drawer').classList.remove('open');
+    document.getElementById('drawer-backdrop').classList.remove('open');
+}
 
-            let html = `
-                <div>
-                    <div class="flex items-baseline justify-between mb-4">
-                        <div>
-                            <span class="text-emerald-600 font-medium">Today,</span>
-                            <span class="ml-2 text-gray-900 font-semibold">Task</span>
-                        </div>
-                        <div class="flex text-xs md:text-sm w-1/2 justify-center gap-5 text-gray-500">
-                            <span class="inline-block border-b border-gray-300 text-xs md:text-sm rounded bg-white text-gray-700 hover:bg-gray-50 cursor-pointer transition-colors" onclick="showAddTaskModal()"> + add </span>   
-                            <span class="text-xs md:text-sm">${completedToday}/${todayTasks.length}</span> 
-                            <span class="text-xs md:text-sm">${todayProgress}% Done</span>
-                        </div>   
-                    </div>
-                    <div class="space-y-px" id="today-list">
-            `;
+// ============================================================
+// SECTION COLLAPSE (Tasks Tab)
+// ============================================================
+function toggleSection(which) {
+    sectionState[which] = !sectionState[which];
+    const btn = document.getElementById(`${which}-collapse-btn`);
+    const content = document.getElementById(`${which}-section-content`);
+    if (!btn || !content) return;
 
-            todayTasks.forEach(task => html += createTaskRow(task, true));
-            html += '</div></div>';
-
-            html += `
-                <div class="mt-8">
-                    <div class="text-gray-500 text-sm font-medium mb-4">Upcoming</div>
-                    <div class="timeline-line pl-10 space-y-8" id="upcoming-list"></div>
-                </div>
-            `;
-
-            container.innerHTML = html;
-
-            const upcoming = currentTasks.filter(t => t.due_date && t.due_date > todayDateStr);
-            const grouped = {};
-            upcoming.forEach(task => {
-                if (!grouped[task.due_date]) grouped[task.due_date] = [];
-                grouped[task.due_date].push(task);
-            });
-
-            const sortedDates = Object.keys(grouped).sort();
-            const upcomingContainer = document.getElementById('upcoming-list');
-
-            sortedDates.forEach((date, index) => {
-                const dateObj = new Date(date);
-                const day = dateObj.getDate();
-                const monthName = dateObj.toLocaleString('default', { month: 'short' });
-
-                let groupHTML = `
-                    <div class="relative">
-                        <div class="absolute -left-[40px] flex flex-col items-center">
-                            <div class="w-10 h-10 rounded-2xl border-2 border-gray-900 bg-white flex items-center justify-center text-lg font-semibold z-10">
-                                ${day}
-                            </div>
-                            ${index < sortedDates.length - 1 ? `<div class="w-px h-8 bg-gray-300 mt-1"></div>` : ''}
-                        </div>
-                        <div class="text-xs  uppercase font-medium text-gray-400 mb-2">${monthName}</div>
-                        <div class="space-y-px">
-                `;
-
-                grouped[date].forEach(task => groupHTML += createTaskRow(task, false));
-                groupHTML += '</div></div>';
-                upcomingContainer.innerHTML += groupHTML;
-            });
-
-            if (sortedDates.length === 0) {
-                upcomingContainer.innerHTML = `<div class="text-gray-400 text-sm italic pl-6">No upcoming tasks</div>`;
-            }
-        }
-
-        function createTaskRow(task, isToday) {
-            const checked = task.completed ? 'checked' : '';
-            const strike = task.completed ? 'line-through text-gray-400' : '';
-            return `
-                <div class="task-item group flex items-center gap-x-3 px-4 py-3 rounded-2xl hover:bg-gray-50 transition-colors">
-                    <input type="checkbox" ${checked} onclick="toggleTask(${task.id})" class="w-5 h-5 accent-gray-900 cursor-pointer">
-                    <span onclick="editTaskInline(this, ${task.id})" class="flex-1 ${strike} cursor-text">${task.title}</span>
-                    <div class="action-icons opacity-0 group-hover:opacity-100 flex items-center gap-x-1">
-                        <button onclick="deleteTask(${task.id}); event.stopImmediatePropagation()" 
-                                class="text-gray-400 hover:text-red-500 w-7 h-7 flex items-center justify-center">
-                            <i class="fa-solid fa-trash text-sm"></i>
-                        </button>
-                    </div>
-                </div>
-            `;
-        }
-
-        function renderProgress() {
-            const container = document.getElementById('progress-container');
-            container.innerHTML = '';
-
-            currentProjects.forEach(project => {
-                const isOpen = project.isOpen || false;
-
-                const createdDate = project.added_date ? new Date(project.added_date).toLocaleDateString('en-US', {month:'short', day:'numeric'}) : '—';
-                const updatedDate = project.last_updated ? new Date(project.last_updated).toLocaleDateString('en-US', {month:'short', day:'numeric'}) : '—';
-
-                let projectHTML = `
-                    <div class="bg-white border border-gray-200 rounded-3xl overflow-hidden">
-                        <div onclick="toggleProject(${project.id})" class="px-6 py-4 flex items-center justify-between cursor-pointer hover:bg-slate-50">
-                            <div class="flex items-center gap-x-3">
-                                <i onclick="event.stopImmediatePropagation(); toggleProject(${project.id})" 
-                                   class="fa-solid ${isOpen ? 'fa-chevron-down' : 'fa-chevron-right'} text-gray-400"></i>
-                                <span class="font-semibold text-gray-900">${project.title}</span>
-                            </div>
-                            
-                            <div class="flex items-center gap-x-4">
-                                <div class="text-xs text-gray-400">
-                                    ${project.completed_count}/${project.total}
-                                </div>
-                                <div class="relative w-10 h-10 flex-shrink-0">
-                                    <svg class="w-10 h-10 -rotate-90" viewBox="0 0 36 36">
-                                        <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#e5e7eb" stroke-width="3" />
-                                        <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#10b981" stroke-width="3" 
-                                              stroke-dasharray="${project.progress}, 100" class="progress-ring" />
-                                    </svg>
-                                    <div class="absolute inset-0 flex items-center justify-center text-[10px] font-semibold text-gray-900">
-                                        ${project.progress}%
-                                    </div>
-                                </div>
-                                <button onclick="event.stopImmediatePropagation(); deleteProject(${project.id})" 
-                                        class="text-red-400 hover:text-red-500 text-xs font-medium">delete</button>
-                            </div>
-                        </div>
-
-                        <!-- Metadata -->
-                        <div class="px-6 pb-2 metadata flex gap-4 text-[10px]">
-                            <div>Created: ${createdDate}</div>
-                            <div>Last updated: ${updatedDate}</div>
-                        </div>
-                `;
-
-                if (isOpen) {
-                    projectHTML += `<div class="px-2 pb-1 border-t">`;
-                    project.subtasks.forEach(sub => {
-                        const subChecked = sub.completed ? 'checked' : '';
-                        const subStrike = sub.completed ? 'line-through text-gray-400' : '';
-                        projectHTML += `
-                            <div class="subtask-item group flex items-center gap-x-3 px-4 py-3 rounded-2xl hover:bg-gray-50 transition-colors">
-                                <input type="checkbox" ${subChecked} onclick="toggleSubtask(${sub.id})" class="w-4 h-4 accent-gray-900 cursor-pointer">
-                                <span onclick="editSubtaskInline(this, ${sub.id})" class="flex-1 text-sm ${subStrike} cursor-text">${sub.title}</span>
-                                <div class="subtask-actions opacity-0 group-hover:opacity-100 flex items-center gap-x-1">
-                                    <button onclick="deleteSubtask(${sub.id}); event.stopImmediatePropagation()" 
-                                            class="text-gray-400 hover:text-red-500 w-6 h-6 flex items-center justify-center">
-                                        <i class="fa-solid fa-trash text-xs"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        `;
-                    });
-
-                    projectHTML += `
-                        <div onclick="addSubtaskPrompt(${project.id})" 
-                             class="mt-3 flex items-center justify-center text-emerald-600 text-sm font-medium cursor-pointer hover:underline">
-                            <i class="fa-solid fa-plus mr-1"></i> Add sub-task
-                        </div>
-                    </div>`;
-                }
-
-                projectHTML += `</div>`;
-                container.innerHTML += projectHTML;
-            });
-
-            if (currentProjects.length === 0) {
-                container.innerHTML = `
-                    <div class="text-center py-12 text-gray-400">
-                        <i class="fa-solid fa-folder-open text-4xl mb-3"></i>
-                        <p>No projects yet.<br>Click + to create one.</p>
-                    </div>
-                `;
-            }
-        }
-
-        // ================== CRUD FUNCTIONS ==================
-
-        async function toggleTask(id) {
-            await fetch(`/api/tasks/${id}/toggle`, { method: 'POST' });
-            await loadTasks();
-        }
-
-        async function deleteTask(id) {
-            if (confirm('Delete this task?')) {
-                await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
-                await loadTasks();
-            }
-        }
-
-        function editTaskInline(el, id) { /* same as before */ 
-            // ... (unchanged for brevity - keep your original logic)
-            const originalText = el.textContent;
-            const input = document.createElement('input');
-            input.type = 'text';
-            input.value = originalText;
-            input.className = 'flex-1 px-2 py-1 border border-gray-300 rounded-xl text-sm outline-none';
-            el.replaceWith(input);
-            input.focus();
-            input.select();
-
-            const save = async () => {
-                if (input.value.trim() && input.value !== originalText) {
-                    await fetch(`/api/tasks/${id}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ title: input.value.trim() })
-                    });
-                    await loadTasks();
-                } else {
-                    input.replaceWith(el);
-                }
-            };
-
-            input.addEventListener('blur', save);
-            input.addEventListener('keydown', e => {
-                if (e.key === 'Enter') save();
-                if (e.key === 'Escape') input.replaceWith(el);
-            });
-        }
-
-        function toggleProject(id) {
-            const project = currentProjects.find(p => p.id === id);
-            if (project) {
-                project.isOpen = !project.isOpen;
-                renderProgress();   // Only re-render, no full reload
-            }
-        }
-
-        async function toggleSubtask(id) {
-            await fetch(`/api/subtasks/${id}/toggle`, { method: 'POST' });
-            
-            // IMPORTANT: Reload data but PRESERVE open/closed state
-            await preserveAndReloadProjects();
-        }
-
-        async function deleteSubtask(sub_id) {
-            if (confirm('Delete this subtask?')) {
-                await fetch(`/api/subtasks/${sub_id}`, { method: 'DELETE' });
-                await preserveAndReloadProjects();
-            }
-        }
-
-        function editSubtaskInline(el, id) {
-            const original = el.textContent;
-            const input = document.createElement('input');
-            input.value = original;
-            input.className = 'flex-1 text-sm px-2 py-1 border border-gray-300 rounded-xl outline-none';
-            el.replaceWith(input);
-            input.focus();
-
-            const save = async () => {
-                if (input.value.trim() && input.value !== original) {
-                    await fetch(`/api/subtasks/${id}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ title: input.value.trim() })
-                    });
-                    await loadProjects();
-                } else {
-                    input.replaceWith(el);
-                }
-            };
-
-            input.addEventListener('blur', save);
-            input.addEventListener('keydown', e => {
-                if (e.key === 'Enter') save();
-                if (e.key === 'Escape') input.replaceWith(el);
-            });
-        }
-
-        // Modals (unchanged except minor improvements)
-                function showAddTaskModal() {
-            const modal = document.getElementById('task-modal');
-            const input = document.getElementById('task-input');
-            const dueInput = document.getElementById('task-due-date');
-
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-            input.focus();
-            input.value = '';           // Clear previous input
-            dueInput.value = todayDateStr;   // Default to today
-
-            // Remove any previous listeners to prevent duplicates
-            input.onkeydown = null;
-
-            // Add fresh keydown listener for Enter / Escape
-            input.onkeydown = async function(e) {
-                if (e.key === 'Enter') {
-                    const title = input.value.trim();
-                    if (title) {
-                        const due_date = dueInput.value || todayDateStr;
-                        
-                        try {
-                            await fetch('/api/tasks', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ title, due_date })
-                            });
-                            
-                            hideTaskModal();
-                            await loadTasks();        // Refresh the task list
-                        } catch (err) {
-                            console.error("Failed to add task", err);
-                            alert("Failed to save task. Please try again.");
-                        }
-                    }
-                } 
-                else if (e.key === 'Escape') {
-                    hideTaskModal();
-                }
-            };
-        }
-
-        function hideTaskModal() {
-            const modal = document.getElementById('task-modal');
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-
-            const input = document.getElementById('task-input');
-            input.value = '';
-            input.onkeydown = null;   // Clean up listener
-        }
-
-        function showAddProjectModal() {
-            const modal = document.getElementById('project-modal');
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-            document.getElementById('project-input').focus();
-        }
-
-        function hideProjectModal() {
-            const modal = document.getElementById('project-modal');
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-        }
-
-        async function addNewProject() {
-            const title = document.getElementById('project-input').value.trim();
-            if (title) {
-                await fetch('/api/projects', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ title })
-                });
-                hideProjectModal();
-                await loadProjects();
-            }
-        }
-
-        async function addSubtaskPrompt(projectId) {
-        const title = prompt('New sub-task title:');
-        if (title && title.trim()) {
-            await fetch(`/api/projects/${projectId}/subtasks`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ title: title.trim() })
-            });
-            await preserveAndReloadProjects();
-        }
+    if (sectionState[which]) {
+        btn.classList.remove('collapsed');
+        gsap.to(content, { height: 'auto', duration: 0.3, ease: 'power2.out', overflow: 'hidden',
+            onStart: () => { content.style.height = '0px'; content.style.overflow = 'hidden'; },
+            onComplete: () => { content.style.height = ''; content.style.overflow = ''; content.style.flex = '1'; }
+        });
+        gsap.fromTo(content.querySelector('.panel-body') || content, { opacity: 0 }, { opacity: 1, duration: 0.25, delay: 0.1 });
+    } else {
+        btn.classList.add('collapsed');
+        const h = content.offsetHeight;
+        content.style.height = h + 'px';
+        content.style.flex = 'none';
+        gsap.to(content, { height: 0, duration: 0.3, ease: 'power2.in',
+            onComplete: () => { content.style.height = '0'; }
+        });
     }
 
-        // Helper: Reload projects while keeping expanded/collapsed state
-        async function preserveAndReloadProjects() {
-            // Step 1: Remember which projects were open
-            const openProjectIds = currentProjects
-                .filter(p => p.isOpen)
-                .map(p => p.id);
+    // On mobile: adjust flex directions
+    if (window.innerWidth <= 768) {
+        const layout = document.getElementById('tasks-layout');
+        if (layout) {
+            if (!sectionState.tasks && !sectionState.projects) {
+                // both collapsed – do nothing special
+            }
+        }
+    }
+}
 
-            // Step 2: Load fresh data from server
-            const res = await fetch('/api/projects');
-            currentProjects = await res.json();
+// ============================================================
+// TASKS
+// ============================================================
+async function loadTasks() {
+    const res = await fetch('/api/tasks');
+    tasks = await res.json();
+    renderTimeline();
+}
 
-            // Step 3: Restore open state for projects that were previously open
-            currentProjects.forEach(project => {
-                if (openProjectIds.includes(project.id)) {
-                    project.isOpen = true;
-                } else {
-                    project.isOpen = false;   // optional: keep closed if it was closed
-                }
+function getToday() {
+    const d = new Date();
+    const tz = new Date(d.toLocaleString('en-US', { timeZone: 'Asia/Dhaka' }));
+    return tz.toISOString().split('T')[0];
+}
+
+function getTomorrow() {
+    const d = new Date();
+    const tz = new Date(d.toLocaleString('en-US', { timeZone: 'Asia/Dhaka' }));
+    tz.setDate(tz.getDate() + 1);
+    return tz.toISOString().split('T')[0];
+}
+
+function renderTimeline() {
+    const body = document.getElementById('timeline-body');
+    if (!body) return;
+
+    const today = getToday();
+    const tomorrow = getTomorrow();
+    const todayTasks = tasks.filter(t => t.due_date === today);
+    const tomorrowTasks = tasks.filter(t => t.due_date === tomorrow);
+    const upcomingTasks = tasks.filter(t => t.due_date && t.due_date > tomorrow);
+    const pastTasks = tasks.filter(t => t.due_date && t.due_date < today && !t.completed);
+
+    const done = todayTasks.filter(t => t.completed).length;
+    const stat = document.getElementById('today-stat');
+    if (stat) stat.textContent = todayTasks.length ? `${done}/${todayTasks.length} done` : '';
+
+    let html = '';
+
+    // Overdue
+    if (pastTasks.length) {
+        html += `<div class="date-label"><i class="fa-solid fa-triangle-exclamation" style="color:var(--red);font-size:10px"></i> Overdue</div>`;
+        pastTasks.forEach(t => { html += taskRowHTML(t); });
+        html += '<div class="date-divider"></div>';
+    }
+
+    // TODAY
+    html += `<div class="date-label">Today <span class="today-badge">Now</span></div>`;
+    todayTasks.forEach(t => { html += taskRowHTML(t); });
+    html += addRowHTML(today, 'Add task for today…');
+    html += '<div class="date-divider" style="margin-top:8px"></div>';
+
+    // TOMORROW explicit
+    html += `<div class="date-label">Tomorrow</div>`;
+    tomorrowTasks.forEach(t => { html += taskRowHTML(t); });
+    html += addRowHTML(tomorrow, 'Add task for tomorrow…');
+
+    // UPCOMING (grouped with date badge timeline)
+    if (upcomingTasks.length) {
+        html += '<div class="date-divider" style="margin-top:8px"></div>';
+        html += `<div class="date-label">Upcoming Tasks</div>`;
+        html += '<div class="upcoming-timeline" style="padding:8px 10px">';
+
+        const grouped = {};
+        upcomingTasks.forEach(t => {
+            if (!grouped[t.due_date]) grouped[t.due_date] = [];
+            grouped[t.due_date].push(t);
+        });
+
+        const sortedDates = Object.keys(grouped).sort();
+        sortedDates.forEach((date, idx) => {
+            const dObj = new Date(date + 'T00:00:00');
+            const monthName = dObj.toLocaleDateString('en-US', { month: 'short' });
+            const dayNum = dObj.getDate();
+            const isLast = idx === sortedDates.length - 1;
+            html += `<div class="upcoming-date-row${isLast ? ' last' : ''}">
+                <div class="date-badge">
+                    <span class="month-name">${monthName}</span>
+                    <span class="day-num">${dayNum}</span>
+                </div>
+                <div class="upcoming-tasks-col">`;
+            grouped[date].forEach(t => { html += taskRowHTML(t); });
+            html += addRowHTML(date, 'Add task…');
+            html += `</div></div>`;
+        });
+        html += '</div>';
+    }
+
+    // Extra: button to add task on custom date
+    html += `<div style="padding:8px 10px;margin-top:4px">
+        <button onclick="showAddTaskModal()" style="background:none;border:1px dashed var(--border2);border-radius:8px;padding:6px 12px;color:var(--text3);font-size:11px;cursor:pointer;width:100%;transition:all 0.15s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text3)'">
+            <i class="fa-solid fa-calendar-plus" style="margin-right:6px"></i>Add task for a specific date
+        </button>
+    </div>`;
+
+    body.innerHTML = html;
+}
+
+function addRowHTML(date, placeholder) {
+    return `<div class="add-row" onclick="document.getElementById('ar-${date}')?.focus()">
+        <i class="fa-solid fa-plus" style="font-size:10px;color:var(--accent)"></i>
+        <input class="add-row-input" id="ar-${date}" placeholder="${placeholder}"
+            onblur="submitQuickTask(this,'${date}')"
+            onkeydown="quickTaskKey(event,this,'${date}')">
+    </div>`;
+}
+
+function taskRowHTML(t) {
+    const done = t.completed ? 'done' : '';
+    const checked = t.completed ? 'checked' : '';
+    return `<div class="task-row" id="task-${t.id}">
+        <input type="checkbox" class="task-check" ${checked} onchange="toggleTask(${t.id})">
+        <span class="task-title ${done}" ondblclick="startEditTask(this, ${t.id})">${escH(t.title)}</span>
+        <div class="row-actions">
+            <button class="icon-btn" onclick="startEditTask(document.querySelector('#task-${t.id} .task-title'),${t.id})" title="Edit"><i class="fa-solid fa-pen" style="font-size:10px"></i></button>
+            <button class="icon-btn danger" onclick="deleteTask(${t.id})" title="Delete"><i class="fa-solid fa-trash" style="font-size:10px"></i></button>
+        </div>
+    </div>`;
+}
+
+function focusDateInput(date) {
+    // When global date picker changes, show add task modal pre-filled
+    if (!date) return;
+    showAddTaskModal(date);
+    document.getElementById('global-date-picker').value = '';
+}
+
+function showAddTaskModal(date = '') {
+    const today = getToday();
+    document.getElementById('addtask-date').value = date || today;
+    document.getElementById('addtask-title').value = '';
+    const label = date ? `Add Task — ${formatDateLabel(date)}` : 'Add Task';
+    document.getElementById('addtask-modal-title').textContent = label;
+    document.getElementById('addtask-modal').style.display = 'flex';
+    setTimeout(() => document.getElementById('addtask-title').focus(), 50);
+}
+function closeAddTaskModal() { document.getElementById('addtask-modal').style.display = 'none'; }
+async function confirmAddTask() {
+    const title = document.getElementById('addtask-title').value.trim();
+    const date = document.getElementById('addtask-date').value;
+    if (!title) { document.getElementById('addtask-title').focus(); return; }
+    closeAddTaskModal();
+    await api('/api/tasks', 'POST', { title, due_date: date });
+    await loadTasks();
+    toast('Task added');
+}
+
+function formatDateLabel(date) {
+    const d = new Date(date + 'T00:00:00');
+    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+async function submitQuickTask(inp, date) {
+    const title = inp.value.trim();
+    if (!title) return;
+    inp.value = '';
+    await api('/api/tasks', 'POST', { title, due_date: date });
+    await loadTasks();
+    toast('Task added');
+}
+function quickTaskKey(e, inp, date) {
+    if (e.key === 'Enter') { e.preventDefault(); submitQuickTask(inp, date); }
+    if (e.key === 'Escape') { inp.value = ''; inp.blur(); }
+}
+
+async function toggleTask(id) {
+    await api(`/api/tasks/${id}/toggle`, 'POST');
+    await loadTasks();
+}
+async function deleteTask(id) {
+    await api(`/api/tasks/${id}`, 'DELETE');
+    tasks = tasks.filter(t => t.id !== id);
+    renderTimeline();
+    toast('Task deleted');
+}
+
+function startEditTask(el, id) {
+    if (!el) return;
+    const original = el.textContent;
+    el.style.display = 'none';
+    const inp = document.createElement('input');
+    inp.className = 'edit-field';
+    inp.value = original;
+    el.parentNode.insertBefore(inp, el.nextSibling);
+    inp.focus(); inp.select();
+    const save = async () => {
+        const val = inp.value.trim();
+        if (val && val !== original) {
+            await api(`/api/tasks/${id}`, 'PUT', { title: val });
+            await loadTasks();
+        } else { inp.remove(); el.style.display = ''; }
+    };
+    inp.addEventListener('blur', save);
+    inp.addEventListener('keydown', e => {
+        if (e.key === 'Enter') save();
+        if (e.key === 'Escape') { inp.remove(); el.style.display = ''; }
+    });
+}
+
+// ============================================================
+// TASK HISTORY
+// ============================================================
+async function showHistory() {
+    const data = await fetch('/api/tasks/history').then(r => r.json());
+    const modal = document.getElementById('history-modal');
+    const body = document.getElementById('history-body');
+    if (!data.length) {
+        body.innerHTML = '<div style="text-align:center;color:var(--text3);padding:30px">No completed tasks in last 30 days.</div>';
+    } else {
+        const grouped = {};
+        data.forEach(t => {
+            const k = t.due_date || 'Unknown';
+            if (!grouped[k]) grouped[k] = [];
+            grouped[k].push(t);
+        });
+        let html = '';
+        Object.keys(grouped).sort().reverse().forEach(date => {
+            const d = new Date(date + 'T00:00:00');
+            const label = d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+            html += `<div style="margin-bottom:12px"><div class="date-label">${label} <span style="color:var(--text3)">${grouped[date].length}</span></div>`;
+            grouped[date].forEach(t => {
+                html += `<div class="history-item"><i class="fa-solid fa-check" style="color:var(--accent);font-size:10px"></i><span style="flex:1">${escH(t.title)}</span></div>`;
             });
+            html += '</div>';
+        });
+        body.innerHTML = html;
+    }
+    modal.style.display = 'flex';
+}
+function closeHistory() { document.getElementById('history-modal').style.display = 'none'; }
 
-            // Step 4: Re-render
-            renderProgress();
-        }
+// ============================================================
+// PROJECTS
+// ============================================================
+let openProjects = new Set();
 
-        // Delete entire project
-        async function deleteProject(id) {
-            if (confirm('Delete this entire project and all its sub-tasks?')) {
-                try {
-                    await fetch(`/api/projects/${id}`, { 
-                        method: 'DELETE' 
-                    });
-                    
-                    // After deletion, reload projects (preserving open state of remaining projects)
-                    await preserveAndReloadProjects();
-                    
-                } catch (e) {
-                    console.error('Failed to delete project', e);
-                    alert('Failed to delete project. Please try again.');
-                }
-            }
-        }
+async function loadProjects() {
+    const res = await fetch('/api/projects');
+    projects = await res.json();
+    renderProjects();
+}
 
-        async function showTaskHistory() {
-            try {
-                // Fetch tasks from the last 30 days
-                const res = await fetch('/api/tasks/history');
-                const historyTasks = await res.json();
+function renderProjects() {
+    const body = document.getElementById('projects-body');
+    if (!body) return;
+    if (!projects.length) {
+        body.innerHTML = '<div style="text-align:center;color:var(--text3);padding:30px;font-size:12px"><i class="fa-solid fa-folder-open" style="font-size:24px;opacity:0.3;display:block;margin-bottom:8px"></i>No projects yet.<br>Click + to create one.</div>';
+        return;
+    }
+    body.innerHTML = '';
+    projects.forEach(p => {
+        const isOpen = openProjects.has(p.id);
+        const pct = p.progress || 0;
+        const r = 11; const circ = 2 * Math.PI * r;
+        const offset = circ - (pct / 100) * circ;
 
-                let html = `
-                    <div class="max-w-2xl w-full mx-4 bg-white rounded-3xl shadow-2xl overflow-hidden">
-                        <!-- Modal Header -->
-                        <div class="px-8 py-6 border-b flex items-center justify-between bg-gray-50">
-                            <div>
-                                <h3 class="text-2xl font-semibold text-gray-900">Task History</h3>
-                                <p class="text-sm text-gray-500 mt-1">Past 30 days summary</p>
+        // Format dates
+        const createdAt = p.added_date ? fmtDate(p.added_date) : '—';
+        const lastUpdated = p.last_updated ? fmtDate(p.last_updated) : '—';
+
+        const card = document.createElement('div');
+        card.className = 'project-card';
+        card.id = `proj-card-${p.id}`;
+        card.innerHTML = `
+            <div class="project-header" onclick="toggleProject(${p.id})">
+                <i class="fa-solid fa-chevron-right project-chevron ${isOpen ? 'open' : ''}" id="proj-chev-${p.id}"></i>
+                <span class="project-name" id="proj-name-${p.id}" ondblclick="startEditProject(this,${p.id},event)">${escH(p.title)}</span>
+                <span class="project-meta">${p.completed_count}/${p.total}</span>
+                <div class="circ-progress" title="${pct}% complete">
+                    <svg viewBox="0 0 28 28" width="28" height="28">
+                        <circle class="track" cx="14" cy="14" r="${r}"/>
+                        <circle class="fill" cx="14" cy="14" r="${r}"
+                            stroke-dasharray="${circ.toFixed(2)}"
+                            stroke-dashoffset="${offset.toFixed(2)}"
+                            id="proj-circ-${p.id}"/>
+                    </svg>
+                </div>
+                <div class="row-actions" style="opacity:1">
+                    <button class="icon-btn" onclick="event.stopPropagation();startEditProject(document.getElementById('proj-name-${p.id}'),${p.id},event)" title="Edit"><i class="fa-solid fa-pen" style="font-size:10px"></i></button>
+                    <button class="icon-btn danger" onclick="event.stopPropagation();deleteProject(${p.id})" title="Delete"><i class="fa-solid fa-trash" style="font-size:10px"></i></button>
+                </div>
+            </div>
+            <div class="project-body-wrapper" id="proj-body-wrap-${p.id}" style="height:${isOpen ? 'auto' : '0px'};overflow:hidden;transition:none">
+                <div class="project-body">
+                    <div class="project-meta-row">
+                        <span><i class="fa-solid fa-calendar-plus" style="font-size:9px"></i> Created: ${createdAt}</span>
+                        <span><i class="fa-solid fa-pen-to-square" style="font-size:9px"></i> Updated: ${lastUpdated}</span>
+                    </div>
+                    ${p.subtasks.map(s => {
+                        const sdone = s.completed ? 'done' : '';
+                        const sc = s.completed ? 'checked' : '';
+                        return `<div class="subtask-row" id="sub-${s.id}">
+                            <input type="checkbox" class="task-check" ${sc} onchange="toggleSub(${s.id})">
+                            <span class="task-title ${sdone}" style="font-size:12px" ondblclick="startEditSub(this,${s.id})">${escH(s.title)}</span>
+                            <div class="row-actions">
+                                <button class="icon-btn" onclick="startEditSub(document.querySelector('#sub-${s.id} .task-title'),${s.id})" title="Edit"><i class="fa-solid fa-pen" style="font-size:10px"></i></button>
+                                <button class="icon-btn danger" onclick="deleteSub(${s.id})" title="Delete"><i class="fa-solid fa-trash" style="font-size:10px"></i></button>
                             </div>
-                            <button onclick="hideHistoryModal()" 
-                                    class="text-gray-400 hover:text-gray-600 transition-colors">
-                                <i class="fa-solid fa-xmark text-3xl"></i>
-                            </button>
-                        </div>
-                        
-                        <!-- Content -->
-                        <div class="p-8 max-h-[70vh] overflow-y-auto">
-                `;
+                        </div>`;
+                    }).join('')}
+                    <div class="add-row" style="padding:6px 14px" onclick="focusSubInput(${p.id})">
+                        <i class="fa-solid fa-plus" style="font-size:10px;color:var(--accent)"></i>
+                        <input class="add-row-input" id="sub-add-${p.id}" placeholder="Add subtask…" style="font-size:12px"
+                            onblur="submitSubtask(this,${p.id})"
+                            onkeydown="subKey(event,this,${p.id})">
+                    </div>
+                </div>
+            </div>`;
+        body.appendChild(card);
+    });
+}
 
-                if (historyTasks.length === 0) {
-                    html += `
-                        <div class="text-center py-16 text-gray-400">
-                            <i class="fa-solid fa-clock-rotate-left text-6xl mb-4"></i>
-                            <p class="text-lg">No tasks completed in the past 30 days</p>
-                        </div>
-                    `;
-                } else {
-                    // Group by date
-                    const grouped = {};
-                    historyTasks.forEach(task => {
-                        const date = task.completed_at ? task.completed_at.split('T')[0] : task.due_date;
-                        if (!grouped[date]) grouped[date] = [];
-                        grouped[date].push(task);
-                    });
+function toggleProject(id) {
+    const wrap = document.getElementById(`proj-body-wrap-${id}`);
+    const chev = document.getElementById(`proj-chev-${id}`);
+    if (!wrap) return;
 
-                    // Sort dates descending (newest first)
-                    const sortedDates = Object.keys(grouped).sort().reverse();
+    if (openProjects.has(id)) {
+        openProjects.delete(id);
+        chev.classList.remove('open');
+        gsap.to(wrap, { height: 0, duration: 0.28, ease: 'power2.in' });
+    } else {
+        openProjects.add(id);
+        chev.classList.add('open');
+        wrap.style.height = 'auto';
+        const h = wrap.scrollHeight;
+        wrap.style.height = '0px';
+        gsap.to(wrap, { height: h, duration: 0.3, ease: 'power2.out',
+            onComplete: () => { wrap.style.height = 'auto'; }
+        });
+    }
+}
 
-                    sortedDates.forEach(date => {
-                        const dateObj = new Date(date);
-                        const displayDate = dateObj.toLocaleDateString('en-US', { 
-                            weekday: 'long', 
-                            month: 'long', 
-                            day: 'numeric' 
-                        });
+function showAddProjectModal(id = null, name = '') {
+    editingProjectId = id;
+    document.getElementById('project-modal-title').textContent = id ? 'Edit Project' : 'New Project';
+    document.getElementById('project-name-input').value = name;
+    document.getElementById('project-modal').style.display = 'flex';
+    setTimeout(() => document.getElementById('project-name-input').focus(), 50);
+}
+function closeProjectModal() { document.getElementById('project-modal').style.display = 'none'; editingProjectId = null; }
 
-                        html += `
-                            <div class="mb-8">
-                                <div class="flex items-center gap-3 mb-4">
-                                    <div class="w-2.5 h-2.5 bg-emerald-500 rounded-full"></div>
-                                    <span class="font-semibold text-gray-900">${displayDate}</span>
-                                    <span class="text-xs text-gray-400 ml-auto">${grouped[date].length} tasks</span>
-                                </div>
-                                <div class="space-y-2 pl-6">
-                        `;
+async function saveProject() {
+    const title = document.getElementById('project-name-input').value.trim();
+    if (!title) return;
+    if (editingProjectId) {
+        await api(`/api/projects/${editingProjectId}`, 'PUT', { title });
+        toast('Project updated');
+    } else {
+        await api('/api/projects', 'POST', { title });
+        toast('Project created');
+    }
+    closeProjectModal();
+    await loadProjects();
+}
 
-                        grouped[date].forEach(task => {
-                            html += `
-                                <div class="flex items-center gap-3 bg-gray-50 px-5 py-3.5 rounded-2xl">
-                                    <i class="fa-solid fa-check text-emerald-500"></i>
-                                    <span class="flex-1 text-gray-700">${task.title}</span>
-                                    <span class="text-xs text-gray-400 font-mono">${task.due_date || ''}</span>
-                                </div>
-                            `;
-                        });
+async function deleteProject(id) {
+    if (!confirm('Delete project and all subtasks?')) return;
+    await api(`/api/projects/${id}`, 'DELETE');
+    openProjects.delete(id);
+    await loadProjects();
+    toast('Project deleted');
+}
 
-                        html += `</div></div>`;
-                    });
-                }
+function startEditProject(el, id, e) {
+    if (e) e.stopPropagation();
+    if (!el) return;
+    const original = el.textContent;
+    const inp = document.createElement('input');
+    inp.className = 'edit-field';
+    inp.value = original;
+    el.style.display = 'none';
+    el.parentNode.insertBefore(inp, el.nextSibling);
+    inp.focus(); inp.select();
+    const save = async () => {
+        const val = inp.value.trim();
+        if (val && val !== original) {
+            await api(`/api/projects/${id}`, 'PUT', { title: val });
+            await loadProjects();
+            toast('Project renamed');
+        } else { inp.remove(); el.style.display = ''; }
+    };
+    inp.addEventListener('blur', save);
+    inp.addEventListener('keydown', ev => {
+        if (ev.key === 'Enter') save();
+        if (ev.key === 'Escape') { inp.remove(); el.style.display = ''; }
+    });
+}
 
-                html += `</div></div>`;
+function focusSubInput(pid) { document.getElementById(`sub-add-${pid}`)?.focus(); }
 
-                // Create and show modal
-                let modal = document.getElementById('history-modal');
-                if (!modal) {
-                    modal = document.createElement('div');
-                    modal.id = 'history-modal';
-                    modal.className = 'fixed inset-0 bg-black/70 flex items-center justify-center z-[100]';
-                    document.body.appendChild(modal);
-                }
+async function submitSubtask(inp, pid) {
+    const title = inp.value.trim();
+    if (!title) return;
+    inp.value = '';
+    await api(`/api/projects/${pid}/subtasks`, 'POST', { title });
+    openProjects.add(pid);
+    await loadProjects();
+}
+function subKey(e, inp, pid) {
+    if (e.key === 'Enter') { e.preventDefault(); submitSubtask(inp, pid); }
+    if (e.key === 'Escape') { inp.value = ''; inp.blur(); }
+}
+async function toggleSub(id) { await api(`/api/subtasks/${id}/toggle`, 'POST'); await loadProjects(); }
+async function deleteSub(id) { await api(`/api/subtasks/${id}`, 'DELETE'); await loadProjects(); toast('Subtask deleted'); }
 
-                modal.innerHTML = html;
-                modal.classList.remove('hidden');
-                modal.classList.add('flex');
+function startEditSub(el, id) {
+    if (!el) return;
+    const original = el.textContent;
+    el.style.display = 'none';
+    const inp = document.createElement('input');
+    inp.className = 'edit-field';
+    inp.style.fontSize = '12px';
+    inp.value = original;
+    el.parentNode.insertBefore(inp, el.nextSibling);
+    inp.focus(); inp.select();
+    const save = async () => {
+        const val = inp.value.trim();
+        if (val && val !== original) { await api(`/api/subtasks/${id}`, 'PUT', { title: val }); await loadProjects(); }
+        else { inp.remove(); el.style.display = ''; }
+    };
+    inp.addEventListener('blur', save);
+    inp.addEventListener('keydown', e => {
+        if (e.key === 'Enter') save();
+        if (e.key === 'Escape') { inp.remove(); el.style.display = ''; }
+    });
+}
 
-            } catch (e) {
-                console.error('Failed to load history', e);
-                alert('Failed to load task history. Please try again.');
-            }
-        }
-
-        function hideHistoryModal() {
-            const modal = document.getElementById('history-modal');
-            if (modal) {
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
-            }
-        }
-
-        async function initializeDashboard() {
-            formatHeaderDate();
-            if ('{{ tab }}' === 'tasks') {
-                await loadTasks();
-                await loadProjects();
-            }
-            console.log('%c✅ Kaeru Dashboard updated successfully', 'color:#10b981; font-family:monospace');
-        }
-
-
-        // ====================== NOTES FUNCTIONALITY (Light Theme + Improved) ======================
-
-let currentNotes = [];
-let currentNoteId = null;
-let autoSaveTimeout = null;
-let notesSidebarOpen = false;
+// ============================================================
+// NOTES — REDESIGNED EDITOR
+// ============================================================
+let dragSrc = null;
+let savedRange = null; // save selection before modal
 
 async function loadNotes() {
-    try {
-        const res = await fetch('/api/notes');
-        currentNotes = await res.json();
-        renderNotesList();
-    } catch (e) {
-        console.error('Failed to load notes', e);
-    }
+    const res = await fetch('/api/notes');
+    notes = await res.json();
+    renderNotesList();
 }
 
 function renderNotesList() {
-    const container = document.getElementById('notes-list');
-    if (!container) return;
-    
-    let html = '';
-    currentNotes.forEach(note => {
-        const isActive = note.id === currentNoteId ? 'bg-white shadow-sm border border-gray-200' : 'hover:bg-white';
-        html += `
-            <div onclick="openNote(${note.id})" 
-                 class="px-4 py-3.5 rounded-2xl cursor-pointer transition-all ${isActive}">
-                <div class="font-medium text-gray-900 line-clamp-1">${note.title || 'Untitled Note'}</div>
-                <div class="text-xs text-gray-500 mt-1">${new Date(note.updated_at).toLocaleDateString('en-US', {month:'short', day:'numeric'})}</div>
-            </div>
+    const list = document.getElementById('notes-list');
+    if (!list) return;
+    if (!notes.length) {
+        list.innerHTML = '<div style="text-align:center;color:var(--text3);padding:20px;font-size:12px">No notes yet.<br>Click + to create.</div>';
+        return;
+    }
+    list.innerHTML = '';
+    notes.forEach((n) => {
+        const active = n.id === currentNoteId ? 'active' : '';
+        const div = document.createElement('div');
+        div.className = `note-item ${active}`;
+        div.dataset.id = n.id;
+        div.draggable = true;
+        div.innerHTML = `
+            ${n.pinned ? '<i class="fa-solid fa-thumbtack note-pin-icon"></i>' : ''}
+            <div class="note-item-title">${escH(n.title)}</div>
+            <div class="note-item-date">${fmtDate(n.updated_at)}</div>
         `;
+        div.addEventListener('click', () => openNote(n.id));
+        div.addEventListener('dragstart', () => { dragSrc = n.id; div.style.opacity = '0.5'; });
+        div.addEventListener('dragend', () => { div.style.opacity = '1'; dragSrc = null; });
+        div.addEventListener('dragover', e => { e.preventDefault(); div.classList.add('drag-over'); });
+        div.addEventListener('dragleave', () => div.classList.remove('drag-over'));
+        div.addEventListener('drop', async e => {
+            e.preventDefault(); div.classList.remove('drag-over');
+            if (dragSrc === null || dragSrc === n.id) return;
+            await reorderNote(dragSrc, n.id);
+        });
+        list.appendChild(div);
     });
-    
-    container.innerHTML = html || `<div class="p-8 text-center text-gray-400">No notes yet.<br>Click + to create one</div>`;
 }
 
-async function createNewNote() {
-    try {
-        const res = await fetch('/api/notes', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({})
-        });
-        const data = await res.json();
-        await loadNotes();
-        openNote(data.id);
-    } catch (e) {
-        alert('Failed to create note');
-    }
+async function reorderNote(srcId, targetId) {
+    const srcIdx = notes.findIndex(n => n.id === srcId);
+    const tgtIdx = notes.findIndex(n => n.id === targetId);
+    const arr = [...notes];
+    const [moved] = arr.splice(srcIdx, 1);
+    arr.splice(tgtIdx, 0, moved);
+    notes = arr;
+    const order = arr.map((n, i) => ({ id: n.id, position: i }));
+    renderNotesList();
+    await api('/api/notes/reorder', 'POST', { order });
 }
 
 async function openNote(id) {
     currentNoteId = id;
     renderNotesList();
-    
-    try {
-        const res = await fetch(`/api/notes/${id}`);
-        const note = await res.json();
-        
-        document.getElementById('note-title').value = note.title || 'Untitled Note';
-        document.getElementById('note-editor').innerHTML = note.content || '<p></p>';
-    } catch (e) {
-        console.error(e);
-    }
-
-    // Auto-close notes sidebar on mobile after selecting a note (highly responsive UX)
-    if (window.innerWidth < 768) {
-        toggleNotesSidebar();
-    }
+    const note = await fetch(`/api/notes/${id}`).then(r => r.json());
+    document.getElementById('note-title-input').value = note.title || '';
+    const editor = document.getElementById('note-editor');
+    editor.innerHTML = note.content || '';
+    // Ensure links open in new tab
+    editor.querySelectorAll('a').forEach(a => { a.setAttribute('target', '_blank'); a.setAttribute('rel', 'noopener'); });
+    const pb = document.getElementById('pin-btn');
+    if (pb) pb.style.color = note.pinned ? 'var(--accent)' : '';
+    if (window.innerWidth < 768) closeSidebar();
 }
 
-function autoSaveCurrentNote() {
-    clearTimeout(autoSaveTimeout);
-    autoSaveTimeout = setTimeout(saveCurrentNote, 800);
+async function createNote() {
+    const data = await api('/api/notes', 'POST', {});
+    await loadNotes();
+    openNote(data.id);
 }
 
-async function saveCurrentNote() {
+function debounceSave() {
+    clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(saveNote, 800);
+}
+
+async function saveNote() {
     if (!currentNoteId) return;
-    
-    const title = document.getElementById('note-title').value.trim() || 'Untitled Note';
+    const title = document.getElementById('note-title-input').value.trim() || 'Untitled Note';
     const content = document.getElementById('note-editor').innerHTML;
-    
-    try {
-        await fetch(`/api/notes/${currentNoteId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title, content })
-        });
-        await loadNotes();
-    } catch (e) {
-        console.error('Save failed', e);
+    await api(`/api/notes/${currentNoteId}`, 'PUT', { title, content });
+    const idx = notes.findIndex(n => n.id === currentNoteId);
+    if (idx >= 0) { notes[idx].title = title; notes[idx].updated_at = new Date().toISOString(); }
+    renderNotesList();
+}
+
+async function deleteNote() {
+    if (!currentNoteId || !confirm('Delete this note?')) return;
+    await api(`/api/notes/${currentNoteId}`, 'DELETE');
+    currentNoteId = null;
+    document.getElementById('note-title-input').value = '';
+    document.getElementById('note-editor').innerHTML = '';
+    await loadNotes();
+    toast('Note deleted');
+}
+
+async function togglePinNote() {
+    if (!currentNoteId) return;
+    const note = notes.find(n => n.id === currentNoteId);
+    if (!note) return;
+    const newPinned = !note.pinned;
+    await api(`/api/notes/${currentNoteId}`, 'PUT', { pinned: newPinned });
+    note.pinned = newPinned;
+    const pb = document.getElementById('pin-btn');
+    if (pb) pb.style.color = newPinned ? 'var(--accent)' : '';
+    notes.sort((a, b) => (b.pinned - a.pinned) || (a.position - b.position));
+    renderNotesList();
+    toast(newPinned ? 'Note pinned' : 'Note unpinned');
+}
+
+// ---- REDESIGNED EDITOR COMMANDS ----
+// Save selection before any modal opens
+function saveSelection() {
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) {
+        savedRange = sel.getRangeAt(0).cloneRange();
+    } else {
+        savedRange = null;
     }
 }
 
-async function deleteCurrentNote() {
-    if (!currentNoteId || !confirm('Delete this note permanently?')) return;
-    
-    try {
-        await fetch(`/api/notes/${currentNoteId}`, { method: 'DELETE' });
-        currentNoteId = null;
-        await loadNotes();
-        document.getElementById('note-title').value = '';
-        document.getElementById('note-editor').innerHTML = '';
-    } catch (e) {
-        alert('Failed to delete note');
+function restoreSelection() {
+    const editor = document.getElementById('note-editor');
+    if (!editor) return;
+    editor.focus();
+    if (savedRange) {
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(savedRange);
     }
 }
 
-// Toolbar Functions
-function execCommand(command) {
+function execFmt(cmd) {
     const editor = document.getElementById('note-editor');
+    if (!editor) return;
     editor.focus();
-    document.execCommand(command, false, null);
+    document.execCommand(cmd, false, null);
+    debounceSave();
+    updateToolbarState();
 }
 
-function setHeading(level) {
+function execList(type) {
     const editor = document.getElementById('note-editor');
+    if (!editor) return;
     editor.focus();
-    if (level === 'h1') document.execCommand('formatBlock', false, 'h1');
-    else if (level === 'h2') document.execCommand('formatBlock', false, 'h2');
-    else if (level === 'h3') document.execCommand('formatBlock', false, 'h3');
-    else document.execCommand('formatBlock', false, 'p');
+
+    if (type === 'ul') {
+        document.execCommand('insertUnorderedList', false, null);
+    } else {
+        document.execCommand('insertOrderedList', false, null);
+    }
+    // Ensure list styles show correctly
+    editor.querySelectorAll('ul').forEach(el => { el.style.listStyleType = 'disc'; el.style.paddingLeft = '22px'; });
+    editor.querySelectorAll('ol').forEach(el => { el.style.listStyleType = 'decimal'; el.style.paddingLeft = '22px'; });
+    debounceSave();
+    updateToolbarState();
 }
 
-function setColor(color) {
+function applyHeading(v) {
     const editor = document.getElementById('note-editor');
+    if (!editor) return;
     editor.focus();
+    if (!v) {
+        document.execCommand('formatBlock', false, 'p');
+    } else {
+        document.execCommand('formatBlock', false, v);
+    }
+    debounceSave();
+}
+
+function applyColor(color) {
+    const editor = document.getElementById('note-editor');
+    if (!editor) return;
+    editor.focus();
+    // Save/restore selection to prevent cursor jump
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+    const range = sel.getRangeAt(0).cloneRange();
+    document.execCommand('styleWithCSS', false, true);
     document.execCommand('foreColor', false, color);
+    // Restore cursor
+    sel.removeAllRanges();
+    sel.addRange(range);
+    debounceSave();
 }
 
-function insertLink() {
-    const url = prompt("Enter the URL:", "https://");
-    if (url && url !== "https://") {
-        const editor = document.getElementById('note-editor');
-        editor.focus();
-        document.execCommand('createLink', false, url);
-    }
+function insertQuote() {
+    const editor = document.getElementById('note-editor');
+    if (!editor) return;
+    editor.focus();
+    document.execCommand('formatBlock', false, 'blockquote');
+    debounceSave();
 }
 
-function insertCodeBlock() {
-    const code = prompt("Paste or type your code here:");
-    if (code) {
-        const editor = document.getElementById('note-editor');
-        editor.focus();
-        const html = `<pre style="background:#f8fafc; padding:14px; border-radius:10px; border:1px solid #e5e7eb; overflow:auto; font-family:monospace;"><code>${code.replace(/</g, '&lt;')}</code></pre>`;
+function insertHR() {
+    const editor = document.getElementById('note-editor');
+    if (!editor) return;
+    editor.focus();
+    document.execCommand('insertHTML', false, '<hr><p><br></p>');
+    debounceSave();
+}
+
+function insertCode() {
+    const editor = document.getElementById('note-editor');
+    if (!editor) return;
+    editor.focus();
+    const sel = window.getSelection();
+    const text = sel ? sel.toString() : '';
+    document.execCommand('insertHTML', false, `<code>${escH(text) || 'code'}</code>`);
+    debounceSave();
+}
+
+// LINK INSERTION FLOW
+let _linkTarget = null; // which editor (notes or node)
+function showLinkModal(target = 'notes') {
+    _linkTarget = target;
+    if (target === 'notes') saveSelection();
+    document.getElementById('link-display-text').value = '';
+    document.getElementById('link-url').value = 'https://';
+    document.getElementById('link-modal').style.display = 'flex';
+    setTimeout(() => document.getElementById('link-display-text').focus(), 50);
+}
+function closeLinkModal() { document.getElementById('link-modal').style.display = 'none'; }
+function confirmInsertLink() {
+    const displayText = document.getElementById('link-display-text').value.trim();
+    const url = document.getElementById('link-url').value.trim();
+    if (!url || url === 'https://') { closeLinkModal(); return; }
+    const text = displayText || url;
+    closeLinkModal();
+
+    if (_linkTarget === 'notes') {
+        restoreSelection();
+        const html = `<a href="${escH(url)}" target="_blank" rel="noopener">${escH(text)}</a>`;
         document.execCommand('insertHTML', false, html);
+        debounceSave();
+    } else if (_linkTarget === 'node') {
+        const editor = document.getElementById('node-desc-editor');
+        if (editor) {
+            editor.focus();
+            const html = `<a href="${escH(url)}" target="_blank" rel="noopener">${escH(text)}</a>`;
+            document.execCommand('insertHTML', false, html);
+        }
     }
 }
 
-// Mobile Notes Sidebar Toggle (highly responsive - hidden on mobile, full toggle drawer)
-function toggleNotesSidebar() {
-    notesSidebarOpen = !notesSidebarOpen;
-    const sidebar = document.getElementById('notes-sidebar');
-    const backdrop = document.getElementById('notes-backdrop');
-    
-    if (notesSidebarOpen) {
-        sidebar.classList.add('translate-x-0');
-        if (backdrop) {
-            backdrop.classList.remove('hidden');
+function updateToolbarState() {
+    const cmds = ['bold', 'italic', 'underline', 'strikeThrough'];
+    const ids = ['tb-bold', 'tb-italic', 'tb-underline', 'tb-strike'];
+    cmds.forEach((c, i) => {
+        const btn = document.getElementById(ids[i]);
+        if (btn) btn.classList.toggle('active', document.queryCommandState(c));
+    });
+    // List state
+    const ulBtn = document.getElementById('tb-ul');
+    const olBtn = document.getElementById('tb-ol');
+    if (ulBtn) ulBtn.classList.toggle('active', document.queryCommandState('insertUnorderedList'));
+    if (olBtn) olBtn.classList.toggle('active', document.queryCommandState('insertOrderedList'));
+}
+
+function closeSidebar() {
+    document.getElementById('notes-sidebar')?.classList.remove('open');
+    const bd = document.getElementById('notes-backdrop');
+    if (bd) bd.style.display = 'none';
+}
+
+// ============================================================
+// TIMELESS — REDESIGNED VIRTUALIZED TIMELINE
+// ============================================================
+let tlDisplayNodes = []; // nodes currently filtered/displayed
+const TL_ROW_HEIGHT = 72; // px per row for virtual scroll
+const TL_BUFFER = 5;
+
+async function loadTimeless() {
+    const res = await fetch('/api/timeless');
+    timelessNodes = await res.json();
+    allTags = [...new Set(timelessNodes.flatMap(n => n.tags_list || []))].sort();
+    renderTagsBar();
+    applyTlFilters();
+}
+
+function applyTlFilters() {
+    let nodes = [...timelessNodes];
+    if (tlFilterTag) {
+        nodes = nodes.filter(n => (n.tags_list || []).includes(tlFilterTag));
+    }
+    if (tlSearchQuery) {
+        const q = tlSearchQuery.toLowerCase();
+        // Show search results overlay
+        const results = nodes.filter(n =>
+            n.title.toLowerCase().includes(q) ||
+            (n.tags_list || []).some(t => t.toLowerCase().includes(q))
+        );
+        renderSearchResults(results);
+        nodes = results;
+    } else {
+        document.getElementById('tl-search-results').style.display = 'none';
+    }
+    tlDisplayNodes = nodes;
+    renderTimelineVirtual();
+}
+
+function renderTagsBar() {
+    const bar = document.getElementById('tl-tags-bar');
+    if (!bar) return;
+    if (!allTags.length) { bar.style.display = 'none'; return; }
+    bar.style.display = 'flex';
+    let html = '<span style="font-size:10px;color:var(--text3);margin-right:2px">Filter:</span>';
+    allTags.forEach(tag => {
+        const active = tlFilterTag === tag ? 'active' : '';
+        html += `<span class="tag-chip ${active}" onclick="setTagFilter('${escH(tag)}')">${escH(tag)}</span>`;
+    });
+    if (tlFilterTag) {
+        html += `<span class="tag-chip reset" onclick="clearTagFilter()"><i class="fa-solid fa-xmark" style="font-size:9px"></i> Clear</span>`;
+    }
+    bar.innerHTML = html;
+}
+
+function setTagFilter(tag) {
+    tlFilterTag = tag;
+    renderTagsBar();
+    applyTlFilters();
+}
+function clearTagFilter() {
+    tlFilterTag = null;
+    renderTagsBar();
+    applyTlFilters();
+}
+
+function tlSearch(q) {
+    tlSearchQuery = q.trim();
+    applyTlFilters();
+}
+
+function renderSearchResults(results) {
+    const el = document.getElementById('tl-search-results');
+    if (!results.length) {
+        el.style.display = 'block';
+        el.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:4px">No results found.</div>';
+        return;
+    }
+    el.style.display = 'block';
+    let html = `<div style="font-size:10px;color:var(--text3);margin-bottom:6px">${results.length} result(s)</div>`;
+    results.forEach(n => {
+        const tags = (n.tags_list || []).join(', ');
+        html += `<div class="search-result-item" onclick="selectNode(${n.id})">
+            <div>
+                <div style="font-size:11px;font-weight:600;color:var(--accent)">${n.hijri_year ? n.hijri_year + ' AH' : (n.gregorian_year ? n.gregorian_year + ' CE' : '—')}</div>
+                <div style="font-size:12px;color:var(--text)">${escH(n.title)}</div>
+                ${tags ? `<div style="font-size:10px;color:var(--text3)">${escH(tags)}</div>` : ''}
+            </div>
+        </div>`;
+    });
+    el.innerHTML = html;
+}
+
+function renderTimelineVirtual() {
+    const container = document.getElementById('tl-rows-container');
+    const inner = document.getElementById('tl-inner');
+    if (!container || !inner) return;
+
+    if (!tlDisplayNodes.length) {
+        container.innerHTML = `<div style="text-align:center;color:var(--text3);padding:60px 20px;font-size:12px">
+            <i class="fa-solid fa-hourglass-half" style="font-size:28px;opacity:0.3;display:block;margin-bottom:8px"></i>
+            ${tlFilterTag ? 'No nodes with this tag.' : 'No nodes yet. Click + to add.'}
+        </div>`;
+        inner.style.height = 'auto';
+        return;
+    }
+
+    // For now, render all nodes (virtualization hook for 1000+)
+    // With true virtualization we'd use scroll position, but for correctness render all
+    // with a virtual approach using absolute positioning for large sets
+    const totalH = tlDisplayNodes.length * (TL_ROW_HEIGHT + 8) + 40;
+    inner.style.minHeight = totalH + 'px';
+
+    let html = '';
+    tlDisplayNodes.forEach((n, i) => {
+        const sel = n.id === currentNodeId ? 'selected' : '';
+        const dotSel = n.id === currentNodeId ? 'selected' : '';
+        const tags = (n.tags_list || []);
+        const tagsHtml = tags.length ? `<div class="tl-node-tags">${tags.map(t => `<span class="tl-tag">${escH(t)}</span>`).join('')}</div>` : '';
+        html += `<div class="tl-desktop-row" style="top:${i * (TL_ROW_HEIGHT + 8) + 8}px">
+            <div class="tl-year-col">
+                <div class="tl-year-hijri">${n.hijri_year ? n.hijri_year + ' AH' : ''}</div>
+                <div class="tl-year-greg">${n.gregorian_year ? n.gregorian_year + ' CE' : ''}</div>
+            </div>
+            <div class="tl-center-line">
+                <div class="tl-node-dot ${dotSel}" onclick="selectNode(${n.id})" title="${escH(n.title)}"></div>
+            </div>
+            <div class="tl-title-col">
+                <div class="tl-node-card ${sel}" onclick="selectNode(${n.id})">
+                    <div class="tl-node-title">${escH(n.title)}</div>
+                    ${tagsHtml}
+                </div>
+            </div>
+        </div>`;
+    });
+    container.innerHTML = html;
+
+    // Update center axis height
+    const axis = document.getElementById('tl-center-axis');
+    if (axis) axis.style.height = Math.max(totalH, 200) + 'px';
+}
+
+function navigateToNode(id) {
+    // Scroll the node into view
+    selectNode(id);
+    // Clear search
+    const inp = document.getElementById('tl-search');
+    if (inp) inp.value = '';
+    tlSearchQuery = '';
+    document.getElementById('tl-search-results').style.display = 'none';
+    applyTlFilters();
+    // Scroll to node
+    const idx = tlDisplayNodes.findIndex(n => n.id === id);
+    if (idx >= 0) {
+        const scrollEl = document.getElementById('tl-scroll');
+        if (scrollEl) scrollEl.scrollTop = idx * (TL_ROW_HEIGHT + 8);
+    }
+}
+
+function selectNode(id) {
+    currentNodeId = id;
+    renderTimelineVirtual();
+    const node = timelessNodes.find(n => n.id === id);
+    if (!node) return;
+
+    const detailBody = buildDetailHTML(node);
+    const isMobile = window.innerWidth <= 768;
+
+    if (isMobile) {
+        document.getElementById('tl-mobile-detail-body').innerHTML = detailBody;
+        document.getElementById('tl-mobile-overlay').classList.add('open');
+    } else {
+        const panel = document.getElementById('tl-detail');
+        document.getElementById('tl-detail-body').innerHTML = detailBody;
+        panel.style.display = 'flex';
+    }
+}
+
+function buildDetailHTML(node) {
+    let html = `<div style="margin-bottom:14px">
+        <div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:6px">${escH(node.title)}</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+            ${node.hijri_year ? `<span style="padding:2px 8px;border-radius:5px;background:var(--accent-bg);color:var(--accent);font-size:11px;font-family:'JetBrains Mono',monospace">${node.hijri_year} AH</span>` : ''}
+            ${node.gregorian_year ? `<span style="padding:2px 8px;border-radius:5px;background:var(--bg3);color:var(--text2);font-size:11px;font-family:'JetBrains Mono',monospace">${node.gregorian_year} CE</span>` : ''}
+        </div>
+    </div>`;
+
+    if (node.tags_list && node.tags_list.length) {
+        html += `<div class="detail-label">Tags</div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px">
+            ${node.tags_list.map(t => `<span class="tl-tag" style="font-size:11px;padding:3px 8px">${escH(t)}</span>`).join('')}
+        </div>`;
+    }
+
+    if (node.description) {
+        html += `<div class="detail-label">Description</div>
+        <div class="detail-desc">${node.description}</div>`;
+    }
+    if (node.sidenote) {
+        html += `<div class="detail-label">Side Note</div>
+        <div class="detail-value" style="font-style:italic;color:var(--text3)">${escH(node.sidenote)}</div>`;
+    }
+    if (node.sources && node.sources.length) {
+        html += `<div class="detail-label">Sources</div>`;
+        node.sources.forEach(s => {
+            html += `<a class="source-link" href="${escH(s.url)}" target="_blank" rel="noopener">
+                <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:10px;flex-shrink:0"></i>
+                ${escH(s.display_text)}
+            </a>`;
+        });
+    }
+    return html;
+}
+
+function closeDetail() {
+    document.getElementById('tl-detail').style.display = 'none';
+    currentNodeId = null;
+    renderTimelineVirtual();
+}
+function closeMobileOverlay() {
+    document.getElementById('tl-mobile-overlay').classList.remove('open');
+    currentNodeId = null;
+    renderTimelineVirtual();
+}
+
+// NODE MODAL
+function showNodeModal(node = null) {
+    editingNodeId = node ? node.id : null;
+    nodeTags = node && node.tags_list ? [...node.tags_list] : [];
+    document.getElementById('node-modal-title').textContent = node ? 'Edit Node' : 'New Node';
+    document.getElementById('node-title').value = node ? node.title : '';
+    const descEditor = document.getElementById('node-desc-editor');
+    descEditor.innerHTML = node ? (node.description || '') : '';
+    document.getElementById('node-greg').value = node ? node.gregorian_year || '' : '';
+    document.getElementById('node-hijri').value = node ? node.hijri_year || '' : '';
+    document.getElementById('node-sidenote').value = node ? node.sidenote || '' : '';
+
+    renderTagsPreview();
+
+    const sl = document.getElementById('sources-list');
+    sl.innerHTML = '';
+    if (node && node.sources) {
+        node.sources.forEach(s => addSourceField(s.display_text, s.url));
+    }
+
+    document.getElementById('node-modal').style.display = 'flex';
+    setTimeout(() => document.getElementById('node-title').focus(), 50);
+}
+function closeNodeModal() { document.getElementById('node-modal').style.display = 'none'; editingNodeId = null; nodeTags = []; }
+
+// TAG INPUT SYSTEM
+function handleTagInput(e) {
+    if (e.key === 'Enter' || e.key === ',') {
+        e.preventDefault();
+        const val = e.target.value.trim().replace(/,/g, '');
+        if (val) addTag(val);
+        e.target.value = '';
+        document.getElementById('tag-suggestions').style.display = 'none';
+    }
+    if (e.key === 'Escape') {
+        document.getElementById('tag-suggestions').style.display = 'none';
+    }
+}
+
+function addTag(tag) {
+    if (nodeTags.includes(tag)) { toast('Tag already added'); return; }
+    nodeTags.push(tag);
+    renderTagsPreview();
+}
+
+function removeTag(tag) {
+    nodeTags = nodeTags.filter(t => t !== tag);
+    renderTagsPreview();
+}
+
+function renderTagsPreview() {
+    const prev = document.getElementById('tags-preview');
+    if (!prev) return;
+    prev.innerHTML = nodeTags.map(t =>
+        `<span class="tag-pill">${escH(t)}<button onclick="removeTag('${escH(t)}')" type="button">×</button></span>`
+    ).join('');
+}
+
+function showTagSuggestions(val) {
+    const sug = document.getElementById('tag-suggestions');
+    if (!val) { sug.style.display = 'none'; return; }
+    const q = val.toLowerCase();
+    const matches = allTags.filter(t => t.toLowerCase().includes(q) && !nodeTags.includes(t));
+    if (!matches.length) { sug.style.display = 'none'; return; }
+    sug.innerHTML = matches.slice(0, 5).map(t =>
+        `<div class="tag-sug-item" onclick="addTag('${escH(t)}');document.getElementById('node-tag-input').value='';document.getElementById('tag-suggestions').style.display='none'">${escH(t)}</div>`
+    ).join('');
+    sug.style.display = 'block';
+}
+
+// Year auto-conversion
+function autoConvertYear(from) {
+    if (from === 'greg') {
+        const g = parseInt(document.getElementById('node-greg').value);
+        if (g && !document.getElementById('node-hijri').value) {
+            document.getElementById('node-hijri').value = Math.round((g - 622) * (33 / 32));
         }
     } else {
-        sidebar.classList.remove('translate-x-0');
-        if (backdrop) {
-            backdrop.classList.add('hidden');
+        const h = parseInt(document.getElementById('node-hijri').value);
+        if (h && !document.getElementById('node-greg').value) {
+            document.getElementById('node-greg').value = Math.round(h * (32 / 33) + 622);
         }
     }
 }
 
-// Initialize when Notes tab is active
-if ('{{ tab }}' === 'notes') {
-    window.addEventListener('load', loadNotes);
+function addSourceField(displayText = '', url = '') {
+    const sl = document.getElementById('sources-list');
+    const div = document.createElement('div');
+    div.style.cssText = 'display:flex;gap:6px;margin-bottom:6px;align-items:center';
+    div.innerHTML = `
+        <input class="field-input" style="flex:1" placeholder="Display text" value="${escH(displayText)}">
+        <input class="field-input" style="flex:1.5" placeholder="https://…" value="${escH(url)}">
+        <button onclick="this.parentNode.remove()" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px"><i class="fa-solid fa-xmark"></i></button>
+    `;
+    sl.appendChild(div);
 }
 
+function nodeDescCmd(cmd) {
+    document.getElementById('node-desc-editor').focus();
+    document.execCommand(cmd, false, null);
+}
+function insertNodeLink() { showLinkModal('node'); }
 
-        window.onload = initializeDashboard;
-    </script>
+async function saveNode() {
+    const title = document.getElementById('node-title').value.trim();
+    if (!title) { document.getElementById('node-title').focus(); return; }
+
+    const gYear = document.getElementById('node-greg').value;
+    const hYear = document.getElementById('node-hijri').value;
+    const descEditor = document.getElementById('node-desc-editor');
+    const description = descEditor ? descEditor.innerHTML : '';
+
+    const sources = [];
+    document.querySelectorAll('#sources-list > div').forEach(div => {
+        const inputs = div.querySelectorAll('input');
+        const dt = inputs[0].value.trim();
+        const url = inputs[1].value.trim();
+        if (dt && url) sources.push({ display_text: dt, url });
+    });
+
+    const payload = {
+        title,
+        description,
+        gregorian_year: gYear ? parseInt(gYear) : null,
+        hijri_year: hYear ? parseInt(hYear) : null,
+        sidenote: document.getElementById('node-sidenote').value,
+        tags: nodeTags.join(','),
+        sources
+    };
+
+    if (editingNodeId) {
+        await api(`/api/timeless/${editingNodeId}`, 'PUT', payload);
+        toast('Node updated');
+    } else {
+        await api('/api/timeless', 'POST', payload);
+        toast('Node added');
+    }
+    closeNodeModal();
+    await loadTimeless();
+    if (currentNodeId) selectNode(currentNodeId);
+}
+
+async function editSelectedNode() {
+    const node = timelessNodes.find(n => n.id === currentNodeId);
+    if (node) showNodeModal(node);
+}
+
+async function deleteSelectedNode() {
+    if (!currentNodeId || !confirm('Delete this node?')) return;
+    await api(`/api/timeless/${currentNodeId}`, 'DELETE');
+    currentNodeId = null;
+    closeDetail();
+    closeMobileOverlay();
+    await loadTimeless();
+    toast('Node deleted');
+}
+
+// ============================================================
+// UTILITIES
+// ============================================================
+function escH(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+function fmtDate(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+// ============================================================
+// MOBILE SETUP
+// ============================================================
+function initMobile() {
+    const isMobile = window.innerWidth < 769;
+    // Show mobile hamburger
+    const ham = document.querySelector('.mobile-only.icon-btn');
+    if (ham) ham.style.display = isMobile ? 'flex' : 'none';
+    // Show sidebar toggle in notes
+    const st = document.getElementById('sidebar-toggle');
+    if (st) st.style.display = isMobile ? 'flex' : 'none';
+    // Tasks layout
+    const layout = document.getElementById('tasks-layout');
+    if (layout) {
+        layout.style.flexDirection = isMobile ? 'column' : 'row';
+        // On mobile remove the border-right from split-left
+        const sl = document.getElementById('tasks-panel');
+        if (sl) {
+            sl.style.borderRight = isMobile ? 'none' : '';
+            sl.style.borderBottom = isMobile ? '1px solid var(--border)' : '';
+            sl.style.flex = isMobile ? '0 0 50%' : '1';
+        }
+        const sr = document.getElementById('projects-panel');
+        if (sr) sr.style.flex = isMobile ? '0 0 50%' : '1';
+    }
+}
+
+// ============================================================
+// NOTE EDITOR — selection tracking
+// ============================================================
+function initNoteEditor() {
+    const editor = document.getElementById('note-editor');
+    if (!editor) return;
+    editor.addEventListener('input', () => {
+        // fix list styles after input
+        editor.querySelectorAll('ul').forEach(el => el.style.listStyleType = 'disc');
+        editor.querySelectorAll('ol').forEach(el => el.style.listStyleType = 'decimal');
+        debounceSave();
+    });
+    editor.addEventListener('keyup', updateToolbarState);
+    editor.addEventListener('mouseup', updateToolbarState);
+    editor.addEventListener('keydown', e => {
+        if (e.key === 'Tab') {
+            e.preventDefault();
+            document.execCommand('insertHTML', false, '&nbsp;&nbsp;&nbsp;&nbsp;');
+        }
+    });
+    // Handle links — open in new tab on click
+    editor.addEventListener('click', e => {
+        if (e.target.tagName === 'A') {
+            e.preventDefault();
+            window.open(e.target.href, '_blank', 'noopener');
+        }
+    });
+}
+
+// ============================================================
+// INIT
+// ============================================================
+window.addEventListener('load', async () => {
+    initTheme();
+    updateClock();
+    setInterval(updateClock, 10000);
+    initMobile();
+
+    if (tab === 'tasks') {
+        await loadTasks();
+        await loadProjects();
+    } else if (tab === 'notes') {
+        await loadNotes();
+        initNoteEditor();
+    } else if (tab === 'timeless') {
+        await loadTimeless();
+    }
+});
+
+window.addEventListener('resize', initMobile);
+
+// Close tag suggestions when clicking outside
+document.addEventListener('click', e => {
+    if (!e.target.closest('.tag-input-wrap')) {
+        const sug = document.getElementById('tag-suggestions');
+        if (sug) sug.style.display = 'none';
+    }
+});
+</script>
 </body>
 </html>
