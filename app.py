@@ -1,47 +1,19 @@
-""" 
-Appriciateable Things you have developed . But there are some technical improvement need here . Follow the instruction below
-
-What you will do Now .
-- in Tasks Section : I could not add tasks that i will do in next few days or task later. So you will Add a date picker to the Tasks section so users can assign future dates; display tasks grouped as Today and Tomorrow explicitly, while all later-dated tasks fall under “Upcoming Tasks,” where each date appears as a compact rounded rectangle (month in short form like Jan, Feb) aligned along a vertical timeline, with corresponding tasks shown to the right in a clean, structured layout.
-- In Tasks Tab: Enable responsive behavior so that on mobile screens the Projects and Tasks sections stack vertically instead of side-by-side; additionally, make both sections independently collapsible/expandable with smooth animations using a CDN-hosted animation library, allowing users to hide Tasks for a cleaner Project view and hide Projects for a cleaner Tasks view.
-- In Task Tab: enable inline editing of project names; enhance each project with metadata fields (Created At, Last Updated) and a smoothly animated circular completion progress indicator (visual only, no percentage text), and implement animated expand/collapse behavior for projects.
-- In Note Tab: restructure and redesign the way you render the formatted text area . the Coloring - Bullet Item aren't working . the current rich text editor is functionally broken—color changes reset the cursor position, bullet lists fail to render despite spacing, and formatting is unreliable—so redesign the editor architecture to properly handle styled text; implement stable cursor behavior, working bullet/ordered lists, and a hyperlink insertion flow that prompts for display text and URL, rendering clickable links that open in a new tab.
-- In Timeless tab . design a scalable timeline system that efficiently handles 1000+ nodes (using virtualization), with a centered vertical timeline on desktop where years (large Hijri date with muted Gregorian date) appear on the left and truncated node titles on the right; clicking a node shifts the timeline aside and opens a detailed panel on the right, while on mobile it opens a dismissible overlay (tap outside or close icon); enable smooth bidirectional scrolling, full-text search with results shown as “Hijri Date – Title – Tags” that navigate to nodes, tag-based filtering with a clear reset option, and a node creation system with fields for Title, Tags (with duplicate prevention suggestions), Description (rich text with clickable hyperlinks using display text + URL opening in new tabs), either Hijri or Gregorian year input (auto-converted and stored as both), and multiple source links rendered as a clickable list.
-- On mobile screens, ensure the UI includes accessible controls for Dark/Light mode toggle, Task History, and Logout, displayed in a clear and reachable layout (e.g., top bar or menu drawer) without disrupting the primary workflow.
-
-Follow Current Code and Modify this Code where Needed as my requirement . 
-
-What you must NOT do:
-
-Do not overhaul or replace the existing UI/UX architecture; preserve at least 90% of the current structure, layout hierarchy, and interaction patterns.
-Do not introduce new design systems, component libraries, or styling paradigms that conflict with the current implementation.
-Do not break or refactor stable, already-working features unless strictly necessary for the requested changes.
-Do not compromise performance, responsiveness, or existing data flow while implementing new features.
-Do not add unnecessary complexity, over-engineering, or redundant abstractions.
-Do not alter core user workflows or navigation logic beyond the explicitly defined requirements.
-Ensure all enhancements are incremental, backward-compatible, and seamlessly integrated into the current system.
-
-Final Deliverable:
-
-- Provide the complete templates/index.html with all specified requirements fully implemented, without deviating from the existing UI structure.
-- Provide the complete app.py with all backend logic updated to support the new features and behaviors.
-- Ensure the implementation strictly uses the following configuration and does not alter it:
-app = Flask(__name__, template_folder="templates")
-app.secret_key = "kaeru-dev-secret-2026"
-CORS(app)
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_FILE = os.path.join(BASE_DIR, "kaeru.db")
-PASSWORD_FILE = os.path.join(BASE_DIR, "password.txt")
 
 
-
-"""
 import os
 import sqlite3
 from datetime import datetime, timedelta
+from datetime import datetime, timedelta
+import time
+import re
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from flask_cors import CORS
+import requests
+import hashlib
+
+FOOTBALL_API_KEY = "e1c859a9b58f4b64ae66a0ec14f07b07"  # Get from https://www.football-data.org/
+FOOTBALL_API_BASE = "https://api.football-data.org/v4"
+
 
 app = Flask(__name__, template_folder="templates")
 app.secret_key = "kaeru-dev-secret-2026"
@@ -50,6 +22,277 @@ CORS(app)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_FILE = os.path.join(BASE_DIR, "kaeru.db")
 PASSWORD_FILE = os.path.join(BASE_DIR, "password.txt")
+
+
+
+# Team IDs for Football-Data.org
+TEAM_IDS = {
+    "Real Madrid": 86,
+    "Barcelona": 81,
+    "Brazil": 764,
+    "Argentina": 760
+}
+
+# Competition IDs
+COMPETITION_IDS = {
+    "UCL": 2001,  # UEFA Champions League
+    "LaLiga": 2014,  # LaLiga
+    "World Cup": 2000,  # FIFA World Cup
+    "Friendlies": 2003  # International Friendlies
+}
+
+# Team short names for display
+TEAM_SHORT_NAMES = {
+    "Real Madrid": "RMA",
+    "Barcelona": "BAR",
+    "Brazil": "BRA",
+    "Argentina": "ARG"
+}
+
+def get_existing_match_hash(title, due_date):
+    """Generate a unique hash for a match to check for duplicates"""
+    match_string = f"{title}_{due_date}"
+    return hashlib.md5(match_string.encode()).hexdigest()
+
+def is_match_already_exists(title, due_date):
+    """Check if a match already exists in tasks to avoid duplicates"""
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT id FROM tasks WHERE title = ? AND due_date = ?",
+            (title, due_date)
+        ).fetchone()
+        
+        # Also check for similar matches within 1 day
+        if not row:
+            due_date_obj = datetime.strptime(due_date, '%Y-%m-%d').date()
+            start_date = due_date_obj - timedelta(days=1)
+            end_date = due_date_obj + timedelta(days=1)
+            
+            teams_match = re.search(r'([A-Z]+) vs ([A-Z]+)', title)
+            if teams_match:
+                team1, team2 = teams_match.groups()
+                rows = conn.execute(
+                    """SELECT id FROM tasks 
+                       WHERE title LIKE ? 
+                       AND due_date BETWEEN ? AND ?""",
+                    (f'%{team1} vs {team2}%', start_date.isoformat(), end_date.isoformat())
+                ).fetchall()
+                return len(rows) > 0
+        
+        return row is not None
+
+def convert_to_bst_plus6(utc_time_str):
+    """Convert UTC time to BST+6 (Bangladesh Time)"""
+    try:
+        utc_time = datetime.fromisoformat(utc_time_str.replace('Z', '+00:00'))
+        local_time = utc_time + timedelta(hours=6)
+        return local_time.strftime("%I:%M %p").lstrip('0').lower()
+    except:
+        return "Time TBD"
+
+
+def fetch_matches_from_api(competition_id, team_names, days_ahead=7):
+    """Fetch matches from Football-Data.org API for specific teams"""
+    matches = []
+    
+    # ---------------------------------------------------------------------
+    # REAL-TIME FIX: 
+    # Grab the actual current date from your system clock
+    # ---------------------------------------------------------------------
+    today = datetime.now().date() 
+    end_date = today + timedelta(days=days_ahead)
+    
+    headers = {'X-Auth-Token': FOOTBALL_API_KEY.strip()}
+    
+    url = f"{FOOTBALL_API_BASE}/competitions/{competition_id}/matches"
+    
+    params = {
+        'dateFrom': today.isoformat(),
+        'dateTo': end_date.isoformat()
+    }
+    
+    try:
+        response = requests.get(url, headers=headers, params=params, timeout=10)
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            target_team_ids = {TEAM_IDS[name]: name for name in team_names if name in TEAM_IDS}
+            
+            for match in data.get('matches', []):
+                # ---------------------------------------------------------
+                # UNCOMMENTED FIX: 
+                # Turn this back on so it hides games that are already over
+                # ---------------------------------------------------------
+                if match.get('status') in ['FINISHED', 'AWARDED', 'CANCELLED']:
+                    continue
+
+                home_team_data = match.get('homeTeam', {})
+                away_team_data = match.get('awayTeam', {})
+                
+                home_id = home_team_data.get('id')
+                away_id = away_team_data.get('id')
+                
+                if home_id in target_team_ids or away_id in target_team_ids:
+                    home_team = target_team_ids.get(home_id, home_team_data.get('shortName', home_team_data.get('name', '')))
+                    away_team = target_team_ids.get(away_id, away_team_data.get('shortName', away_team_data.get('name', '')))
+                    
+                    # --- 1. THE TIMEZONE FIX ---
+                    # First, get the exact UTC time
+                    utc_dt = datetime.fromisoformat(match['utcDate'].replace('Z', '+00:00'))
+                    
+                    # Next, add 6 hours for Bangladesh Time BEFORE extracting the date
+                    bst_dt = utc_dt + timedelta(hours=6)
+                    
+                    # Now extract both from the fully converted Bangladesh timestamp
+                    match_date = bst_dt.date() # This will correctly roll over to April 8!
+                    match_time = bst_dt.strftime('%I:%M %p').lstrip('0').lower() # "1:00 am"
+                    
+                    # --- 2. THE LALIGA FIX ---
+                    competition_name = match.get('competition', {}).get('name', '')
+                    
+                    # The API uses "Primera Division", so we added it to the check!
+                    comp_short = "UCL" if "Champions League" in competition_name else \
+                                "LaLiga" if "Primera Division" in competition_name or "LaLiga" in competition_name else \
+                                "World Cup" if "World Cup" in competition_name else \
+                                "Friendly" if "Friendly" in competition_name else "Match"
+                    
+                    matches.append({
+                        'home_team': home_team,
+                        'away_team': away_team,
+                        'date': match_date,
+                        'time': match_time,
+                        'competition': comp_short,
+                        'competition_full': competition_name,
+                        'status': match.get('status', 'TIMED')
+                    })
+        else:
+            print(f"API Error {response.status_code}: {response.text}")
+    except Exception as e:
+        print(f"Error fetching matches: {str(e)}")
+    
+    return matches
+
+def get_relevant_matches():
+    """Fetch all relevant matches for configured teams and competitions"""
+    all_matches = []
+    
+    competitions_config = [
+        {"comp_id": COMPETITION_IDS["UCL"], "teams": ["Real Madrid", "Barcelona"], "name": "UCL"},
+        {"comp_id": COMPETITION_IDS["LaLiga"], "teams": ["Real Madrid", "Barcelona"], "name": "LaLiga"},
+        {"comp_id": COMPETITION_IDS["World Cup"], "teams": ["Brazil", "Argentina"], "name": "World Cup"},
+        {"comp_id": COMPETITION_IDS["Friendlies"], "teams": ["Brazil", "Argentina"], "name": "Friendlies"}
+    ]
+    
+    for config in competitions_config:
+        matches = fetch_matches_from_api(config["comp_id"], config["teams"], days_ahead=7)
+        
+        # ---------------------------------------------------------------------
+        # THE FIX FOR 429 ERRORS:
+        # Pause for 2 seconds after each API call to respect the 10 req/min limit
+        # ---------------------------------------------------------------------
+        time.sleep(2) 
+        
+        for match in matches:
+            home_short = TEAM_SHORT_NAMES.get(match['home_team'], str(match['home_team'])[:3].upper())
+            away_short = TEAM_SHORT_NAMES.get(match['away_team'], str(match['away_team'])[:3].upper())
+            
+            title = f"{match['competition']}: {home_short} vs {away_short} - {match['time']}"
+            due_date = match['due_date'] if 'due_date' in match else match['date'].isoformat()
+            
+            all_matches.append({
+                'title': title,
+                'due_date': due_date,
+                'home_team': match['home_team'],
+                'away_team': match['away_team'],
+                'competition': match['competition'],
+                'raw_date': match['date']
+            })
+    
+    # Remove duplicates
+    unique_matches = {}
+    for match in all_matches:
+        key = f"{match['home_team']}_{match['away_team']}_{match['due_date']}"
+        if key not in unique_matches:
+            unique_matches[key] = match
+    
+    return list(unique_matches.values())
+
+
+def add_matches_to_tasks():
+    """Fetch matches and add them to tasks if not already present"""
+    matches = get_relevant_matches()
+    added_count = 0
+    skipped_count = 0
+    date_range = ""
+    
+    if matches:
+        dates = [m['raw_date'] for m in matches]
+        date_range = f"{min(dates).strftime('%b %d')} - {max(dates).strftime('%b %d, %Y')}"
+    
+    for match in matches:
+        if not is_match_already_exists(match['title'], match['due_date']):
+            with get_db() as conn:
+                conn.execute(
+                    "INSERT INTO tasks (title, due_date, completed) VALUES (?, ?, 0)",
+                    (match['title'], match['due_date'])
+                )
+                conn.commit()
+                added_count += 1
+                print(f"Added match: {match['title']} on {match['due_date']}")
+        else:
+            skipped_count += 1
+    
+    return added_count, skipped_count, date_range
+
+@app.route('/api/sports/sync', methods=['POST'])
+def sync_sports_matches():
+    """Endpoint to manually trigger sports match sync"""
+    try:
+        added, skipped, date_range = add_matches_to_tasks()
+        
+        if added > 0:
+            message = f"Added {added} new matches for {date_range}"
+            if skipped > 0:
+                message += f" (skipped {skipped} duplicates)"
+        else:
+            message = f"No new matches found for {date_range}"
+        
+        return jsonify({
+            "success": True,
+            "added": added,
+            "skipped": skipped,
+            "date_range": date_range,
+            "message": message
+        })
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+@app.route('/api/sports/matches', methods=['GET'])
+def get_upcoming_matches():
+    """Get upcoming matches without adding to tasks"""
+    matches = get_relevant_matches()
+    
+    formatted_matches = []
+    for match in matches:
+        formatted_matches.append({
+            'title': match['title'],
+            'date': match['due_date'],
+            'competition': match['competition'],
+            'home_team': match['home_team'],
+            'away_team': match['away_team']
+        })
+    
+    return jsonify({
+        'count': len(formatted_matches),
+        'matches': formatted_matches
+    })
+
+
+
 
 
 def get_db():
@@ -150,20 +393,50 @@ def init_db():
             )
         ''')
 
-        # Seed tasks if empty
-        if conn.execute("SELECT COUNT(*) FROM tasks").fetchone()[0] == 0:
-            today = datetime.now().strftime("%Y-%m-%d")
-            tomorrow = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
-            conn.executemany(
-                "INSERT INTO tasks (title, completed, due_date) VALUES (?, ?, ?)",
-                [
-                    ("Code Force Contest 17", 0, today),
-                    ("Leet Code Biweekly 233", 0, today),
-                    ("Academic Assignment 455", 1, today),
-                    ("SE exam 1st chapter and 2nd chapter", 0, tomorrow),
-                    ("System Design Online Class", 0, tomorrow),
-                ]
+
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS links (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                url TEXT NOT NULL,
+                click_count INTEGER DEFAULT 0,
+                sort_order INTEGER DEFAULT 0,
+                pinned INTEGER DEFAULT 0,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
             )
+        ''')
+
+        cursor = conn.execute("PRAGMA table_info(links);")
+        link_cols = [row[1] for row in cursor.fetchall()]
+        if 'sort_order' not in link_cols:
+            conn.execute('ALTER TABLE links ADD COLUMN sort_order INTEGER DEFAULT 0')
+        if 'pinned' not in link_cols:
+            conn.execute('ALTER TABLE links ADD COLUMN pinned INTEGER DEFAULT 0')
+
+
+
+
+
+        # ==================== SEEDING LOGIC ====================
+        # Only seed default tasks when the database file is newly created
+        # (i.e. user deleted kaeru.db completely)
+        db_existed_before = os.path.exists(DB_FILE)
+        
+        if not db_existed_before:
+            if conn.execute("SELECT COUNT(*) FROM tasks").fetchone()[0] == 0:
+                today = datetime.now().strftime("%Y-%m-%d")
+                tomorrow = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
+                conn.executemany(
+                    "INSERT INTO tasks (title, completed, due_date) VALUES (?, ?, ?)",
+                    [
+                        ("Code Force Contest 17", 0, today),
+                        ("Leet Code Biweekly 233", 0, today),
+                        ("Academic Assignment 455", 1, today),
+                        ("SE exam 1st chapter and 2nd chapter", 0, tomorrow),
+                        ("System Design Online Class", 0, tomorrow),
+                    ]
+                )
 
         conn.commit()
 
@@ -211,41 +484,378 @@ def login():
             50% { border-color: rgba(16,185,129,0.7); }
         }
         .pulse-border { animation: pulse-border 2s ease-in-out infinite; }
+        
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+        }
+        
+        .pulse-dot {
+            animation: pulse-dot 2s ease-in-out infinite;
+        }
+        
+        /* Directional Keyframes for Perfect Synchronization */
+        @keyframes letterOutLeft {
+            0% { transform: translateX(0) scale(1); opacity: 1; filter: blur(0); letter-spacing: 0; }
+            100% { transform: translateX(-15px) scale(0.7); opacity: 0; filter: blur(3px); letter-spacing: -2px; }
+        }
+        
+        @keyframes letterInRight {
+            0% { transform: translateX(15px) scale(0.7); opacity: 0; filter: blur(3px); letter-spacing: -2px; }
+            100% { transform: translateX(0) scale(1); opacity: 1; filter: blur(0); letter-spacing: 0; }
+        }
+        
+        @keyframes letterOutRight {
+            0% { transform: translateX(0) scale(1); opacity: 1; filter: blur(0); letter-spacing: 0; }
+            100% { transform: translateX(15px) scale(0.7); opacity: 0; filter: blur(3px); letter-spacing: -2px; }
+        }
+        
+        @keyframes letterInLeft {
+            0% { transform: translateX(-15px) scale(0.7); opacity: 0; filter: blur(3px); letter-spacing: -2px; }
+            100% { transform: translateX(0) scale(1); opacity: 1; filter: blur(0); letter-spacing: 0; }
+        }
+        
+        .text-container {
+            position: relative;
+            height: 42px;
+            overflow: hidden;
+            display: inline-block;
+        }
+        
+        .switching-text {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+        }
+        
+        .letter {
+            display: inline-block;
+            white-space: pre;
+        }
+        
+        .version-badge {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 20px;
+            padding: 2px 8px;
+            font-size: 10px;
+            font-weight: 500;
+            color: #10b981;
+            backdrop-filter: blur(4px);
+        }
+        
+        .repo-link {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 4px 12px;
+            transition: all 0.3s ease;
+            font-size: 12px;
+        }
+        
+        .repo-link:hover {
+            background: rgba(16, 185, 129, 0.1);
+            border-color: rgba(16, 185, 129, 0.3);
+            transform: translateY(-1px);
+        }
+        
+        .error-shake {
+            animation: shake 0.5s ease-in-out;
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 <body class="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
     <div class="w-full max-w-sm">
-        <div class="text-center mb-8">
-            <div class="inline-flex items-center justify-center w-14 h-14 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl mb-4">
-                <i class="fa-solid fa-frog text-2xl text-emerald-400"></i>
-            </div>
-            <h1 class="text-2xl font-bold text-white tracking-tight">Kaeru</h1>
-            <p class="text-zinc-500 text-sm mt-1">Personal productivity workspace</p>
+        <div class="absolute top-4 right-4">
+            <a href="https://github.com/Irshad-11/Kaeru" target="_blank" class="repo-link inline-flex items-center gap-2 text-zinc-400 hover:text-emerald-400 transition-all">
+                <i class="fa-brands fa-github text-sm"></i>
+                <span class="text-xs">Kaeru</span>
+                <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+            </a>
         </div>
+        
+        <div class="text-center mb-8">
+            <div class="flex items-center justify-center gap-3">
+                <div class="inline-flex items-center justify-center w-14 h-14 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl">
+                    <i class="fa-sharp-duotone fa-solid fa-torii-gate text-2xl text-emerald-400"></i>
+                </div>
+                <div class="text-left">
+                    <div class="flex items-center gap-2">
+                        <div class="text-container" style="min-width: 100px;">
+                            <div id="english-text" class="switching-text">
+                                <h1 class="text-3xl font-bold text-emerald-400 tracking-tight whitespace-nowrap" id="english-letters"></h1>
+                            </div>
+                            <div id="japanese-text" class="switching-text" style="display: none;">
+                                <h1 class="text-3xl font-bold text-emerald-400 tracking-tight whitespace-nowrap" id="japanese-letters"></h1>
+                            </div>
+                        </div>
+                        <span class="version-badge inline-flex items-center gap-2">
+                            <span class="pulse-dot">
+                                <span class="w-2 h-2 bg-emerald-500 rounded-full inline-block"></span>
+                            </span>
+                            <span>v6.3.2</span>
+                        </span>
+                    </div>
+                    
+                </div>
+                
+            </div>
+        </div>
+        
         <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 pulse-border">
-            <form method="post" class="space-y-4">
+            <form method="post" class="space-y-4" id="login-form">
                 <div>
                     <label class="text-xs font-medium text-zinc-400 uppercase tracking-wider">Access Key</label>
-                    <input type="password" name="key" autofocus
-                           placeholder="Enter your access key"
+                    <input type="password" name="key" id="access-key" autofocus
+                           placeholder="Access Protected"
                            class="mt-2 w-full px-4 py-3 bg-zinc-950 border border-zinc-700 focus:border-emerald-500 rounded-xl outline-none text-white text-sm placeholder:text-zinc-600 transition-colors">
                 </div>
                 <button type="submit"
-                        class="w-full bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-semibold py-3 rounded-xl transition-all active:scale-95 glow">
-                    Enter Workspace <i class="fa-solid fa-arrow-right ml-2"></i>
+                        class="w-full bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-semibold py-3 rounded-xl transition-all active:scale-95 glow group">
+                    <span>Get in</span>
+                    <i class="fa-solid fa-arrow-right ml-2 group-hover:translate-x-1 transition-transform"></i>
                 </button>
             </form>
+            
+            <div id="error-message" class="mt-4 hidden fade-in">
+                <div class="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-center">
+                    <p class="text-red-400 text-xs mb-1">
+                        <i class="fa-solid fa-lock mr-1"></i>
+                        This site is for personal use only.
+                    </p>
+                    <p class="text-red-400/80 text-xs">
+                        Owner: Irshad Hossain | 
+                        <a href="https://github.com/Irshad-11/Kaeru" target="_blank" class="underline hover:text-red-300">
+                            Visit Repo for your own Kaeru
+                        </a>
+                    </p>
+                </div>
+            </div>
         </div>
+        
         <div class="text-center mt-6 flex justify-center gap-5 text-zinc-600">
-            <a href="https://github.com/Irshad-11" target="_blank" class="hover:text-zinc-400 transition-colors"><i class="fa-brands fa-github text-xl"></i></a>
-            <a href="https://www.linkedin.com/in/irshad-hossain-785548323/" target="_blank" class="hover:text-zinc-400 transition-colors"><i class="fa-brands fa-linkedin text-xl"></i></a>
-            <a href="https://www.facebook.com/irshad.risad" target="_blank" class="hover:text-zinc-400 transition-colors"><i class="fa-brands fa-facebook text-xl"></i></a>
+            <a href="https://github.com/Irshad-11" target="_blank" class="hover:text-emerald-400 transition-colors">
+                <i class="fa-brands fa-github text-xl"></i>
+            </a>
+            <a href="https://www.linkedin.com/in/irshad-hossain-785548323/" target="_blank" class="hover:text-emerald-400 transition-colors">
+                <i class="fa-brands fa-linkedin text-xl"></i>
+            </a>
+            <a href="https://www.facebook.com/irshad.risad" target="_blank" class="hover:text-emerald-400 transition-colors">
+                <i class="fa-brands fa-facebook text-xl"></i>
+            </a>
         </div>
-        <p class="text-center text-zinc-700 text-xs mt-4">By Irshad Hossain · Personal Use Only</p>
+        <p class="text-center text-zinc-700 text-xs mt-4">Irshad Hossain ★ Personal Use Only</p>
     </div>
+    
+    <script>
+        // Handle form submission with error display
+        document.getElementById('login-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const errorDiv = document.getElementById('error-message');
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalBtnText = submitBtn.innerHTML;
+            
+            // Disable button and show loading
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Verifying...';
+            
+            try {
+                const response = await fetch(window.location.href, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    // Success - redirect
+                    window.location.href = '/tasks';
+                } else {
+                    // Show error message
+                    errorDiv.classList.remove('hidden');
+                    errorDiv.classList.add('error-shake');
+                    
+                    // Add shake animation to the form
+                    const formBox = document.querySelector('.bg-zinc-900');
+                    formBox.classList.add('error-shake');
+                    
+                    // Clear the input
+                    document.getElementById('access-key').value = '';
+                    document.getElementById('access-key').focus();
+                    
+                    // Remove shake after animation
+                    setTimeout(() => {
+                        errorDiv.classList.remove('error-shake');
+                        formBox.classList.remove('error-shake');
+                    }, 500);
+                    
+                    // Auto-hide error after 5 seconds
+                    setTimeout(() => {
+                        errorDiv.classList.add('hidden');
+                    }, 5000);
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                errorDiv.classList.remove('hidden');
+            } finally {
+                // Re-enable button
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnText;
+            }
+        });
+        
+        // Clear error when typing
+        document.getElementById('access-key').addEventListener('input', function() {
+            const errorDiv = document.getElementById('error-message');
+            if (!errorDiv.classList.contains('hidden')) {
+                errorDiv.classList.add('hidden');
+            }
+        });
+        
+        // Split text into individual letters with spans
+        function splitIntoSpans(text, containerId) {
+            const container = document.getElementById(containerId);
+            if (!container) return [];
+            
+            const letters = text.split('');
+            const spans = [];
+            container.innerHTML = '';
+            
+            letters.forEach((letter) => {
+                const span = document.createElement('span');
+                span.className = 'letter';
+                span.textContent = letter;
+                span.style.display = 'inline-block';
+                span.style.opacity = '0'; // Initialize invisible for clean IN animation
+                span.style.transition = 'all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55)';
+                container.appendChild(span);
+                spans.push(span);
+            });
+            
+            return spans;
+        }
+        
+        // Animate letters one by one with magnetic easing
+        function animateLetters(letters, animName, callback) {
+            const delays = [];
+            const totalLetters = letters.length;
+            
+            // Calculate delays based on magnetic easing (faster at edges, slower in middle)
+            for (let i = 0; i < totalLetters; i++) {
+                // Normalize position between -1 and 1
+                const t = totalLetters > 1 ? (i / (totalLetters - 1)) * 2 - 1 : 0;
+                // Magnetic easing function: velocity increases at edges
+                const magneticEasing = Math.abs(t) < 0.3 ? 0.3 : Math.pow(Math.abs(t), 1.5);
+                // Delay between 10ms and 40ms based on position
+                let delay = 10 + (magneticEasing * 30);
+                delays.push(delay);
+            }
+            
+            // Apply animations sequentially
+            let completed = 0;
+            letters.forEach((letter, index) => {
+                const accumDelay = delays.slice(0, index + 1).reduce((a, b) => a + b, 0);
+                
+                setTimeout(() => {
+                    // Reset animation safely before applying the new one
+                    letter.style.animation = 'none';
+                    void letter.offsetWidth; // Trigger reflow to restart animation
+                    
+                    letter.style.animation = `${animName} 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards`;
+                    
+                    setTimeout(() => {
+                        completed++;
+                        if (completed === totalLetters && callback) {
+                            setTimeout(callback, 50);
+                        }
+                    }, 400); // 400ms is the duration of the CSS animation
+                }, accumDelay);
+            });
+        }
+        
+        // Initialize text with letter spans
+        const englishWord = 'Kaeru';
+        const japaneseWord = '代える';
+        
+        let englishLetterSpans = [];
+        let japaneseLetterSpans = [];
+        
+        // Split both texts into spans
+        function initializeTexts() {
+            const englishContainer = document.getElementById('english-letters');
+            const japaneseContainer = document.getElementById('japanese-letters');
+            
+            if (englishContainer && japaneseContainer) {
+                // Split texts
+                englishLetterSpans = splitIntoSpans(englishWord, 'english-letters');
+                japaneseLetterSpans = splitIntoSpans(japaneseWord, 'japanese-letters');
+            }
+        }
+        
+        // Text switching with character-by-character animation
+        let showEnglish = true;
+        const englishTextDiv = document.getElementById('english-text');
+        const japaneseTextDiv = document.getElementById('japanese-text');
+        
+        function switchText() {
+            if (showEnglish) {
+                // Switch from English to Japanese
+                // 1. English slides OUT to the left
+                animateLetters(englishLetterSpans, 'letterOutLeft', () => {
+                    englishTextDiv.style.display = 'none';
+                });
+                
+                // 2. Japanese slides IN from the right (slight overlap)
+                japaneseTextDiv.style.display = 'block';
+                setTimeout(() => {
+                    animateLetters(japaneseLetterSpans, 'letterInRight');
+                }, 100); 
+            } else {
+                // Switch from Japanese to English
+                // 1. Japanese slides OUT to the right
+                animateLetters(japaneseLetterSpans, 'letterOutRight', () => {
+                    japaneseTextDiv.style.display = 'none';
+                });
+                
+                // 2. English slides IN from the left (slight overlap)
+                englishTextDiv.style.display = 'block';
+                setTimeout(() => {
+                    animateLetters(englishLetterSpans, 'letterInLeft');
+                }, 100);
+            }
+            showEnglish = !showEnglish;
+        }
+        
+        // Initialize everything
+        initializeTexts();
+        
+        // Start the switching cycle
+        let switchInterval = setInterval(switchText, 5000);
+        
+        // Initial animation on load
+        setTimeout(() => {
+            animateLetters(englishLetterSpans, 'letterInRight');
+        }, 100);
+    </script>
 </body>
 </html>
-    '''
+'''
 
 
 @app.route('/logout')
@@ -376,11 +986,12 @@ def add_project():
     if not title:
         return jsonify({"error": "Title required"}), 400
     added_date = datetime.now().strftime("%Y-%m-%d")
+    last_updated = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     with get_db() as conn:
-        conn.execute("INSERT INTO projects (title, added_date) VALUES (?, ?)", (title, added_date))
+        conn.execute("INSERT INTO projects (title, added_date, last_updated) VALUES (?, ?, ?)", 
+                     (title, added_date, last_updated))
         conn.commit()
     return jsonify({"success": True})
-
 
 @app.route('/api/projects/<int:project_id>', methods=['PUT'])
 def edit_project(project_id):
@@ -420,8 +1031,14 @@ def add_subtask(project_id):
 @app.route('/api/subtasks/<int:sub_id>/toggle', methods=['POST'])
 def toggle_subtask(sub_id):
     with get_db() as conn:
-        conn.execute("UPDATE subtasks SET completed = NOT completed WHERE id = ?", (sub_id,))
-        conn.commit()
+        # Get the project_id before updating
+        row = conn.execute("SELECT project_id FROM subtasks WHERE id = ?", (sub_id,)).fetchone()
+        if row:
+            # Toggle the subtask
+            conn.execute("UPDATE subtasks SET completed = NOT completed WHERE id = ?", (sub_id,))
+            # Update the project's last_updated timestamp
+            conn.execute("UPDATE projects SET last_updated = CURRENT_TIMESTAMP WHERE id = ?", (row['project_id'],))
+            conn.commit()
     return jsonify({"success": True})
 
 
@@ -444,8 +1061,8 @@ def edit_subtask(sub_id):
 def delete_subtask(sub_id):
     with get_db() as conn:
         row = conn.execute("SELECT project_id FROM subtasks WHERE id = ?", (sub_id,)).fetchone()
-        conn.execute("DELETE FROM subtasks WHERE id = ?", (sub_id,))
         if row:
+            conn.execute("DELETE FROM subtasks WHERE id = ?", (sub_id,))
             conn.execute("UPDATE projects SET last_updated = CURRENT_TIMESTAMP WHERE id = ?", (row['project_id'],))
         conn.commit()
     return jsonify({"success": True})
@@ -525,27 +1142,33 @@ def reorder_notes():
         conn.commit()
     return jsonify({"success": True})
 
-
 # ====================== TIMELESS API ======================
 
 @app.route('/api/timeless', methods=['GET'])
 def get_timeless():
     with get_db() as conn:
         nodes = conn.execute(
-            "SELECT * FROM timeless_nodes ORDER BY hijri_year ASC, id ASC"
+            "SELECT * FROM timeless_nodes ORDER BY hijri_year ASC, gregorian_year ASC, id ASC"
         ).fetchall()
         result = []
         for node in nodes:
             n = dict(node)
+            # Get sources
             sources = conn.execute(
                 "SELECT * FROM timeless_sources WHERE node_id = ? ORDER BY id", (n['id'],)
             ).fetchall()
             n['sources'] = [dict(s) for s in sources]
-            # Parse tags
-            if n.get('tags'):
+            
+            # Parse tags safely - DEBUG
+            print(f"Node {n['id']} - Raw tags from DB: '{n.get('tags', '')}'")
+            
+            if n.get('tags') and n['tags'].strip():
                 n['tags_list'] = [t.strip() for t in n['tags'].split(',') if t.strip()]
             else:
                 n['tags_list'] = []
+            
+            print(f"Node {n['id']} - Parsed tags_list: {n['tags_list']}")
+            
             result.append(n)
         return jsonify(result)
 
@@ -553,27 +1176,38 @@ def get_timeless():
 @app.route('/api/timeless', methods=['POST'])
 def add_timeless():
     data = request.get_json()
+    print(f"=== ADD NODE - Received data: {data}")  # DEBUG
+    
     title = data.get('title', '').strip()
     if not title:
         return jsonify({"error": "Title required"}), 400
+    
     description = data.get('description', '')
     gregorian_year = data.get('gregorian_year')
     hijri_year = data.get('hijri_year')
     sidenote = data.get('sidenote', '')
     sources = data.get('sources', [])
     tags = data.get('tags', '')
+    
+    print(f"Tags before save: '{tags}'")  # DEBUG
 
+    # Auto convert year if only one is provided
     if gregorian_year and not hijri_year:
         hijri_year = gregorian_to_hijri_year(int(gregorian_year))
     elif hijri_year and not gregorian_year:
         gregorian_year = hijri_to_gregorian_year(int(hijri_year))
 
     with get_db() as conn:
-        conn.execute(
-            "INSERT INTO timeless_nodes (title, description, gregorian_year, hijri_year, sidenote, tags) VALUES (?, ?, ?, ?, ?, ?)",
+        cursor = conn.execute(
+            """INSERT INTO timeless_nodes 
+               (title, description, gregorian_year, hijri_year, sidenote, tags) 
+               VALUES (?, ?, ?, ?, ?, ?)""",
             (title, description, gregorian_year, hijri_year, sidenote, tags)
         )
-        node_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+        node_id = cursor.lastrowid
+        
+        print(f"Saved node {node_id} with tags: '{tags}'")  # DEBUG
+
         for src in sources:
             if src.get('url') and src.get('display_text'):
                 conn.execute(
@@ -581,19 +1215,27 @@ def add_timeless():
                     (node_id, src['display_text'], src['url'])
                 )
         conn.commit()
+    
     return jsonify({"id": node_id, "success": True})
 
 
 @app.route('/api/timeless/<int:node_id>', methods=['PUT'])
 def edit_timeless(node_id):
     data = request.get_json()
+    print(f"=== EDIT NODE {node_id} - Received data: {data}")  # DEBUG
+    
     title = data.get('title', '').strip()
+    if not title:
+        return jsonify({"error": "Title required"}), 400  # Fixed the string quote issue
+
     description = data.get('description', '')
     gregorian_year = data.get('gregorian_year')
     hijri_year = data.get('hijri_year')
     sidenote = data.get('sidenote', '')
     sources = data.get('sources', [])
     tags = data.get('tags', '')
+    
+    print(f"Tags for update: '{tags}'")  # DEBUG
 
     if gregorian_year and not hijri_year:
         hijri_year = gregorian_to_hijri_year(int(gregorian_year))
@@ -602,10 +1244,14 @@ def edit_timeless(node_id):
 
     with get_db() as conn:
         conn.execute(
-            "UPDATE timeless_nodes SET title=?, description=?, gregorian_year=?, hijri_year=?, sidenote=?, tags=?, updated_at=CURRENT_TIMESTAMP WHERE id=?",
+            """UPDATE timeless_nodes 
+               SET title=?, description=?, gregorian_year=?, hijri_year=?, 
+                   sidenote=?, tags=?, updated_at=CURRENT_TIMESTAMP 
+               WHERE id=?""",
             (title, description, gregorian_year, hijri_year, sidenote, tags, node_id)
         )
         conn.execute("DELETE FROM timeless_sources WHERE node_id = ?", (node_id,))
+        
         for src in sources:
             if src.get('url') and src.get('display_text'):
                 conn.execute(
@@ -613,6 +1259,8 @@ def edit_timeless(node_id):
                     (node_id, src['display_text'], src['url'])
                 )
         conn.commit()
+    
+    print(f"Updated node {node_id} with tags: '{tags}'")  # DEBUG
     return jsonify({"success": True})
 
 
@@ -636,6 +1284,293 @@ def get_all_tags():
                 if t:
                     all_tags.add(t)
         return jsonify(sorted(list(all_tags)))
+    
+
+
+
+
+# ====================== LINKS API ======================
+
+@app.route('/links')
+def links():
+
+    return render_template('index.html', tab='links')
+
+
+@app.route('/api/links', methods=['GET'])
+def get_links():
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT * FROM links ORDER BY pinned DESC, sort_order ASC, id ASC"   # ← This line must say DESC
+        ).fetchall()
+        return jsonify([dict(row) for row in rows])
+
+
+@app.route('/api/links', methods=['POST'])
+def add_link():
+    data = request.get_json()
+    title = data.get('title', '').strip()
+    url = data.get('url', '').strip()
+    
+    if not title or not url:
+        return jsonify({"error": "Title and URL are required"}), 400
+    
+    with get_db() as conn:
+        # Shift all unpinned links down so new one becomes the first unpinned
+        conn.execute("UPDATE links SET sort_order = sort_order + 1 WHERE pinned = 0")
+        
+        conn.execute(
+            """INSERT INTO links (title, url, click_count, sort_order, pinned) 
+               VALUES (?, ?, ?, ?, ?)""",
+            (title, url, 0, 0, 0)   # new link = unpinned + sort_order 0
+        )
+        conn.commit()
+        
+        link_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+        
+    return jsonify({"id": link_id, "success": True})
+
+@app.route('/api/links/<int:link_id>', methods=['PUT'])
+def update_link(link_id):
+    data = request.get_json()
+    title = data.get('title', '').strip()
+    url = data.get('url', '').strip()
+    
+    if not title or not url:
+        return jsonify({"error": "Title and URL are required"}), 400
+    
+    with get_db() as conn:
+        conn.execute(
+            "UPDATE links SET title = ?, url = ? WHERE id = ?",
+            (title, url, link_id)
+        )
+        conn.commit()
+        
+    return jsonify({"success": True})
+
+
+@app.route('/api/links/<int:link_id>', methods=['DELETE'])
+def delete_link(link_id):
+    with get_db() as conn:
+        conn.execute("DELETE FROM links WHERE id = ?", (link_id,))
+        conn.commit()
+        
+    return jsonify({"success": True})
+
+
+@app.route('/api/links/<int:link_id>/click', methods=['POST'])
+def increment_link_click(link_id):
+    with get_db() as conn:
+        conn.execute(
+            "UPDATE links SET click_count = click_count + 1 WHERE id = ?",
+            (link_id,)
+        )
+        conn.commit()
+        
+    return jsonify({"success": True})
+
+
+@app.route('/api/links/<int:link_id>/pin', methods=['POST'])
+def toggle_link_pin(link_id):
+    data = request.get_json()
+    pinned = data.get('pinned', False)
+    
+    with get_db() as conn:
+        conn.execute(
+            "UPDATE links SET pinned = ? WHERE id = ?",
+            (1 if pinned else 0, link_id)
+        )
+        conn.commit()
+        
+    return jsonify({"success": True})
+
+
+@app.route('/api/links/reorder', methods=['POST'])
+def reorder_links():
+    data = request.get_json()
+    order = data.get('order', [])
+    
+    with get_db() as conn:
+        for item in order:
+            conn.execute(
+                "UPDATE links SET sort_order = ? WHERE id = ?",
+                (item['order'], item['id'])
+            )
+        conn.commit()
+        
+    return jsonify({"success": True})
+
+
+@app.route('/api/links/import', methods=['POST'])
+def import_links():
+    data = request.get_json()
+    imported_links = data.get('links', [])
+    
+    if not isinstance(imported_links, list):
+        return jsonify({"error": "Invalid data format"}), 400
+    
+    with get_db() as conn:
+        # Clear existing links
+        conn.execute("DELETE FROM links")
+        
+        # Insert imported links
+        for idx, link in enumerate(imported_links):
+            conn.execute(
+                """INSERT INTO links (title, url, click_count, sort_order, pinned) 
+                   VALUES (?, ?, ?, ?, ?)""",
+                (link.get('title', ''), 
+                 link.get('url', ''), 
+                 link.get('click_count', 0),
+                 idx,
+                 1 if link.get('pinned') else 0)
+            )
+        conn.commit()
+        
+    return jsonify({"success": True})
+
+
+
+
+
+# ====================== IMPORT/EXPORT API ======================
+
+@app.route('/api/export', methods=['POST'])
+def export_data():
+    """Export all data as JSON"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+            
+        access_key = data.get('access_key', '')
+        
+        print(f"Export attempt - Received key: '{access_key}'")  # Debug
+        print(f"Expected key: '{get_password()}'")  # Debug
+        
+        # Verify access key
+        if access_key != get_password():
+            return jsonify({"error": "Invalid access key"}), 401
+        
+        with get_db() as conn:
+            # Export all tables
+            export = {
+                "version": "1.0",
+                "export_date": datetime.now().isoformat(),
+                "tasks": [dict(row) for row in conn.execute("SELECT * FROM tasks").fetchall()],
+                "projects": [dict(row) for row in conn.execute("SELECT * FROM projects").fetchall()],
+                "subtasks": [dict(row) for row in conn.execute("SELECT * FROM subtasks").fetchall()],
+                "notes": [dict(row) for row in conn.execute("SELECT * FROM notes").fetchall()],
+                "timeless_nodes": [dict(row) for row in conn.execute("SELECT * FROM timeless_nodes").fetchall()],
+                "timeless_sources": [dict(row) for row in conn.execute("SELECT * FROM timeless_sources").fetchall()],
+                "links": [dict(row) for row in conn.execute("SELECT * FROM links").fetchall()]
+            }
+            
+        print(f"Export successful - {len(export['tasks'])} tasks, {len(export['projects'])} projects")  # Debug
+        return jsonify(export)
+        
+    except Exception as e:
+        print(f"Export error: {str(e)}")  # Debug
+        return jsonify({"error": f"Export failed: {str(e)}"}), 500
+
+@app.route('/api/import', methods=['POST'])
+def import_data():
+    """Import data from JSON backup"""
+    data = request.get_json()
+    access_key = data.get('access_key', '')
+    backup_data = data.get('data', {})
+    
+    # Verify access key
+    if access_key != get_password():
+        return jsonify({"error": "Invalid access key"}), 401
+    
+    # Validate data structure
+    required_tables = ['tasks', 'projects', 'subtasks', 'notes', 'timeless_nodes', 'timeless_sources', 'links']
+    for table in required_tables:
+        if table not in backup_data:
+            return jsonify({"error": f"Invalid backup format: missing {table}"}), 400
+    
+    with get_db() as conn:
+        try:
+            # Clear all existing data (disable foreign keys temporarily)
+            conn.execute("PRAGMA foreign_keys = OFF")
+            
+            # Clear all tables in correct order
+            conn.execute("DELETE FROM timeless_sources")
+            conn.execute("DELETE FROM timeless_nodes")
+            conn.execute("DELETE FROM subtasks")
+            conn.execute("DELETE FROM projects")
+            conn.execute("DELETE FROM tasks")
+            conn.execute("DELETE FROM notes")
+            conn.execute("DELETE FROM links")
+            
+            # Reset autoincrement counters
+            conn.execute("DELETE FROM sqlite_sequence")
+            
+            # Import tasks
+            for task in backup_data.get('tasks', []):
+                conn.execute(
+                    "INSERT INTO tasks (id, title, completed, due_date, created_at) VALUES (?, ?, ?, ?, ?)",
+                    (task.get('id'), task.get('title'), task.get('completed', 0), 
+                     task.get('due_date'), task.get('created_at'))
+                )
+            
+            # Import projects
+            for project in backup_data.get('projects', []):
+                conn.execute(
+                    "INSERT INTO projects (id, title, added_date, last_updated) VALUES (?, ?, ?, ?)",
+                    (project.get('id'), project.get('title'), project.get('added_date'), project.get('last_updated'))
+                )
+            
+            # Import subtasks
+            for subtask in backup_data.get('subtasks', []):
+                conn.execute(
+                    "INSERT INTO subtasks (id, project_id, title, completed) VALUES (?, ?, ?, ?)",
+                    (subtask.get('id'), subtask.get('project_id'), subtask.get('title'), subtask.get('completed', 0))
+                )
+            
+            # Import notes
+            for note in backup_data.get('notes', []):
+                conn.execute(
+                    "INSERT INTO notes (id, title, content, pinned, position, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (note.get('id'), note.get('title'), note.get('content'), note.get('pinned', 0),
+                     note.get('position', 0), note.get('created_at'), note.get('updated_at'))
+                )
+            
+            # Import timeless nodes
+            for node in backup_data.get('timeless_nodes', []):
+                conn.execute(
+                    "INSERT INTO timeless_nodes (id, title, description, gregorian_year, hijri_year, tags, sidenote, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    (node.get('id'), node.get('title'), node.get('description'), node.get('gregorian_year'),
+                     node.get('hijri_year'), node.get('tags'), node.get('sidenote'), node.get('created_at'), node.get('updated_at'))
+                )
+            
+            # Import timeless sources
+            for source in backup_data.get('timeless_sources', []):
+                conn.execute(
+                    "INSERT INTO timeless_sources (id, node_id, display_text, url) VALUES (?, ?, ?, ?)",
+                    (source.get('id'), source.get('node_id'), source.get('display_text'), source.get('url'))
+                )
+            
+            # Import links
+            for link in backup_data.get('links', []):
+                conn.execute(
+                    "INSERT INTO links (id, title, url, click_count, sort_order, pinned, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                    (link.get('id'), link.get('title'), link.get('url'), link.get('click_count', 0),
+                     link.get('sort_order', 0), link.get('pinned', 0), link.get('created_at'), link.get('updated_at'))
+                )
+            
+            conn.execute("PRAGMA foreign_keys = ON")
+            conn.commit()
+            
+        except Exception as e:
+            conn.execute("PRAGMA foreign_keys = ON")
+            return jsonify({"error": f"Import failed: {str(e)}"}), 500
+    
+    return jsonify({"success": True, "message": "Data imported successfully"})
+
+
+
+
 
 
 # ====================== YEAR CONVERSION HELPERS ======================
@@ -649,6 +1584,12 @@ def hijri_to_gregorian_year(h_year):
     """Approximate Hijri year to Gregorian year conversion."""
     return round(h_year * (32 / 33) + 622)
 
+@app.route('/debug/schema')
+def debug_schema():
+    with get_db() as conn:
+        cursor = conn.execute("PRAGMA table_info(timeless_nodes)")
+        columns = cursor.fetchall()
+        return jsonify([dict(col) for col in columns])
 
 init_db()
 

@@ -11,7 +11,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <style>
         :root[data-theme="dark"] {
-            --bg: #0d0d0f; --bg2: #131316; --bg3: #1a1a1f; --bg4: #222228;
+            --bg: #0d0d0f; --bg2: #131316; --bg3: #0f1a0f54; --bg4: #12241254; --bgex: #122412
             --border: #2a2a32; --border2: #333340;
             --text: #f0f0f5; --text2: #a8a8bc; --text3: #6b6b80;
             --accent: #10b981; --accent2: #059669;
@@ -19,6 +19,7 @@
             --red: #ef4444; --red-bg: rgba(239,68,68,0.08);
             --yellow: #f59e0b; --blue: #3b82f6;
             --shadow: 0 4px 24px rgba(0,0,0,0.4); --shadow2: 0 2px 8px rgba(0,0,0,0.3);
+            --checkbox-accent: #065f46;
         }
         :root[data-theme="light"] {
             --bg: #f8f9fb; --bg2: #ffffff; --bg3: #f1f3f7; --bg4: #e8eaf0;
@@ -31,7 +32,7 @@
             --shadow: 0 4px 24px rgba(0,0,0,0.08); --shadow2: 0 2px 8px rgba(0,0,0,0.05);
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        html, body { height: 100%; overflow: hidden; }
+        html, body { height: 100%; }
         body { font-family: 'Sora', sans-serif; background: var(--bg); color: var(--text); font-size: 13px; line-height: 1.5; }
         ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
@@ -85,6 +86,26 @@
         .panel-title { font-size: 12px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.06em; }
         .panel-body { flex: 1; overflow-y: auto; padding: 12px; }
 
+
+        /* Custom bulletproof spin AND color animation */
+        @keyframes customSpinAndColor {
+            0% { 
+                transform: rotate(0deg); 
+                color: var(--accent); 
+            }
+            100% { 
+                transform: rotate(360deg); 
+                color: var(--accent); 
+            }
+        }
+
+        /* Class to apply the animation */
+        .syncing-active {
+            animation: customSpinAndColor 1s linear infinite !important;
+            display: inline-block !important; /* CRITICAL: Allows the icon to rotate */
+        }
+
+
         /* INLINE INPUT */
         .inline-input {
             width: 100%; padding: 6px 10px;
@@ -98,13 +119,38 @@
         /* TASK ROW */
         .task-row {
             display: flex; align-items: center; gap: 8px;
-            padding: 7px 10px; border-radius: 9px;
+            padding: 0px 10px; border-radius: 9px;
             transition: background 0.1s; cursor: default;
         }
         .task-row:hover { background: var(--bg3); }
         .task-row:hover .row-actions { opacity: 1; }
-        .row-actions { display: flex; gap: 2px; opacity: 0; transition: opacity 0.15s; flex-shrink: 0; }
-        .task-check { width: 15px; height: 15px; border-radius: 4px; flex-shrink: 0; accent-color: var(--accent); cursor: pointer; }
+        .row-actions { display: flex; gap: 1px; opacity: 0; transition: opacity 0.15s; flex-shrink: 0; }
+        .task-check {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 15px;
+            height: 15px;
+            border-radius: 4px;
+            border: 1px solid var(--border2);
+            background: var(--bg3);
+            cursor: pointer;
+            position: relative;
+        }
+        .task-check:checked {
+            background: #065f46; /* your dark green */
+            border-color: #065f46;
+        }
+
+        .task-check:checked::after {
+            content: "★";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -55%);
+            font-size: 11px;
+            color: white; /* checkmark color */
+        }
+
         .task-title { flex: 1; font-size: 13px; color: var(--text); }
         .task-title.done { text-decoration: line-through; color: var(--text3); }
         .edit-field {
@@ -146,8 +192,8 @@
             margin-bottom: 12px; position: relative;
         }
         .upcoming-date-row::before {
-            content: ''; position: absolute; left: 50px; top: 20px; bottom: -12px;
-            width: 1px; background: var(--border);
+            content: ''; position: absolute; left: 23px; top: 40px; bottom: -12px;
+            width: 1px; background: var(--border2);
         }
         .upcoming-date-row:last-child::before { display: none; }
         .date-badge {
@@ -182,8 +228,8 @@
         /* CIRCULAR PROGRESS */
         .circ-progress { position: relative; width: 28px; height: 28px; flex-shrink: 0; }
         .circ-progress svg { transform: rotate(-90deg); }
-        .circ-progress .track { fill: none; stroke: var(--bg4); stroke-width: 3; }
-        .circ-progress .fill { fill: none; stroke: var(--accent); stroke-width: 3; stroke-linecap: round; transition: stroke-dashoffset 0.5s cubic-bezier(0.4,0,0.2,1); }
+        .circ-progress .track { fill: none; stroke: var(--bg4); stroke-width: 6; }
+        .circ-progress .fill { fill: none; stroke: var(--accent); stroke-width: 6; stroke-linecap: round; transition: stroke-dashoffset 0.5s cubic-bezier(0.4,0,0.2,1); }
 
         /* PROJECT META */
         .project-meta-row {
@@ -195,7 +241,7 @@
         /* SUBTASK */
         .subtask-row {
             display: flex; align-items: center; gap: 8px;
-            padding: 6px 14px; transition: background 0.1s;
+            padding: 0px 14px; transition: background 0.1s;
         }
         .subtask-row:hover { background: var(--bg3); }
         .subtask-row:hover .row-actions { opacity: 1; }
@@ -364,7 +410,7 @@
 
         /* DETAIL PANEL */
         .detail-panel {
-            width: 340px; min-width: 340px; border-left: 1px solid var(--border);
+            width: 40%; border-left: 1px solid var(--border);
             background: var(--bg2); display: flex; flex-direction: column; overflow: hidden;
         }
         .detail-content { flex: 1; overflow-y: auto; padding: 14px; font-size: 13px; }
@@ -471,7 +517,10 @@
         #toast {
             position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
             background: var(--bg4); border: 1px solid var(--border2); border-radius: 8px;
-            padding: 8px 14px; font-size: 12px; color: var(--text2);
+            padding: 6px 8px; font-size: 12px; color: var(--text2);
+            width: 70%;
+            text-align: center;
+            z-index: 10000;
             opacity: 0; transition: opacity 0.2s; z-index: 999; pointer-events: none;
         }
         #toast.show { opacity: 1; }
@@ -509,23 +558,474 @@
         }
         .search-result-item:hover { background: var(--bg3); border-color: var(--accent-border); }
 
+
+        /* Collapsable Sidebar in Timeless */
+
+        /* Collapsible Tags Bar */
+        .tl-tags-bar-wrapper {
+            border-bottom: 1px solid var(--border);
+            background: var(--bg2);
+            flex-shrink: 0;
+        }
+
+        .tl-tags-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 12px;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.15s;
+        }
+
+        .tl-tags-header:hover {
+            background: var(--bg3);
+        }
+
+        .tl-tags-header-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 11px;
+            color: var(--text3);
+        }
+
+        .tl-tags-header-left i {
+            font-size: 10px;
+            transition: transform 0.3s ease;
+        }
+
+        .tl-tags-header-left i.collapsed {
+            transform: rotate(-90deg);
+        }
+
+        .tag-count-badge {
+            background: var(--accent-bg);
+            color: var(--accent);
+            padding: 2px 6px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 500;
+        }
+
+        .tl-tags-container {
+            max-height: 200px;
+            overflow: hidden;
+            transition: max-height 0.3s ease, padding 0.3s ease;
+        }
+
+        .tl-tags-container.collapsed {
+            max-height: 0 !important;
+            padding: 0 12px !important;
+        }
+
+        .tl-tags-bar {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            flex-wrap: wrap;
+            padding: 6px 12px 12px 12px;
+        }
+
+        /* Tag truncation in node cards */
+        .tl-node-tags {
+            display: flex;
+            gap: 4px;
+            margin-top: 6px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .tl-tag {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            background: var(--bg3);
+            color: var(--text3);
+            border: 1px solid var(--border);
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .tl-tag:hover {
+            background: var(--accent-bg);
+            color: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .tag-more-indicator {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            background: var(--accent-bg);
+            color: var(--accent);
+            cursor: pointer;
+            white-space: nowrap;
+            font-weight: 500;
+        }
+
+        .tag-more-indicator:hover {
+            background: var(--accent);
+            color: white;
+        }
+
+
+        /* Smooth transitions for collapsible elements */
+        .tl-tags-container {
+            transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s ease;
+        }
+
+        #tags-chevron {
+            transition: transform 0.3s ease;
+        }
+
+        .tl-node-card {
+            transition: all 0.2s ease;
+        }
+
+        .tag-more-indicator {
+            transition: all 0.15s ease;
+        }
+
+
+
+        /* QUICK-LINKS */
+        /* LINK CARDS STYLES - MINIMAL SQUARES */
+        .links-grid {
+            display: grid;
+            /* Desktop: auto-fits as many boxes as possible (min 200px wide) */
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+            align-items: stretch;
+        }
+
+        .link-card {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            animation: fadeInUp 0.3s ease-out;
+            aspect-ratio: 1 / 1; /* Forces a perfect square */
+            
+            /* Center contents */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .link-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--accent-border);
+            box-shadow: var(--shadow);
+        }
+
+        .link-card.pinned {
+            background: linear-gradient(135deg, var(--bg2) 0%, var(--accent-bg) 100%);
+            border-top: 2px solid var(--accent);
+        }
+
+        .link-card.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+        }
+
+        .link-card.drag-over {
+            border: 2px dashed var(--accent);
+            background: var(--accent-bg);
+            transform: scale(1.02);
+        }
+
+        .link-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 6px;
+            width: 100%;
+            padding: 0 4px;
+            
+            /* NEW: Truncation safeguards */
+            display: -webkit-box;
+            -webkit-line-clamp: 2; /* Max 2 lines. Change to 1 if you want it even stricter! */
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            word-break: break-all; /* Forces a break even if the user types one massive continuous word */
+        }
+
+        .link-url {
+            font-size: 11px;
+            color: var(--text3);
+            word-break: break-all;
+            margin-bottom: 12px;
+            font-family: 'JetBrains Mono', monospace;
+            opacity: 0.6;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            width: 100%;
+            padding: 0 4px;
+        }
+
+        .link-stats {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            color: var(--text3);
+            flex-shrink: 0;
+        }
+
+        .link-actions {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            gap: 4px;
+            opacity: 0;
+            transition: opacity 0.2s;
+            background: var(--bg2);
+            border-radius: 6px;
+            padding: 4px;
+            z-index: 10;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+
+        .link-card:hover .link-actions {
+            opacity: 1;
+        }
+
+        /* Permanent pin icon for pinned items */
+        .pinned-indicator {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: var(--accent-bg);
+            border: 1px solid var(--accent);
+            border-radius: 6px;
+            padding: 4px 6px;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            z-index: 5;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .pinned-indicator:hover {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        .click-count {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: var(--bg3);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text2);
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .add-link-card {
+            transition: all 0.2s;
+            background: var(--bg3);
+            border: 2px dashed var(--border2);
+            border-radius: 12px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            aspect-ratio: 1 / 1; /* Match the perfect square of other cards */
+        }
+
+        .add-link-card:hover {
+            border-color: var(--accent);
+            background: var(--accent-bg);
+            transform: translateY(-2px);
+        }
+
+        .add-link-card i {
+            transition: transform 0.2s;
+            font-size: 28px;
+            color: var(--accent);
+            margin-bottom: 10px;
+        }
+
+        /* =========================================
+        RESPONSIVE DESIGN (Mobile & Tablets)
+        ========================================= */
+
+        @media (max-width: 768px) {
+            .links-grid {
+                gap: 16px;
+                /* Smaller columns for tablets */
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); 
+            }
+            
+        }
+
+        @media (max-width: 480px) {
+            .links-grid {
+                /* FORCE exactly 2 columns on mobile screens */
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+            }
+
+            .link-card {
+                padding: 10px;
+                border-radius: 8px;
+            }
+
+            /* Make text highly minimal for small mobile squares */
+            .link-title {
+                font-size: 13px;
+                margin-bottom: 4px;
+            }
+
+            .link-url {
+                font-size: 9px;
+                margin-bottom: 8px;
+                -webkit-line-clamp: 1; /* Only show 1 line of URL to save space */
+            }
+
+            .click-count {
+                font-size: 9px;
+                padding: 3px 8px;
+            }
+
+            /* Shrink the floating icons so they don't cover text */
+            .pinned-indicator {
+                top: 6px;
+                left: 6px;
+                padding: 3px 5px;
+                font-size: 10px;
+            }
+
+            .link-actions {
+                top: 6px;
+                right: 6px;
+                padding: 2px;
+            }
+
+            .link-actions .icon-btn {
+                width: 24px;
+                height: 24px;
+                font-size: 10px;
+            }
+            
+            .add-link-card i {
+                font-size: 20px;
+            }
+            
+            .add-link-card span:nth-child(2) {
+                font-size: 12px !important;
+            }
+            .add-link-card span:nth-child(3) {
+                display: none; /* Hide the "Click to create" subtext on mobile to stay minimal */
+            }
+        }
+
+        /* RESPONSIVE */
+        /* RESPONSIVE */
         /* RESPONSIVE */
         @media (max-width: 768px) {
+
+            .hide-kaeru-on-mobile {
+                display: none !important;
+            }
+
             .notes-sidebar {
-                position: fixed; top: 48px; left: 0; bottom: 0;
+                position: fixed; left: 0; top: 0; bottom: 0;
                 z-index: 50; transform: translateX(-100%);
                 width: 260px; min-width: 260px;
+                
             }
             .notes-sidebar.open { transform: translateX(0); }
             .detail-panel { display: none !important; }
             .tl-year-col { width: 80px; min-width: 80px; }
             .tl-year-hijri { font-size: 14px; }
-            .tasks-mobile-stack { flex-direction: column !important; }
-            .tasks-mobile-stack .split-left,
-            .tasks-mobile-stack .split-right { border-right: none !important; border-bottom: 1px solid var(--border); }
-            .tasks-mobile-stack .split-right { border-bottom: none; }
-            .mobile-actions-visible { display: flex !important; }
-            .desktop-only-actions { display: none !important; }
+
+            /* TASKS TAB MOBILE LAYOUT - WHAT YOU ASKED FOR */
+            .tasks-mobile-stack { 
+                flex-direction: column !important; 
+                height: 100%; 
+                
+            }
+            .tasks-mobile-stack .split-left {      /* Tasks panel */
+                flex: 0 0 auto !important;         /* Only content height */
+                border-right: none !important;
+                border-bottom: 1px solid var(--border);
+                overflow: hidden;
+                max-height: 80vh;
+            }
+            .tasks-mobile-stack .split-right {     /* Projects panel */
+                flex: 1 !important;                /* Take all remaining space */
+                border-bottom: none;
+            }
+            .tasks-mobile-stack .split-left .panel-body {
+                flex: 1;
+                overflow-y: auto !important; /* Ensure scroll */
+                min-height: 0;              /* Flex shrink prerequisite */
+            }
+            .main { overflow-y: auto !important; }
+
+            #tl-center-axis {
+                left: 26% !important;
+            }
+
+            .tl-node-card {
+
+            }
+
+            /* === TOPBAR MOBILE OPTIMIZATION === */
+            .topbar {
+                padding: 0 10px;
+                gap: 6px;
+            }
+            #clock {
+                display: none;
+            }
+            .tab-nav {
+                gap: 2px;
+            }
+            .tab-btn {
+                padding: 5px 9px;
+                font-size: 11px;
+            }
+            .tab-text {
+                display: none !important;
+            }
+            .desktop-only-actions {
+                gap: 1px;
+            }
+            .icon-btn {
+                width: 32px;
+                height: 32px;
+            }
+            .circ-progress .track { stroke-width: 3; }
+            .circ-progress .fill { stroke-width: 3; }
         }
         @media (min-width: 769px) {
             .notes-sidebar { transform: none !important; }
@@ -569,55 +1069,85 @@
     </style>
 </head>
 <body>
+    <!-- Add this right after the opening body tag or in the head -->
+<script>
+    // Override console.log to show in UI for debugging
+    const originalLog = console.log;
+    console.log = function(...args) {
+        originalLog.apply(console, args);
+        
+        // Create debug panel if it doesn't exist
+        let debugPanel = document.getElementById('debug-panel');
+        if (!debugPanel && window.location.hash === '#debug') {
+            debugPanel = document.createElement('div');
+            debugPanel.id = 'debug-panel';
+            debugPanel.style.cssText = 'position:fixed; bottom:10px; right:10px; width:300px; max-height:200px; background:rgba(0,0,0,0.9); color:#0f0; font-size:10px; font-family:monospace; padding:8px; border-radius:5px; overflow-y:auto; z-index:10000;';
+            document.body.appendChild(debugPanel);
+        }
+        
+        if (debugPanel) {
+            const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
+            debugPanel.innerHTML += `<div>${new Date().toLocaleTimeString()}: ${msg}</div>`;
+            debugPanel.scrollTop = debugPanel.scrollHeight;
+        }
+    };
+</script>
 <div class="app">
     <!-- TOPBAR -->
-    <div class="topbar">
-        <div style="display:flex;align-items:center;gap:6px;margin-right:8px">
-            <i class="fa-solid fa-frog" style="color:var(--accent);font-size:14px"></i>
-            <span style="font-size:13px;font-weight:700;color:var(--text)">Kaeru</span>
-        </div>
+    <!-- TOPBAR - RESPONSIVE (Mobile shows tabs as icons only) -->
+<div class="topbar">
+    <div style="display:flex;align-items:center;gap:6px;margin-right:8px">
+        <span class="hide-kaeru-on-mobile" style="font-size:13px;font-weight:700;color:var(--text)">代える</span>
+        <span style="font-size:13px;font-weight:700;color:var(--text);cursor:pointer;" onclick="openSettingsOverlay()">Kaeru</span>
+    </div>
 
-        <div class="tab-nav">
-            <button class="tab-btn {% if tab == 'tasks' %}active{% endif %}" onclick="location.href='/tasks'">
-                <i class="fa-solid fa-list-check"></i><span>Tasks</span>
-            </button>
-            <button class="tab-btn {% if tab == 'notes' %}active{% endif %}" onclick="location.href='/notes'">
-                <i class="fa-solid fa-note-sticky"></i><span>Notes</span>
-            </button>
-            <button class="tab-btn {% if tab == 'timeless' %}active{% endif %}" onclick="location.href='/timeless'">
-                <i class="fa-solid fa-infinity"></i><span>Timeless</span>
-            </button>
-        </div>
-
-        <div style="flex:1"></div>
-
-        <span id="clock" style="font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace;white-space:nowrap"></span>
-
-        <div style="display:flex;align-items:center;gap:5px;padding:0 6px">
-            <div class="sync-dot" id="sync-dot"></div>
-            <span id="sync-label" style="font-size:10px;color:var(--text3)">Synced</span>
-        </div>
-
-        <!-- Desktop controls -->
-        <div class="desktop-only-actions" style="display:flex;align-items:center;gap:2px">
-            <button class="icon-btn" onclick="toggleTheme()" title="Toggle theme">
-                <i class="fa-solid fa-circle-half-stroke" id="theme-icon"></i>
-            </button>
-            {% if tab == 'tasks' %}
-            <button class="icon-btn" onclick="showHistory()" title="Task history" style="font-size:11px">
-                <i class="fa-solid fa-clock-rotate-left"></i>
-            </button>
-            {% endif %}
-            <button class="icon-btn danger" onclick="location.href='/logout'" title="Logout">
-                <i class="fa-solid fa-right-from-bracket"></i>
-            </button>
-        </div>
-
-        <!-- Mobile hamburger -->
-        <button class="icon-btn mobile-only" onclick="openDrawer()" style="display:none">
-            <i class="fa-solid fa-bars"></i>
+    <div class="tab-nav">
+        <button class="tab-btn {% if tab == 'tasks' %}active{% endif %}" onclick="location.href='/tasks'" title="Tasks">
+            <i class="fa-solid fa-list-check"></i><span class="tab-text">Tasks</span>
+        </button>
+        <button class="tab-btn {% if tab == 'notes' %}active{% endif %}" onclick="location.href='/notes'" title="Notes">
+            <i class="fa-solid fa-note-sticky"></i><span class="tab-text">Notes</span>
+        </button>
+        <button class="tab-btn {% if tab == 'timeless' %}active{% endif %}" onclick="location.href='/timeless'" title="Timeless">
+            <i class="fa-solid fa-infinity"></i><span class="tab-text">Timeless</span>
+        </button>
+        <button class="tab-btn {% if tab == 'links' %}active{% endif %}" onclick="location.href='/links'" title="Quick Links">
+            <i class="fa-solid fa-link"></i><span class="tab-text">Links</span>
         </button>
     </div>
+
+    <div style="flex:1"></div>
+
+    <span id="clock" style="font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace;white-space:nowrap"></span>
+
+    <div style="display:flex;align-items:center;gap:5px;padding:0 6px">
+        <div class="sync-dot" id="sync-dot"></div>
+        <!--
+        <span id="sync-label" style="font-size:10px;color:var(--text3)">Synced</span>
+        -->
+    </div>
+
+    <!-- Actions (always visible - even on mobile) -->
+    <div class="desktop-only-actions" style="display:flex;align-items:center;gap:2px">
+        <button class="icon-btn" onclick="toggleTheme()" title="Toggle theme">
+            <i class="fa-solid fa-circle-half-stroke" id="theme-icon"></i>
+        </button>
+        {% if tab == 'tasks' %}
+        <button class="icon-btn" onclick="showHistory()" title="Task history" style="font-size:11px">
+            <i class="fa-solid fa-clock-rotate-left"></i>
+        </button>
+        {% endif %}
+        <button class="icon-btn danger" onclick="location.href='/logout'" title="Logout">
+            <i class="fa-solid fa-right-from-bracket"></i>
+        </button>
+    </div>
+
+    <!-- Mobile hamburger (still available) -->
+     <!-- 
+    <button class="icon-btn mobile-only" onclick="openDrawer()" style="display:none">
+        <i class="fa-solid fa-bars"></i>
+    </button> -->
+</div>
 
     <!-- MOBILE DRAWER BACKDROP -->
     <div class="drawer-backdrop" id="drawer-backdrop" onclick="closeDrawer()"></div>
@@ -656,6 +1186,9 @@
                     <span>Tasks</span>
                 </button>
                 <div style="display:flex;align-items:center;gap:6px">
+                    <button class="icon-btn" onclick="syncSportsMatches()" title="Sync Football Matches" style="color: var(--accent);">
+                        <i class="fa-solid fa-futbol"></i>
+                    </button>
                     <span id="today-stat" style="font-size:11px;color:var(--text3)"></span>
                     <!-- Quick-add date picker -->
                     <input type="date" id="global-date-picker" title="Pick date to add task" onchange="focusDateInput(this.value)">
@@ -708,17 +1241,24 @@
             <button class="tb-btn" id="tb-italic" onclick="execFmt('italic')" title="Italic"><i class="fa-solid fa-italic"></i></button>
             <button class="tb-btn" id="tb-underline" onclick="execFmt('underline')" title="Underline"><i class="fa-solid fa-underline"></i></button>
             <button class="tb-btn" id="tb-strike" onclick="execFmt('strikeThrough')" title="Strike"><i class="fa-solid fa-strikethrough"></i></button>
+            <!--
             <div class="tb-sep"></div>
             <button class="tb-btn" id="tb-ul" onclick="execList('ul')" title="Bullet list"><i class="fa-solid fa-list-ul"></i></button>
             <button class="tb-btn" id="tb-ol" onclick="execList('ol')" title="Numbered list"><i class="fa-solid fa-list-ol"></i></button>
             <button class="tb-btn" onclick="execFmt('outdent')" title="Outdent"><i class="fa-solid fa-outdent"></i></button>
             <button class="tb-btn" onclick="execFmt('indent')" title="Indent"><i class="fa-solid fa-indent"></i></button>
             <div class="tb-sep"></div>
+            -->
+            <!--
             <button class="tb-btn" onclick="insertQuote()" title="Blockquote"><i class="fa-solid fa-quote-left"></i></button>
+            -->
             <button class="tb-btn" onclick="insertHR()" title="Divider"><i class="fa-solid fa-minus"></i></button>
             <button class="tb-btn" onclick="insertCode()" title="Code"><i class="fa-solid fa-code"></i></button>
             <button class="tb-btn" onclick="showLinkModal()" title="Link"><i class="fa-solid fa-link"></i></button>
+            
+            <!--
             <div class="tb-sep"></div>
+            
             <div style="display:flex;gap:3px;align-items:center">
                 <div class="color-dot" style="background:#f0f0f5;border:1px solid #555" onclick="applyColor('#f0f0f5')" title="Default"></div>
                 <div class="color-dot" style="background:#ef4444" onclick="applyColor('#ef4444')" title="Red"></div>
@@ -727,6 +1267,7 @@
                 <div class="color-dot" style="background:#3b82f6" onclick="applyColor('#3b82f6')" title="Blue"></div>
                 <div class="color-dot" style="background:#a855f7" onclick="applyColor('#a855f7')" title="Purple"></div>
             </div>
+            -->
             <div style="flex:1"></div>
             <button class="tb-btn" onclick="togglePinNote()" title="Pin note" id="pin-btn"><i class="fa-solid fa-thumbtack"></i></button>
             <button class="tb-btn" onclick="deleteNote()" title="Delete note" style="color:var(--red)"><i class="fa-solid fa-trash"></i></button>
@@ -738,58 +1279,148 @@
     </div>
 
     {% elif tab == 'timeless' %}
-    <!-- TIMELESS TAB -->
-    <div class="tl-outer">
-        <div class="tl-main">
-            <!-- Search + Tags bar -->
-            <div class="tl-search-bar">
-                <i class="fa-solid fa-magnifying-glass" style="color:var(--text3);font-size:11px"></i>
-                <input class="tl-search-input" id="tl-search" placeholder="Search nodes by title, tags…" oninput="tlSearch(this.value)">
-                <button class="icon-btn" onclick="showNodeModal()" style="color:var(--accent)" title="Add node">
-                    <i class="fa-solid fa-plus"></i>
-                </button>
-            </div>
-            <div class="tl-tags-bar" id="tl-tags-bar" style="display:none"></div>
+<!-- TIMELESS TAB -->
+<div class="tl-outer">
+    <div class="tl-main">
+        <!-- Search Bar -->
+        <div class="tl-search-bar">
+            <i class="fa-solid fa-magnifying-glass" style="color:var(--text3);font-size:11px"></i>
+            <input class="tl-search-input" id="tl-search" placeholder="Search nodes by title, description, tags…" oninput="tlSearch(this.value)">
+            <button class="icon-btn" onclick="showNodeModal()" style="color:var(--accent)" title="Add node">
+                <i class="fa-solid fa-plus"></i>
+            </button>
+        </div>
 
-            <!-- Search Results -->
-            <div id="tl-search-results" style="display:none;padding:8px 12px;overflow-y:auto;max-height:200px;border-bottom:1px solid var(--border);background:var(--bg2)"></div>
-
-            <!-- Virtual scroll timeline -->
-            <div id="tl-scroll">
-                <div id="tl-inner" style="position:relative;padding:12px 0">
-                    <!-- Center line -->
-                    <div id="tl-center-axis" style="position:absolute;left:120px;top:0;bottom:0;width:2px;background:var(--border2);z-index:0"></div>
-                    <div id="tl-rows-container"></div>
+        <!-- Collapsible Tags Bar -->
+        <div class="tl-tags-bar-wrapper">
+            <div class="tl-tags-header" onclick="toggleTagsBar()">
+                <div class="tl-tags-header-left">
+                    <i class="fa-solid fa-chevron-down" id="tags-chevron"></i>
+                    <i class="fa-solid fa-tags"></i>
+                    <span>Filter by Tags</span>
                 </div>
+                <div class="tag-count-badge" id="tag-count-badge">0 tags</div>
+            </div>
+            <div class="tl-tags-container" id="tl-tags-container">
+                <div class="tl-tags-bar" id="tl-tags-bar"></div>
             </div>
         </div>
 
-        <!-- Desktop Detail Panel -->
-        <div class="detail-panel" id="tl-detail" style="display:none">
-            <div class="panel-header">
-                <span class="panel-title">Detail</span>
-                <div style="display:flex;gap:2px">
-                    <button class="icon-btn" onclick="editSelectedNode()" title="Edit"><i class="fa-solid fa-pen"></i></button>
-                    <button class="icon-btn danger" onclick="deleteSelectedNode()" title="Delete"><i class="fa-solid fa-trash"></i></button>
-                    <button class="icon-btn" onclick="closeDetail()" title="Close"><i class="fa-solid fa-xmark"></i></button>
-                </div>
-            </div>
-            <div class="detail-content" id="tl-detail-body"></div>
-        </div>
+        <!-- Search Results -->
+        <div id="tl-search-results" style="display:none;padding:8px 12px;overflow-y:auto;max-height:200px;border-bottom:1px solid var(--border);background:var(--bg2)"></div>
 
-        <!-- Mobile Overlay Detail -->
-        <div class="tl-mobile-overlay" id="tl-mobile-overlay">
-            <div class="panel-header">
-                <span class="panel-title">Detail</span>
-                <div style="display:flex;gap:2px">
-                    <button class="icon-btn" onclick="editSelectedNode()" title="Edit"><i class="fa-solid fa-pen"></i></button>
-                    <button class="icon-btn danger" onclick="deleteSelectedNode()" title="Delete"><i class="fa-solid fa-trash"></i></button>
-                    <button class="icon-btn" onclick="closeMobileOverlay()" title="Close"><i class="fa-solid fa-xmark"></i></button>
-                </div>
+        <!-- Virtual scroll timeline -->
+        <div id="tl-scroll">
+            <div id="tl-inner" style="position:relative;padding:12px 0">
+                <!-- Center line -->
+                <div id="tl-center-axis" style="position:absolute;left:131px;top:0;bottom:0;width:2px;background:var(--border2);z-index:0"></div>
+                <div id="tl-rows-container"></div>
             </div>
-            <div class="detail-content" id="tl-mobile-detail-body"></div>
         </div>
     </div>
+
+    <!-- Desktop Detail Panel -->
+    <div class="detail-panel" id="tl-detail" style="display:none">
+        <div class="panel-header">
+            <span class="panel-title">Detail</span>
+            <div style="display:flex;gap:2px">
+                <button class="icon-btn" onclick="editSelectedNode()" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                <button class="icon-btn danger" onclick="deleteSelectedNode()" title="Delete"><i class="fa-solid fa-trash"></i></button>
+                <button class="icon-btn" onclick="closeDetail()" title="Close"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+        </div>
+        <div class="detail-content" id="tl-detail-body"></div>
+    </div>
+
+    <!-- Mobile Overlay Detail -->
+    <div class="tl-mobile-overlay" id="tl-mobile-overlay">
+        <div class="panel-header">
+            <span class="panel-title">Detail</span>
+            <div style="display:flex;gap:2px">
+                <button class="icon-btn" onclick="editSelectedNode()" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                <button class="icon-btn danger" onclick="deleteSelectedNode()" title="Delete"><i class="fa-solid fa-trash"></i></button>
+                <button class="icon-btn" onclick="closeMobileOverlay()" title="Close"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+        </div>
+        <div class="detail-content" id="tl-mobile-detail-body"></div>
+    </div>
+</div>
+
+    {% elif tab == 'links' %}
+<!-- LINKS TAB - Quick Links Manager -->
+<div class="links-container" style="flex: 1; width: 100%; height: 100%; padding: 20px; overflow-y: auto; box-sizing: border-box;">
+    <div style="max-width: 1400px; margin: 0 auto;">
+        <!-- Header -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px;">
+            <div>
+                <h2 style="font-size: 20px; font-weight: 600; color: var(--text);">
+                    <i class="fa-solid fa-link" style="color: var(--accent); margin-right: 10px;"></i>
+                    Quick Links
+                </h2>
+                <p style="font-size: 12px; color: var(--text3); margin-top: 4px;">Manage your frequently used links</p>
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <button class="icon-btn" onclick="exportLinks()" title="Export Links">
+                    <i class="fa-solid fa-upload"></i>
+                </button>
+                <button class="icon-btn" onclick="importLinks()" title="Import Links">
+                    <i class="fa-solid fa-download"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Links Grid - Flexbox horizontal -->
+        <div id="links-grid" class="links-grid">
+            <!-- Add New Link Card (always at the top/left) -->
+            <div class="add-link-card" onclick="showLinkModal()">
+                <i class="fa-solid fa-plus"></i>
+                <span style="font-size: 14px; font-weight: 500; color: var(--text2);">Add New Link</span>
+                <span style="font-size: 11px; color: var(--text3); margin-top: 4px;">Click to create</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Link Modal (Add/Edit) - No click count field -->
+<div class="modal-overlay" id="link-edit-modal" style="display:none" onclick="if(event.target===this)closeLinkEditModal()">
+    <div class="modal-box" style="max-width: 450px;">
+        <div class="modal-header">
+            <span class="modal-title" id="link-modal-title">Add New Link</span>
+            <button class="icon-btn" onclick="closeLinkEditModal()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body">
+            <div class="field-group">
+                <div class="field-label">Title *</div>
+                <input class="field-input" id="link-title" placeholder="e.g., Google, GitHub, etc." autocomplete="off">
+            </div>
+            <div class="field-group">
+                <div class="field-label">URL *</div>
+                <input class="field-input" id="link-url-field" placeholder="https://..." autocomplete="off">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="closeLinkEditModal()">Cancel</button>
+            <button class="btn-primary" onclick="saveLink()">Save Link</button>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal-overlay" id="delete-link-modal" style="display:none" onclick="if(event.target===this)closeDeleteModal()">
+    <div class="modal-box" style="max-width: 350px;">
+        <div class="modal-header">
+            <span class="modal-title">Delete Link</span>
+            <button class="icon-btn" onclick="closeDeleteModal()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body">
+            <p style="color: var(--text2);">Are you sure you want to delete "<span id="delete-link-title"></span>"?</p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+            <button class="btn-danger" onclick="confirmDeleteLink()">Delete</button>
+        </div>
+    </div>
+</div>
 
     {% endif %}
 
@@ -855,11 +1486,12 @@
             <div class="field-group">
                 <div class="field-label">Tags <span style="color:var(--text3);font-size:10px">(add unique tags)</span></div>
                 <div class="tag-input-wrap">
-                    <input class="field-input" id="node-tag-input" placeholder="Type tag and press Enter…"
-                        onkeydown="handleTagInput(event)" oninput="showTagSuggestions(this.value)">
-                    <div class="tag-suggestions" id="tag-suggestions" style="display:none"></div>
+                    <input class="field-input" id="node-tag-input" type="text" placeholder="Type tag and press Enter…"
+                        onkeypress="handleTagKeyPress(event)" 
+                        oninput="showTagSuggestions(this.value)">
+                    <div class="tag-suggestions" id="tag-suggestions" style="display:none; position:absolute; background:var(--bg2); border:1px solid var(--border); border-radius:6px; max-height:120px; overflow-y:auto; z-index:1000;"></div>
                 </div>
-                <div class="tags-preview" id="tags-preview"></div>
+                <div class="tags-preview" id="tags-preview" style="margin-top:8px; min-height:32px;"></div>
             </div>
             <div class="field-group">
                 <div class="field-label">Side Note</div>
@@ -936,6 +1568,91 @@
         </div>
     </div>
 </div>
+
+
+
+
+
+
+
+<!-- Settings/Info Overlay -->
+<div class="modal-overlay" id="settings-overlay" style="display:none" onclick="if(event.target===this)closeSettingsOverlay()">
+    <div class="modal-box" style="max-width: 500px;">
+        <div class="modal-header">
+            <span class="modal-title">
+                <i class="fa-solid fa-torii-gate" style="margin-right: 10px; color: var(--accent);"></i>
+                Kaeru Workspace
+            </span>
+            <button class="icon-btn" onclick="closeSettingsOverlay()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <!-- System Info -->
+            <div style="margin-bottom: 20px; padding: 12px; background: var(--bg3); border-radius: 12px;">
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                    <i class="fa-solid fa-database" style="font-size: 24px; color: var(--accent);"></i>
+                    <div>
+                        <div style="font-size: 13px; font-weight: 600;">System Information</div>
+                        <div style="font-size: 11px; color: var(--text3);">Version 6.3.2 | By Irshad Hossain</div>
+                    </div>
+                </div>
+                <div id="system-stats" style="font-size: 11px; color: var(--text2);">
+                    <div><i class="fa-solid fa-tasks" style="width: 20px;"></i> Loading...</div>
+                </div>
+            </div>
+            
+            <!-- Import/Export Section -->
+            <div style="margin-bottom: 16px;">
+                <div class="field-label" style="margin-bottom: 8px;">
+                    <i class="fa-solid fa-arrow-up-from-bracket"></i> Backup & Restore
+                </div>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button onclick="exportData()" class="btn-primary" style="flex: 1;">
+                        <i class="fa-solid fa-download"></i> Export Backup
+                    </button>
+                    <button onclick="triggerImport()" class="btn-secondary" style="flex: 1;">
+                        <i class="fa-solid fa-upload"></i> Import Backup
+                    </button>
+                </div>
+                <input type="file" id="import-file" accept=".json" style="display: none;" onchange="importData(this.files[0])">
+            </div>
+            
+            <div style="font-size: 11px; color: var(--text3); padding: 8px; background: var(--accent-bg); border-radius: 8px;">
+                <i class="fa-solid fa-info-circle"></i> 
+                Export creates a JSON backup of all your data. Import will replace ALL existing data - make sure to export first!
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="closeSettingsOverlay()">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- Access Key Modal for Import/Export -->
+<div class="modal-overlay" id="access-key-modal" style="display:none" onclick="if(event.target===this)closeAccessKeyModal()">
+    <div class="modal-box" style="max-width: 380px;">
+        <div class="modal-header">
+            <span class="modal-title" id="access-key-modal-title">Verify Access Key</span>
+            <button class="icon-btn" onclick="closeAccessKeyModal()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="field-group">
+                <div class="field-label">Access Key</div>
+                <input type="password" class="field-input" id="access-key-input" placeholder="Enter your access key..." onkeydown="if(event.key==='Enter')confirmAccessKey()">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="closeAccessKeyModal()">Cancel</button>
+            <button class="btn-primary" onclick="confirmAccessKey()">Verify</button>
+        </div>
+    </div>
+</div>
+
+
+
 
 <script>
 // ============================================================
@@ -1028,11 +1745,13 @@ async function api(url, method = 'GET', body = null) {
 // ============================================================
 // TOAST
 // ============================================================
-function toast(msg) {
+function toast(msg, duration = 1000) {
     const t = document.getElementById('toast');
     t.textContent = msg;
     t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), 2000);
+    
+    // Uses the custom duration (3000) if provided, otherwise defaults to 2000
+    setTimeout(() => t.classList.remove('show'), duration);
 }
 
 // ============================================================
@@ -1198,7 +1917,7 @@ function taskRowHTML(t) {
         <input type="checkbox" class="task-check" ${checked} onchange="toggleTask(${t.id})">
         <span class="task-title ${done}" ondblclick="startEditTask(this, ${t.id})">${escH(t.title)}</span>
         <div class="row-actions">
-            <button class="icon-btn" onclick="startEditTask(document.querySelector('#task-${t.id} .task-title'),${t.id})" title="Edit"><i class="fa-solid fa-pen" style="font-size:10px"></i></button>
+            <button class="icon-btn none md:block" onclick="startEditTask(document.querySelector('#task-${t.id} .task-title'),${t.id})" title="Edit"><i class="fa-solid fa-pen" style="font-size:10px"></i></button>
             <button class="icon-btn danger" onclick="deleteTask(${t.id})" title="Delete"><i class="fa-solid fa-trash" style="font-size:10px"></i></button>
         </div>
     </div>`;
@@ -1334,61 +2053,60 @@ function renderProjects() {
         return;
     }
     body.innerHTML = '';
-    projects.forEach(p => {
-        const isOpen = openProjects.has(p.id);
-        const pct = p.progress || 0;
+    projects.forEach(project => {  // Changed from 'p' to 'project' to avoid confusion
+        const isOpen = openProjects.has(project.id);
+        const pct = project.progress || 0;
         const r = 11; const circ = 2 * Math.PI * r;
         const offset = circ - (pct / 100) * circ;
 
-        // Format dates
-        const createdAt = p.added_date ? fmtDate(p.added_date) : '—';
-        const lastUpdated = p.last_updated ? fmtDate(p.last_updated) : '—';
+        const createdAt = project.added_date ? fmtDate(project.added_date) : '—';
+        const lastUpdated = project.last_updated ? fmtDate(project.last_updated) : '—';
 
         const card = document.createElement('div');
         card.className = 'project-card';
-        card.id = `proj-card-${p.id}`;
+        card.id = `proj-card-${project.id}`;
         card.innerHTML = `
-            <div class="project-header" onclick="toggleProject(${p.id})">
-                <i class="fa-solid fa-chevron-right project-chevron ${isOpen ? 'open' : ''}" id="proj-chev-${p.id}"></i>
-                <span class="project-name" id="proj-name-${p.id}" ondblclick="startEditProject(this,${p.id},event)">${escH(p.title)}</span>
-                <span class="project-meta">${p.completed_count}/${p.total}</span>
+            <div class="project-header" onclick="toggleProject(${project.id})">
+                <i class="fa-solid fa-chevron-right project-chevron ${isOpen ? 'open' : ''}" id="proj-chev-${project.id}"></i>
+                <span class="project-name" id="proj-name-${project.id}" ondblclick="startEditProject(this,${project.id},event)">${escH(project.title)}</span>
+                <span class="project-meta">${project.completed_count}/${project.total}</span>
                 <div class="circ-progress" title="${pct}% complete">
                     <svg viewBox="0 0 28 28" width="28" height="28">
                         <circle class="track" cx="14" cy="14" r="${r}"/>
                         <circle class="fill" cx="14" cy="14" r="${r}"
                             stroke-dasharray="${circ.toFixed(2)}"
                             stroke-dashoffset="${offset.toFixed(2)}"
-                            id="proj-circ-${p.id}"/>
+                            id="proj-circ-${project.id}"/>
                     </svg>
                 </div>
                 <div class="row-actions" style="opacity:1">
-                    <button class="icon-btn" onclick="event.stopPropagation();startEditProject(document.getElementById('proj-name-${p.id}'),${p.id},event)" title="Edit"><i class="fa-solid fa-pen" style="font-size:10px"></i></button>
-                    <button class="icon-btn danger" onclick="event.stopPropagation();deleteProject(${p.id})" title="Delete"><i class="fa-solid fa-trash" style="font-size:10px"></i></button>
+                    <button class="icon-btn" onclick="event.stopPropagation();startEditProject(document.getElementById('proj-name-${project.id}'),${project.id},event)" title="Edit"><i class="fa-solid fa-pen" style="font-size:10px"></i></button>
+                    <button class="icon-btn danger" onclick="event.stopPropagation();deleteProject(${project.id})" title="Delete"><i class="fa-solid fa-trash" style="font-size:10px"></i></button>
                 </div>
             </div>
-            <div class="project-body-wrapper" id="proj-body-wrap-${p.id}" style="height:${isOpen ? 'auto' : '0px'};overflow:hidden;transition:none">
+            <div class="project-body-wrapper" id="proj-body-wrap-${project.id}" style="height:${isOpen ? 'auto' : '0px'};overflow:hidden;transition:none">
                 <div class="project-body">
                     <div class="project-meta-row">
                         <span><i class="fa-solid fa-calendar-plus" style="font-size:9px"></i> Created: ${createdAt}</span>
                         <span><i class="fa-solid fa-pen-to-square" style="font-size:9px"></i> Updated: ${lastUpdated}</span>
                     </div>
-                    ${p.subtasks.map(s => {
-                        const sdone = s.completed ? 'done' : '';
-                        const sc = s.completed ? 'checked' : '';
-                        return `<div class="subtask-row" id="sub-${s.id}">
-                            <input type="checkbox" class="task-check" ${sc} onchange="toggleSub(${s.id})">
-                            <span class="task-title ${sdone}" style="font-size:12px" ondblclick="startEditSub(this,${s.id})">${escH(s.title)}</span>
+                    ${(project.subtasks || []).map(sub => {
+                        const sdone = sub.completed ? 'done' : '';
+                        const sc = sub.completed ? 'checked' : '';
+                        return `<div class="subtask-row" id="sub-${sub.id}">
+                            <input type="checkbox" class="task-check" ${sc} onchange="toggleSub(${sub.id})">
+                            <span class="task-title ${sdone}" style="font-size:12px" ondblclick="startEditSub(this,${sub.id})">${escH(sub.title)}</span>
                             <div class="row-actions">
-                                <button class="icon-btn" onclick="startEditSub(document.querySelector('#sub-${s.id} .task-title'),${s.id})" title="Edit"><i class="fa-solid fa-pen" style="font-size:10px"></i></button>
-                                <button class="icon-btn danger" onclick="deleteSub(${s.id})" title="Delete"><i class="fa-solid fa-trash" style="font-size:10px"></i></button>
+                                <button class="icon-btn" onclick="startEditSub(document.querySelector('#sub-${sub.id} .task-title'),${sub.id})" title="Edit"><i class="fa-solid fa-pen" style="font-size:10px"></i></button>
+                                <button class="icon-btn danger" onclick="deleteSub(${sub.id})" title="Delete"><i class="fa-solid fa-trash" style="font-size:10px"></i></button>
                             </div>
                         </div>`;
                     }).join('')}
-                    <div class="add-row" style="padding:6px 14px" onclick="focusSubInput(${p.id})">
+                    <div class="add-row" style="padding:6px 14px" onclick="focusSubInput(${project.id})">
                         <i class="fa-solid fa-plus" style="font-size:10px;color:var(--accent)"></i>
-                        <input class="add-row-input" id="sub-add-${p.id}" placeholder="Add subtask…" style="font-size:12px"
-                            onblur="submitSubtask(this,${p.id})"
-                            onkeydown="subKey(event,this,${p.id})">
+                        <input class="add-row-input" id="sub-add-${project.id}" placeholder="Add subtask…" style="font-size:12px"
+                            onblur="submitSubtask(this,${project.id})"
+                            onkeydown="subKey(event,this,${project.id})">
                     </div>
                 </div>
             </div>`;
@@ -1784,37 +2502,113 @@ function closeSidebar() {
 }
 
 // ============================================================
-// TIMELESS — REDESIGNED VIRTUALIZED TIMELINE
+// TIMELESS — WITH COLLAPSIBLE TAGS BAR & TRUNCATED TAGS
 // ============================================================
-let tlDisplayNodes = []; // nodes currently filtered/displayed
-const TL_ROW_HEIGHT = 72; // px per row for virtual scroll
-const TL_BUFFER = 5;
+let tlDisplayNodes = [];
+const TL_ROW_HEIGHT = 72;
+let tagsBarExpanded = false;
 
+// Add this at the end of your loadTimeless function or in the initialization
+function initTagsBarState() {
+    const container = document.getElementById('tl-tags-container');
+    const chevron = document.getElementById('tags-chevron');
+    
+    if (!tagsBarExpanded) {
+        if (container) container.classList.add('collapsed');
+        if (chevron) {
+            chevron.classList.add('collapsed');
+            chevron.style.transform = 'rotate(-90deg)';
+        }
+    }
+}
+
+// Call this function after renderTagsBar() in loadTimeless
+
+function toggleTagsBar() {
+    tagsBarExpanded = !tagsBarExpanded;
+    const container = document.getElementById('tl-tags-container');
+    const chevron = document.getElementById('tags-chevron');
+    
+    if (tagsBarExpanded) {
+        container.classList.remove('collapsed');
+        chevron.classList.remove('collapsed');
+        chevron.style.transform = 'rotate(0deg)';
+    } else {
+        container.classList.add('collapsed');
+        chevron.classList.add('collapsed');
+        chevron.style.transform = 'rotate(-90deg)';
+    }
+}
+
+// Replace the loadTimeless function
 async function loadTimeless() {
+    console.log('Loading timeless nodes...');
     const res = await fetch('/api/timeless');
     timelessNodes = await res.json();
+    
+    console.log('Loaded nodes:', timelessNodes);
+    timelessNodes.forEach(node => {
+        console.log(`Node ${node.id} - Title: "${node.title}", Tags raw: "${node.tags}", Tags list:`, node.tags_list);
+    });
+    
+    // Force rebuild allTags
     allTags = [...new Set(timelessNodes.flatMap(n => n.tags_list || []))].sort();
+    console.log('All unique tags:', allTags);
+    
     renderTagsBar();
     applyTlFilters();
+    initTagsBarState();
 }
 
 function applyTlFilters() {
     let nodes = [...timelessNodes];
+    
+    // Apply tag filter
     if (tlFilterTag) {
-        nodes = nodes.filter(n => (n.tags_list || []).includes(tlFilterTag));
+        nodes = nodes.filter(n => {
+            let nodeTags = [];
+            if (n.tags_list && Array.isArray(n.tags_list)) {
+                nodeTags = n.tags_list;
+            } else if (n.tags && typeof n.tags === 'string') {
+                nodeTags = n.tags.split(',').map(t => t.trim()).filter(t => t);
+            } else if (n.tags && Array.isArray(n.tags)) {
+                nodeTags = n.tags;
+            }
+            return nodeTags.includes(tlFilterTag);
+        });
     }
+    
+    // Apply search query
     if (tlSearchQuery) {
         const q = tlSearchQuery.toLowerCase();
-        // Show search results overlay
-        const results = nodes.filter(n =>
-            n.title.toLowerCase().includes(q) ||
-            (n.tags_list || []).some(t => t.toLowerCase().includes(q))
-        );
+        const results = nodes.filter(n => {
+            // Get all searchable fields
+            let nodeTags = [];
+            if (n.tags_list && Array.isArray(n.tags_list)) {
+                nodeTags = n.tags_list;
+            } else if (n.tags && typeof n.tags === 'string') {
+                nodeTags = n.tags.split(',').map(t => t.trim()).filter(t => t);
+            } else if (n.tags && Array.isArray(n.tags)) {
+                nodeTags = n.tags;
+            }
+            
+            const tagsText = nodeTags.join(' ').toLowerCase();
+            const titleText = (n.title || '').toLowerCase();
+            const descText = (n.description || '').toLowerCase();
+            const sidenoteText = (n.sidenote || '').toLowerCase();
+            
+            return titleText.includes(q) || 
+                   descText.includes(q) || 
+                   sidenoteText.includes(q) || 
+                   tagsText.includes(q);
+        });
         renderSearchResults(results);
         nodes = results;
     } else {
-        document.getElementById('tl-search-results').style.display = 'none';
+        const searchResultsDiv = document.getElementById('tl-search-results');
+        if (searchResultsDiv) searchResultsDiv.style.display = 'none';
     }
+    
     tlDisplayNodes = nodes;
     renderTimelineVirtual();
 }
@@ -1822,15 +2616,39 @@ function applyTlFilters() {
 function renderTagsBar() {
     const bar = document.getElementById('tl-tags-bar');
     if (!bar) return;
-    if (!allTags.length) { bar.style.display = 'none'; return; }
-    bar.style.display = 'flex';
-    let html = '<span style="font-size:10px;color:var(--text3);margin-right:2px">Filter:</span>';
+    
+    // Extract all unique tags from timelessNodes
+    const allUniqueTags = new Set();
+    timelessNodes.forEach(node => {
+        let nodeTags = [];
+        if (node.tags_list && Array.isArray(node.tags_list)) {
+            nodeTags = node.tags_list;
+        } else if (node.tags && typeof node.tags === 'string') {
+            nodeTags = node.tags.split(',').map(t => t.trim()).filter(t => t);
+        } else if (node.tags && Array.isArray(node.tags)) {
+            nodeTags = node.tags;
+        }
+        nodeTags.forEach(tag => allUniqueTags.add(tag));
+    });
+    
+    allTags = Array.from(allUniqueTags).sort();
+    
+    // Update tag count badge
+    const badge = document.getElementById('tag-count-badge');
+    if (badge) badge.textContent = `${allTags.length} tag${allTags.length !== 1 ? 's' : ''}`;
+    
+    if (!allTags.length) { 
+        bar.innerHTML = '<div style="color:var(--text3); font-size:11px; padding:4px 0;">No tags yet. Add tags to nodes to filter here.</div>';
+        return; 
+    }
+    
+    let html = '';
     allTags.forEach(tag => {
         const active = tlFilterTag === tag ? 'active' : '';
         html += `<span class="tag-chip ${active}" onclick="setTagFilter('${escH(tag)}')">${escH(tag)}</span>`;
     });
     if (tlFilterTag) {
-        html += `<span class="tag-chip reset" onclick="clearTagFilter()"><i class="fa-solid fa-xmark" style="font-size:9px"></i> Clear</span>`;
+        html += `<span class="tag-chip reset" onclick="clearTagFilter()"><i class="fa-solid fa-xmark" style="font-size:9px"></i> Clear filter</span>`;
     }
     bar.innerHTML = html;
 }
@@ -1887,9 +2705,6 @@ function renderTimelineVirtual() {
         return;
     }
 
-    // For now, render all nodes (virtualization hook for 1000+)
-    // With true virtualization we'd use scroll position, but for correctness render all
-    // with a virtual approach using absolute positioning for large sets
     const totalH = tlDisplayNodes.length * (TL_ROW_HEIGHT + 8) + 40;
     inner.style.minHeight = totalH + 'px';
 
@@ -1898,7 +2713,26 @@ function renderTimelineVirtual() {
         const sel = n.id === currentNodeId ? 'selected' : '';
         const dotSel = n.id === currentNodeId ? 'selected' : '';
         const tags = (n.tags_list || []);
-        const tagsHtml = tags.length ? `<div class="tl-node-tags">${tags.map(t => `<span class="tl-tag">${escH(t)}</span>`).join('')}</div>` : '';
+        
+        // Truncate tags: show first line only, rest as +X more
+        let tagsHtml = '';
+        if (tags.length > 0) {
+            // Calculate how many tags fit in one line (approximately)
+            // We'll show first 3 tags, then +X more if there are more
+            const MAX_VISIBLE_TAGS = 3;
+            const visibleTags = tags.slice(0, MAX_VISIBLE_TAGS);
+            const remainingCount = tags.length - MAX_VISIBLE_TAGS;
+            
+            tagsHtml = `<div class="tl-node-tags">`;
+            visibleTags.forEach(t => {
+                tagsHtml += `<span class="tl-tag" onclick="event.stopPropagation(); setTagFilter('${escH(t)}')">${escH(t)}</span>`;
+            });
+            if (remainingCount > 0) {
+                tagsHtml += `<span class="tag-more-indicator" onclick="event.stopPropagation(); showAllTagsTooltip(this, ${JSON.stringify(tags).replace(/"/g, '&quot;')})" title="${tags.slice(MAX_VISIBLE_TAGS).join(', ')}">+${remainingCount} more</span>`;
+            }
+            tagsHtml += `</div>`;
+        }
+        
         html += `<div class="tl-desktop-row" style="top:${i * (TL_ROW_HEIGHT + 8) + 8}px">
             <div class="tl-year-col">
                 <div class="tl-year-hijri">${n.hijri_year ? n.hijri_year + ' AH' : ''}</div>
@@ -1909,7 +2743,7 @@ function renderTimelineVirtual() {
             </div>
             <div class="tl-title-col">
                 <div class="tl-node-card ${sel}" onclick="selectNode(${n.id})">
-                    <div class="tl-node-title">${escH(n.title)}</div>
+                    <div class="tl-node-title" title="${escH(n.title)}">${escH(n.title)}</div>
                     ${tagsHtml}
                 </div>
             </div>
@@ -1917,9 +2751,39 @@ function renderTimelineVirtual() {
     });
     container.innerHTML = html;
 
-    // Update center axis height
     const axis = document.getElementById('tl-center-axis');
     if (axis) axis.style.height = Math.max(totalH, 200) + 'px';
+}
+
+function showAllTagsTooltip(element, tagsArray) {
+    // Create a temporary tooltip
+    const tooltip = document.createElement('div');
+    tooltip.style.cssText = `
+        position: fixed;
+        background: var(--bg2);
+        border: 1px solid var(--accent);
+        border-radius: 8px;
+        padding: 8px 12px;
+        z-index: 1000;
+        box-shadow: var(--shadow);
+        max-width: 250px;
+        font-size: 11px;
+    `;
+    
+    const tags = typeof tagsArray === 'string' ? JSON.parse(tagsArray) : tagsArray;
+    tooltip.innerHTML = `<div style="display: flex; flex-wrap: wrap; gap: 6px;">${tags.map(t => 
+        `<span style="padding: 2px 8px; background: var(--accent-bg); color: var(--accent); border-radius: 12px; cursor: pointer;" onclick="setTagFilter('${escH(t)}')">${escH(t)}</span>`
+    ).join('')}</div>`;
+    
+    const rect = element.getBoundingClientRect();
+    tooltip.style.top = rect.bottom + 5 + 'px';
+    tooltip.style.left = rect.left + 'px';
+    
+    document.body.appendChild(tooltip);
+    
+    // Remove tooltip after 3 seconds or on click
+    setTimeout(() => tooltip.remove(), 3000);
+    tooltip.addEventListener('click', () => tooltip.remove());
 }
 
 function navigateToNode(id) {
@@ -1940,10 +2804,18 @@ function navigateToNode(id) {
 }
 
 function selectNode(id) {
+    console.log('Selecting node:', id);
     currentNodeId = id;
     renderTimelineVirtual();
     const node = timelessNodes.find(n => n.id === id);
-    if (!node) return;
+    if (!node) {
+        console.error('Node not found:', id);
+        return;
+    }
+    
+    console.log('Selected node data:', node);
+    console.log('Node tags:', node.tags);
+    console.log('Node tags_list:', node.tags_list);
 
     const detailBody = buildDetailHTML(node);
     const isMobile = window.innerWidth <= 768;
@@ -1959,6 +2831,8 @@ function selectNode(id) {
 }
 
 function buildDetailHTML(node) {
+    console.log('Building detail HTML for node:', node.id);
+    
     let html = `<div style="margin-bottom:14px">
         <div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:6px">${escH(node.title)}</div>
         <div style="display:flex;gap:10px;flex-wrap:wrap">
@@ -1967,23 +2841,43 @@ function buildDetailHTML(node) {
         </div>
     </div>`;
 
-    if (node.tags_list && node.tags_list.length) {
-        html += `<div class="detail-label">Tags</div>
-        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px">
-            ${node.tags_list.map(t => `<span class="tl-tag" style="font-size:11px;padding:3px 8px">${escH(t)}</span>`).join('')}
-        </div>`;
+    // Show ALL tags in detail panel (no truncation)
+    let tags = [];
+    
+    if (node.tags_list && Array.isArray(node.tags_list) && node.tags_list.length > 0) {
+        tags = node.tags_list;
+    } else if (node.tags && typeof node.tags === 'string' && node.tags.trim()) {
+        tags = node.tags.split(',').map(t => t.trim()).filter(t => t);
+    } else if (node.tags && Array.isArray(node.tags)) {
+        tags = node.tags;
     }
 
-    if (node.description) {
-        html += `<div class="detail-label">Description</div>
+    if (tags.length > 0) {
+        html += `<div class="detail-label"><i class="fa-solid fa-tags"></i> Tags</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">
+            ${tags.map(t => `
+                <span style="font-size:11px; padding:4px 10px; background:var(--accent-bg); color:var(--accent); border:1px solid var(--accent-border); border-radius:9999px; cursor:pointer;" onclick="setTagFilter('${escH(t)}')">
+                    <i class="fa-solid fa-hashtag" style="font-size:9px; margin-right:4px;"></i>${escH(t)}
+                </span>
+            `).join('')}
+        </div>`;
+    } else {
+        html += `<div class="detail-label"><i class="fa-solid fa-tags"></i> Tags</div>
+        <div style="color:var(--text3); font-size:11px; padding:4px 0; margin-bottom:12px;">No tags added</div>`;
+    }
+
+    if (node.description && node.description.trim()) {
+        html += `<div class="detail-label"><i class="fa-solid fa-align-left"></i> Description</div>
         <div class="detail-desc">${node.description}</div>`;
     }
-    if (node.sidenote) {
-        html += `<div class="detail-label">Side Note</div>
+    
+    if (node.sidenote && node.sidenote.trim()) {
+        html += `<div class="detail-label"><i class="fa-solid fa-paperclip"></i> Side Note</div>
         <div class="detail-value" style="font-style:italic;color:var(--text3)">${escH(node.sidenote)}</div>`;
     }
+    
     if (node.sources && node.sources.length) {
-        html += `<div class="detail-label">Sources</div>`;
+        html += `<div class="detail-label"><i class="fa-solid fa-link"></i> Sources</div>`;
         node.sources.forEach(s => {
             html += `<a class="source-link" href="${escH(s.url)}" target="_blank" rel="noopener">
                 <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:10px;flex-shrink:0"></i>
@@ -1991,7 +2885,28 @@ function buildDetailHTML(node) {
             </a>`;
         });
     }
+    
     return html;
+}
+
+async function debugCheckDatabase() {
+    console.log('=== DEBUG: Checking database ===');
+    const response = await fetch('/api/timeless');
+    const data = await response.json();
+    console.log('All nodes from API:', data);
+    
+    data.forEach(node => {
+        console.log(`Node ID: ${node.id}`);
+        console.log(`  Title: ${node.title}`);
+        console.log(`  Raw tags field: "${node.tags}"`);
+        console.log(`  Tags list:`, node.tags_list);
+        console.log(`  Type of tags: ${typeof node.tags}`);
+    });
+    
+    // Also check if there's a tags endpoint
+    const tagsResponse = await fetch('/api/timeless/tags');
+    const tagsData = await tagsResponse.json();
+    console.log('All tags from /api/timeless/tags:', tagsData);
 }
 
 function closeDetail() {
@@ -2008,7 +2923,18 @@ function closeMobileOverlay() {
 // NODE MODAL
 function showNodeModal(node = null) {
     editingNodeId = node ? node.id : null;
-    nodeTags = node && node.tags_list ? [...node.tags_list] : [];
+    
+    // Clear and reset tags array
+    nodeTags = [];
+    
+    if (node && node.tags_list && node.tags_list.length > 0) {
+        nodeTags = [...node.tags_list];
+    } else if (node && node.tags && typeof node.tags === 'string' && node.tags.trim()) {
+        nodeTags = node.tags.split(',').map(t => t.trim()).filter(t => t);
+    }
+    
+    console.log('Opening modal with tags:', nodeTags); // Debug
+    
     document.getElementById('node-modal-title').textContent = node ? 'Edit Node' : 'New Node';
     document.getElementById('node-title').value = node ? node.title : '';
     const descEditor = document.getElementById('node-desc-editor');
@@ -2025,52 +2951,128 @@ function showNodeModal(node = null) {
         node.sources.forEach(s => addSourceField(s.display_text, s.url));
     }
 
+    // Clear the tag input field
+    const tagInput = document.getElementById('node-tag-input');
+    if (tagInput) tagInput.value = '';
+    
     document.getElementById('node-modal').style.display = 'flex';
     setTimeout(() => document.getElementById('node-title').focus(), 50);
 }
+
 function closeNodeModal() { document.getElementById('node-modal').style.display = 'none'; editingNodeId = null; nodeTags = []; }
 
 // TAG INPUT SYSTEM
-function handleTagInput(e) {
-    if (e.key === 'Enter' || e.key === ',') {
+function handleTagKeyPress(e) {
+    console.log('Tag input key pressed:', e.key, 'keyCode:', e.keyCode);
+    
+    if (e.key === 'Enter' || e.key === ',' || e.keyCode === 13 || e.keyCode === 188) {
         e.preventDefault();
-        const val = e.target.value.trim().replace(/,/g, '');
-        if (val) addTag(val);
-        e.target.value = '';
-        document.getElementById('tag-suggestions').style.display = 'none';
+        e.stopPropagation();
+        
+        const input = e.target;
+        let val = input.value.trim();
+        
+        // Remove trailing comma if present
+        val = val.replace(/,+$/, '');
+        
+        console.log('Processing tag input, value:', val);
+        
+        if (val && val.length > 0) {
+            addTagManually(val);
+            input.value = '';
+        }
+        
+        // Hide suggestions
+        const suggestionsDiv = document.getElementById('tag-suggestions');
+        if (suggestionsDiv) suggestionsDiv.style.display = 'none';
     }
-    if (e.key === 'Escape') {
-        document.getElementById('tag-suggestions').style.display = 'none';
+}
+
+// New function to manually add tags
+function addTagManually(tag) {
+    if (!tag || tag.trim() === '') {
+        console.log('Empty tag, ignoring');
+        return;
     }
+    
+    tag = tag.trim();
+    console.log('addTagManually called with:', tag);
+    console.log('Current nodeTags before add:', nodeTags);
+    
+    if (nodeTags.includes(tag)) { 
+        toast('Tag "' + tag + '" already added'); 
+        console.log('Tag already exists:', tag);
+        return; 
+    }
+    
+    nodeTags.push(tag);
+    console.log('Tag added. New nodeTags:', nodeTags);
+    renderTagsPreview();
+    toast('Tag "' + tag + '" added');
 }
 
 function addTag(tag) {
-    if (nodeTags.includes(tag)) { toast('Tag already added'); return; }
-    nodeTags.push(tag);
-    renderTagsPreview();
+    addTagManually(tag);
 }
 
 function removeTag(tag) {
+    console.log('Removing tag:', tag);
     nodeTags = nodeTags.filter(t => t !== tag);
+    console.log('Updated nodeTags array:', nodeTags);
     renderTagsPreview();
+    toast('Tag "' + tag + '" removed');
 }
 
 function renderTagsPreview() {
     const prev = document.getElementById('tags-preview');
     if (!prev) return;
-    prev.innerHTML = nodeTags.map(t =>
-        `<span class="tag-pill">${escH(t)}<button onclick="removeTag('${escH(t)}')" type="button">×</button></span>`
+    
+    console.log('Rendering tags preview. Current nodeTags:', nodeTags);
+    
+    if (!nodeTags || nodeTags.length === 0) {
+        prev.innerHTML = '<div style="color:var(--text3); font-size:11px; padding:4px 0;">No tags added. Type a tag and press Enter.</div>';
+        return;
+    }
+    
+    prev.innerHTML = nodeTags.map(tag => 
+        `<span class="tag-pill" style="display:inline-flex; align-items:center; gap:4px; background:var(--accent-bg); color:var(--accent); padding:4px 10px; border-radius:12px; font-size:11px; margin:3px;">
+            <i class="fa-solid fa-hashtag" style="font-size:9px;"></i>
+            ${escH(tag)}
+            <button onclick="removeTag('${escH(tag)}')" type="button" style="background:none; border:none; color:var(--accent); cursor:pointer; padding:0 4px; font-size:14px;">×</button>
+        </span>`
     ).join('');
 }
 
 function showTagSuggestions(val) {
     const sug = document.getElementById('tag-suggestions');
-    if (!val) { sug.style.display = 'none'; return; }
-    const q = val.toLowerCase();
-    const matches = allTags.filter(t => t.toLowerCase().includes(q) && !nodeTags.includes(t));
-    if (!matches.length) { sug.style.display = 'none'; return; }
+    if (!val || val.trim() === '') { 
+        if (sug) sug.style.display = 'none'; 
+        return; 
+    }
+    
+    const q = val.toLowerCase().trim();
+    console.log('Showing suggestions for:', q);
+    
+    // Get all existing tags from the system
+    const allExistingTags = allTags || [];
+    const matches = allExistingTags.filter(t => 
+        t.toLowerCase().includes(q) && !nodeTags.includes(t)
+    );
+    
+    console.log('Matches found:', matches);
+    
+    if (!matches.length) { 
+        sug.style.display = 'none'; 
+        return; 
+    }
+    
     sug.innerHTML = matches.slice(0, 5).map(t =>
-        `<div class="tag-sug-item" onclick="addTag('${escH(t)}');document.getElementById('node-tag-input').value='';document.getElementById('tag-suggestions').style.display='none'">${escH(t)}</div>`
+        `<div class="tag-sug-item" style="padding: 6px 10px; cursor: pointer; font-size: 12px; color: var(--text2); transition: background 0.1s;" 
+             onmouseover="this.style.backgroundColor='var(--bg3)'" 
+             onmouseout="this.style.backgroundColor='transparent'"
+             onclick="addTagManually('${escH(t)}'); document.getElementById('node-tag-input').value=''; this.parentElement.style.display='none'">
+            <i class="fa-solid fa-tag" style="font-size: 10px; margin-right: 6px;"></i>${escH(t)}
+        </div>`
     ).join('');
     sug.style.display = 'block';
 }
@@ -2110,7 +3112,10 @@ function insertNodeLink() { showLinkModal('node'); }
 
 async function saveNode() {
     const title = document.getElementById('node-title').value.trim();
-    if (!title) { document.getElementById('node-title').focus(); return; }
+    if (!title) { 
+        document.getElementById('node-title').focus(); 
+        return; 
+    }
 
     const gYear = document.getElementById('node-greg').value;
     const hYear = document.getElementById('node-hijri').value;
@@ -2125,21 +3130,35 @@ async function saveNode() {
         if (dt && url) sources.push({ display_text: dt, url });
     });
 
+    // CRITICAL: Make sure tags are properly formatted
+    console.log('=== SAVING NODE ===');
+    console.log('Current nodeTags array BEFORE save:', nodeTags);
+    console.log('nodeTags length:', nodeTags.length);
+    console.log('nodeTags type:', typeof nodeTags);
+    
+    const tagsString = nodeTags.join(',');
+    console.log('Tags string to save:', tagsString);
+    console.log('Tags string length:', tagsString.length);
+
     const payload = {
         title,
         description,
         gregorian_year: gYear ? parseInt(gYear) : null,
         hijri_year: hYear ? parseInt(hYear) : null,
         sidenote: document.getElementById('node-sidenote').value,
-        tags: nodeTags.join(','),
+        tags: tagsString,  // Send as comma-separated string
         sources
     };
 
+    console.log('Full payload being sent:', JSON.stringify(payload, null, 2));
+
     if (editingNodeId) {
-        await api(`/api/timeless/${editingNodeId}`, 'PUT', payload);
+        const response = await api(`/api/timeless/${editingNodeId}`, 'PUT', payload);
+        console.log('Update response:', response);
         toast('Node updated');
     } else {
-        await api('/api/timeless', 'POST', payload);
+        const response = await api('/api/timeless', 'POST', payload);
+        console.log('Create response:', response);
         toast('Node added');
     }
     closeNodeModal();
@@ -2162,6 +3181,438 @@ async function deleteSelectedNode() {
     toast('Node deleted');
 }
 
+
+// ============================================================
+// LINKS MANAGER - UPDATED VERSION (satisfies all requirements)
+// ============================================================
+let links = [];
+let editingLinkId = null;
+let deleteLinkId = null;
+let dragSourceLink = null;
+
+async function loadLinks() {
+    try {
+        const response = await fetch('/api/links');
+        const data = await response.json();
+        console.log('Raw data from server:', data);
+        
+        // Ensure pinned is treated as boolean
+        links = data.map(link => ({
+            ...link,
+            pinned: link.pinned === 1 || link.pinned === true,
+            sort_order: link.sort_order || 0
+        }));
+        
+        console.log('Processed links:', links);
+        renderLinks();
+    } catch (error) {
+        console.error('Error loading links:', error);
+        toast('Failed to load links');
+    }
+}
+
+function renderLinks() {
+    const grid = document.getElementById('links-grid');
+    if (!grid) return;
+
+    // === THIS IS THE CRITICAL SORTING BLOCK ===
+    const sortedLinks = [...links].sort((a, b) => {
+        const aPinned = a.pinned === true || a.pinned === 1;
+        const bPinned = b.pinned === true || b.pinned === 1;
+        
+        if (aPinned && !bPinned) return -1;   // pinned first
+        if (!aPinned && bPinned) return 1;    // pinned first
+        
+        // Same group → respect your drag-and-drop order
+        return (a.sort_order || 0) - (b.sort_order || 0);
+    });
+    // ============================================
+
+    // Remove old cards...
+    const existingCards = grid.querySelectorAll('.link-card:not(.add-link-card)');
+    existingCards.forEach(card => card.remove());
+
+    const addCard = grid.querySelector('.add-link-card');
+    
+    // MODIFIED: Keep track of the last inserted card so they chain sequentially
+    let currentElement = addCard; 
+    
+    sortedLinks.forEach(link => {
+        const card = createLinkCard(link);
+        // Insert right after the last element we processed
+        currentElement.after(card);
+        // Move the reference to the newly inserted card
+        currentElement = card; 
+    });
+}
+
+function createLinkCard(link) {
+    const card = document.createElement('div');
+    card.className = `link-card ${link.pinned ? 'pinned' : ''}`;
+    card.setAttribute('data-id', link.id);
+    card.setAttribute('draggable', 'true');
+    
+    // Format click count display
+    const clickCount = link.click_count || 0;
+    
+    // UPDATED CARD HTML to match exact UI requirement:
+    // - Big title
+    // - Muted URL (truncated)
+    // - Click count
+    // - Hover shows edit + pin + delete (pin button only for unpinned)
+    // - Pinned items show permanent pin icon (always visible, clickable to unpin)
+    // - No extra/duplicated pin icon on hover for pinned items
+    card.innerHTML = `
+        ${link.pinned ? `
+        <button class="pinned-indicator" onclick="event.stopPropagation(); pinLink(${link.id});" title="Unpin">
+            <i class="fa-solid fa-thumbtack"></i>
+        </button>
+        ` : ''}
+        
+        <div class="link-actions">
+            ${!link.pinned ? `
+            <button class="icon-btn" onclick="event.stopPropagation(); pinLink(${link.id});" title="Pin">
+                <i class="fa-solid fa-thumbtack"></i>
+            </button>
+            ` : ''}
+            <button class="icon-btn" onclick="event.stopPropagation(); editLink(${link.id})" title="Edit">
+                <i class="fa-solid fa-pen" style="font-size: 11px;"></i>
+            </button>
+            <button class="icon-btn danger" onclick="event.stopPropagation(); deleteLinkPrompt(${link.id}, '${escapeHtml(link.title)}')" title="Delete">
+                <i class="fa-solid fa-trash" style="font-size: 11px;"></i>
+            </button>
+        </div>
+        
+        <div class="link-title">${escapeHtml(link.title)}</div>
+        <div class="link-url" title="${escapeHtml(link.url)}">${escapeHtml(truncateUrl(link.url, 60))}</div>
+        <div class="link-stats">
+            <span class="click-count">
+                <i class="fa-solid fa-mouse-pointer"></i> ${clickCount} click${clickCount !== 1 ? 's' : ''}
+            </span>
+        </div>
+    `;
+    
+    // Make the whole card clickable to open link
+    card.style.cursor = 'pointer';
+    card.addEventListener('click', (e) => {
+        // Don't trigger if clicking on action buttons or pin indicator
+        if (e.target.closest('.link-actions') || e.target.closest('.pinned-indicator')) return;
+        openLink(link.id, link.url);
+    });
+    
+    // Drag and drop handlers
+    card.addEventListener('dragstart', handleDragStart);
+    card.addEventListener('dragend', handleDragEnd);
+    card.addEventListener('dragover', handleDragOver);
+    card.addEventListener('dragleave', handleDragLeave);
+    card.addEventListener('drop', handleDrop);
+    
+    return card;
+}
+
+function truncateUrl(url, maxLength) {
+    if (!url) return '';
+    if (url.length <= maxLength) return url;
+    return url.substring(0, maxLength) + '...';
+}
+
+function handleDragStart(e) {
+    const card = e.target.closest('.link-card');
+    if (!card || card.classList.contains('add-link-card')) {
+        e.preventDefault();
+        return false;
+    }
+    dragSourceLink = parseInt(card.getAttribute('data-id'));
+    card.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', dragSourceLink);
+}
+
+function handleDragEnd(e) {
+    const card = e.target.closest('.link-card');
+    if (card) card.classList.remove('dragging');
+    document.querySelectorAll('.link-card').forEach(c => {
+        c.classList.remove('drag-over');
+    });
+    dragSourceLink = null;
+}
+
+function handleDragOver(e) {
+    e.preventDefault();
+    const card = e.target.closest('.link-card');
+    if (!card || card.classList.contains('add-link-card')) return;
+    if (dragSourceLink && parseInt(card.getAttribute('data-id')) !== dragSourceLink) {
+        card.classList.add('drag-over');
+    }
+    e.dataTransfer.dropEffect = 'move';
+}
+
+function handleDragLeave(e) {
+    const card = e.target.closest('.link-card');
+    if (card) card.classList.remove('drag-over');
+}
+
+async function handleDrop(e) {
+    e.preventDefault();
+    const targetCard = e.target.closest('.link-card');
+    if (!targetCard || targetCard.classList.contains('add-link-card')) return;
+    
+    targetCard.classList.remove('drag-over');
+    
+    const targetId = parseInt(targetCard.getAttribute('data-id'));
+    if (dragSourceLink && dragSourceLink !== targetId) {
+        await reorderLinks(dragSourceLink, targetId);
+    }
+}
+
+async function reorderLinks(sourceId, targetId) {
+    const sourceIndex = links.findIndex(l => l.id === sourceId);
+    const targetIndex = links.findIndex(l => l.id === targetId);
+    
+    if (sourceIndex === -1 || targetIndex === -1) return;
+    
+    // Reorder the array
+    const [movedLink] = links.splice(sourceIndex, 1);
+    links.splice(targetIndex, 0, movedLink);
+    
+    // Update sort_order property based on current order
+    // Separate pinned and unpinned for ordering
+    const pinnedLinks = links.filter(l => l.pinned === true);
+    const unpinnedLinks = links.filter(l => l.pinned === false);
+    
+    // Update sort_order for pinned items (0, 1, 2...)
+    pinnedLinks.forEach((link, idx) => {
+        link.sort_order = idx;
+    });
+    
+    // Update sort_order for unpinned items (0, 1, 2...)
+    unpinnedLinks.forEach((link, idx) => {
+        link.sort_order = idx;
+    });
+    
+    // Save to server
+    try {
+        await api('/api/links/reorder', 'POST', { order: links.map(l => ({ id: l.id, order: l.sort_order })) });
+        renderLinks();
+        toast('Links reordered');
+    } catch (error) {
+        toast('Failed to reorder links');
+        await loadLinks(); // Reload to fix order
+    }
+}
+
+function showLinkModal(linkId = null) {
+    editingLinkId = linkId;
+    
+    if (linkId) {
+        const link = links.find(l => l.id === linkId);
+        if (link) {
+            document.getElementById('link-modal-title').textContent = 'Edit Link';
+            document.getElementById('link-title').value = link.title;
+            document.getElementById('link-url-field').value = link.url;
+        }
+    } else {
+        document.getElementById('link-modal-title').textContent = 'Add New Link';
+        document.getElementById('link-title').value = '';
+        document.getElementById('link-url-field').value = '';
+    }
+    
+    document.getElementById('link-edit-modal').style.display = 'flex';
+    setTimeout(() => document.getElementById('link-title').focus(), 50);
+}
+
+function closeLinkEditModal() {
+    document.getElementById('link-edit-modal').style.display = 'none';
+    editingLinkId = null;
+}
+
+async function saveLink() {
+    const title = document.getElementById('link-title').value.trim();
+    let url = document.getElementById('link-url-field').value.trim();
+    
+    if (!title) {
+        toast('Please enter a title');
+        document.getElementById('link-title').focus();
+        return;
+    }
+    
+    if (!url) {
+        toast('Please enter a URL');
+        document.getElementById('link-url-field').focus();
+        return;
+    }
+    
+    // Add https:// if no protocol specified
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        url = 'https://' + url;
+    }
+    
+    // Validate URL
+    try {
+        new URL(url);
+    } catch (e) {
+        toast('Please enter a valid URL');
+        document.getElementById('link-url-field').focus();
+        return;
+    }
+    
+    const payload = { title, url };
+    
+    try {
+        if (editingLinkId) {
+            await api(`/api/links/${editingLinkId}`, 'PUT', payload);
+            toast('Link updated');
+        } else {
+            // NEW: no need to send sort_order or pinned - backend now forces
+            // new unpinned links to appear RIGHT AFTER pinned items
+            await api('/api/links', 'POST', payload);
+            toast('Link added');
+        }
+        closeLinkEditModal();
+        await loadLinks();
+    } catch (error) {
+        console.error('Error saving link:', error);
+        toast('Failed to save link');
+    }
+}
+
+async function openLink(id, url) {
+    try {
+        // Increment click count
+        await api(`/api/links/${id}/click`, 'POST');
+        
+        // Update local count for display
+        const link = links.find(l => l.id === id);
+        if (link) {
+            link.click_count = (link.click_count || 0) + 1;
+            renderLinks();
+        }
+        
+        // Open in new tab
+        window.open(url, '_blank', 'noopener,noreferrer');
+    } catch (error) {
+        console.error('Error opening link:', error);
+        // Still open the link even if click tracking fails
+        window.open(url, '_blank', 'noopener,noreferrer');
+    }
+}
+
+async function editLink(id) {
+    showLinkModal(id);
+}
+
+async function pinLink(id) {
+    const link = links.find(l => l.id === id);
+    if (!link) return;
+    
+    const newPinned = !link.pinned;
+    try {
+        await api(`/api/links/${id}/pin`, 'POST', { pinned: newPinned });
+        link.pinned = newPinned;
+        
+        // Reorder all links to maintain proper sort_order
+        const pinnedLinks = links.filter(l => l.pinned === true);
+        const unpinnedLinks = links.filter(l => l.pinned === false);
+        
+        // Update sort_order for pinned items
+        pinnedLinks.forEach((l, idx) => {
+            l.sort_order = idx;
+        });
+        
+        // Update sort_order for unpinned items
+        unpinnedLinks.forEach((l, idx) => {
+            l.sort_order = idx;
+        });
+        
+        // Save updated order to server
+        await api('/api/links/reorder', 'POST', { order: links.map(l => ({ id: l.id, order: l.sort_order })) });
+        
+        renderLinks();
+        toast(newPinned ? 'Link pinned' : 'Link unpinned');
+    } catch (error) {
+        console.error('Error pinning link:', error);
+        toast('Failed to update pin status');
+    }
+}
+
+function deleteLinkPrompt(id, title) {
+    deleteLinkId = id;
+    document.getElementById('delete-link-title').textContent = title;
+    document.getElementById('delete-link-modal').style.display = 'flex';
+}
+
+function closeDeleteModal() {
+    document.getElementById('delete-link-modal').style.display = 'none';
+    deleteLinkId = null;
+}
+
+async function confirmDeleteLink() {
+    if (deleteLinkId) {
+        try {
+            await api(`/api/links/${deleteLinkId}`, 'DELETE');
+            await loadLinks();
+            toast('Link deleted');
+        } catch (error) {
+            console.error('Error deleting link:', error);
+            toast('Failed to delete link');
+        }
+    }
+    closeDeleteModal();
+}
+
+async function exportLinks() {
+    const data = JSON.stringify(links, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `kaeru-links-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast('Links exported');
+}
+
+function importLinks() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'application/json';
+    input.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+            try {
+                const importedLinks = JSON.parse(event.target.result);
+                if (Array.isArray(importedLinks)) {
+                    await api('/api/links/import', 'POST', { links: importedLinks });
+                    await loadLinks();
+                    toast('Links imported successfully');
+                } else {
+                    toast('Invalid file format');
+                }
+            } catch (error) {
+                console.error('Error parsing file:', error);
+                toast('Error parsing file');
+            }
+        };
+        reader.readAsText(file);
+    };
+    input.click();
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, function(m) {
+        if (m === '&') return '&amp;';
+        if (m === '<') return '&lt;';
+        if (m === '>') return '&gt;';
+        return m;
+    });
+}
+
 // ============================================================
 // UTILITIES
 // ============================================================
@@ -2175,30 +3626,365 @@ function fmtDate(iso) {
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
+
+
+
+
+// ============================================================
+// SETTINGS OVERLAY (Click on Kaeru logo)
+// ============================================================
+
+// Make the Kaeru text clickable
+function makeKaeruClickable() {
+    const kaeruElement = document.querySelector('.topbar [style*="font-size:13px;font-weight:700;color:var(--text)"]');
+    if (kaeruElement) {
+        kaeruElement.style.cursor = 'pointer';
+        kaeruElement.style.transition = 'all 0.2s';
+        kaeruElement.onmouseover = () => kaeruElement.style.opacity = '0.7';
+        kaeruElement.onmouseout = () => kaeruElement.style.opacity = '1';
+        kaeruElement.onclick = () => openSettingsOverlay();
+    }
+}
+
+function openSettingsOverlay() {
+    document.getElementById('settings-overlay').style.display = 'flex';
+    loadSystemStats();
+}
+
+function closeSettingsOverlay() {
+    document.getElementById('settings-overlay').style.display = 'none';
+}
+
+async function loadSystemStats() {
+    try {
+        // Fetch real counts from API
+        const [tasksRes, projectsRes, notesRes, timelessRes, linksRes] = await Promise.all([
+            fetch('/api/tasks'),
+            fetch('/api/projects'),
+            fetch('/api/notes'),
+            fetch('/api/timeless'),
+            fetch('/api/links')
+        ]);
+        
+        const tasks = await tasksRes.json();
+        const projects = await projectsRes.json();
+        const notes = await notesRes.json();
+        const timeless = await timelessRes.json();
+        const links = await linksRes.json();
+        
+        const statsHtml = `
+            <div><i class="fa-solid fa-tasks" style="width: 20px;"></i> Tasks: ${tasks.length}</div>
+            <div><i class="fa-solid fa-folder" style="width: 20px;"></i> Projects: ${projects.length}</div>
+            <div><i class="fa-solid fa-note-sticky" style="width: 20px;"></i> Notes: ${notes.length}</div>
+            <div><i class="fa-solid fa-infinity" style="width: 20px;"></i> Timeless Nodes: ${timeless.length}</div>
+            <div><i class="fa-solid fa-link" style="width: 20px;"></i> Links: ${links.length}</div>
+            <div style="margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--border);">
+                <i class="fa-solid fa-calendar" style="width: 20px;"></i> Last Sync: ${new Date().toLocaleString()}
+            </div>
+        `;
+        
+        const statsDiv = document.getElementById('system-stats');
+        if (statsDiv) statsDiv.innerHTML = statsHtml;
+    } catch (error) {
+        console.error('Error loading system stats:', error);
+        const statsDiv = document.getElementById('system-stats');
+        if (statsDiv) statsDiv.innerHTML = '<div style="color: var(--red);">Error loading statistics</div>';
+    }
+}
+
+// ============================================================
+// IMPORT/EXPORT FUNCTIONS
+// ============================================================
+
+let pendingAction = null; // 'export' or 'import'
+let pendingImportData = null;
+
+function exportData() {
+    pendingAction = 'export';
+    document.getElementById('access-key-modal-title').textContent = 'Export Data - Verify Access Key';
+    document.getElementById('access-key-modal').style.display = 'flex';
+    setTimeout(() => document.getElementById('access-key-input').focus(), 50);
+}
+
+function triggerImport() {
+    // Clear any previous pending data
+    pendingImportData = null;
+    pendingAction = 'import';
+    
+    // Trigger file selection
+    const fileInput = document.getElementById('import-file');
+    if (fileInput) {
+        fileInput.value = ''; // Reset file input
+        fileInput.click();
+    } else {
+        console.error('File input element not found');
+        toast('Error: File input not found');
+    }
+}
+
+async function importData(file) {
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        try {
+            const backupData = JSON.parse(e.target.result);
+            
+            // Validate backup format
+            if (!backupData.version || !backupData.tasks) {
+                toast('Invalid backup file format');
+                return;
+            }
+            
+            pendingImportData = backupData;
+            pendingAction = 'import';
+            document.getElementById('access-key-modal-title').textContent = 'Import Data - Verify Access Key';
+            document.getElementById('access-key-modal').style.display = 'flex';
+            setTimeout(() => document.getElementById('access-key-input').focus(), 50);
+        } catch (error) {
+            toast('Error parsing backup file: ' + error.message);
+        }
+    };
+    reader.readAsText(file);
+}
+
+async function confirmAccessKey() {
+    const accessKey = document.getElementById('access-key-input').value.trim();
+    if (!accessKey) {
+        toast('Please enter access key');
+        return;
+    }
+    
+    // Get the button and disable it
+    const confirmBtn = document.querySelector('#access-key-modal .btn-primary');
+    const originalText = confirmBtn.textContent;
+    confirmBtn.textContent = 'Verifying...';
+    confirmBtn.disabled = true;
+    
+    try {
+        if (pendingAction === 'export') {
+            confirmBtn.textContent = 'Exporting...';
+            await performExport(accessKey);
+            closeAccessKeyModal();
+            
+        } else if (pendingAction === 'import' && pendingImportData) {
+            confirmBtn.textContent = 'Importing...';
+            await performImport(accessKey, pendingImportData);
+            closeAccessKeyModal();
+        }
+    } catch (error) {
+        console.error('Action failed:', error);
+        toast('Action failed: ' + error.message);
+    } finally {
+        confirmBtn.textContent = originalText;
+        confirmBtn.disabled = false;
+    }
+    
+    pendingAction = null;
+    pendingImportData = null;
+    document.getElementById('access-key-input').value = '';
+}
+
+
+async function performExport(accessKey) {
+    try {
+        console.log('Exporting with access key:', accessKey);
+        
+        const response = await fetch('/api/export', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ access_key: accessKey })
+        });
+        
+        console.log('Response status:', response.status);
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Error response:', errorText);
+            toast(`Export failed: ${response.status}`);
+            return;
+        }
+        
+        // Get the data as JSON
+        const data = await response.json();
+        console.log('Export successful! Data size:', JSON.stringify(data).length);
+        
+        // Create download using Blob
+        const jsonString = JSON.stringify(data, null, 2);
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        // Create a temporary link and trigger download
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `kaeru_backup_${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(link);
+        link.click();
+        
+        // Clean up
+        setTimeout(() => {
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }, 100);
+        
+        toast('Backup exported successfully!');
+        closeSettingsOverlay();
+        closeAccessKeyModal();
+        
+    } catch (error) {
+        console.error('Export error:', error);
+        toast('Export failed: ' + error.message);
+    }
+}
+
+async function performImport(accessKey, backupData) {
+    // Confirm before import
+    if (!confirm('⚠️ WARNING: This will REPLACE ALL your existing data!\n\n' +
+                 'Make sure you have a backup before continuing.\n\n' +
+                 'Are you absolutely sure you want to continue?')) {
+        toast('Import cancelled');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/import', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                access_key: accessKey,
+                data: backupData 
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            toast('✅ Data imported successfully! Refreshing page...');
+            closeSettingsOverlay();
+            // Reload the page after a short delay to refresh all data
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            toast('❌ Import failed: ' + (result.error || 'Unknown error'));
+            console.error('Import failed:', result);
+        }
+    } catch (error) {
+        console.error('Import error:', error);
+        toast('❌ Import failed: ' + error.message);
+    }
+}
+
+function closeAccessKeyModal() {
+    document.getElementById('access-key-modal').style.display = 'none';
+    document.getElementById('access-key-input').value = '';
+    pendingAction = null;
+    pendingImportData = null;
+}
+
+
+
+// Sports API Functions
+async function syncSportsMatches() {
+    // 1. Grab the football icon inside the sync button
+    const syncButtonIcon = document.querySelector('button[title="Sync Football Matches"] .fa-futbol');
+    
+    try {
+        // 2. Start the spinning and color change animations!
+        if (syncButtonIcon) {
+            syncButtonIcon.classList.add('fa-spin', 'syncing-active');
+        }
+        
+        toast('Syncing football matches...'); // Normal duration for the starting toast
+        
+        const response = await fetch('/api/sports/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Pass 3000 (3 seconds) as the second parameter for this specific toast
+            toast(`${data.message}`, 3000); 
+            // Refresh tasks to show new matches
+            await loadTasks();
+        } else {
+            toast('❌ Sync failed: ' + data.error, 3000);
+        }
+    } catch (error) {
+        console.error('Sync error:', error);
+        toast('❌ Failed to sync matches', 3000);
+    } finally {
+        // 3. STOP the animation whether the sync succeeds OR fails
+        if (syncButtonIcon) {
+            syncButtonIcon.classList.remove('fa-spin', 'syncing-active');
+        }
+    }
+}
+
+// Optional: Auto-sync when loading tasks page
+async function autoSyncSportsMatches() {
+    try {
+        const response = await fetch('/api/sports/matches');
+        const data = await response.json(); // Renamed variable to 'data' for clarity
+        
+        // FIXED: The backend returns an object with a 'count' property and a 'matches' array.
+        // We need to check data.count or data.matches.length
+        if (data.count && data.count > 0) {
+            console.log(`Found ${data.count} upcoming matches`);
+            // Optionally auto-sync or just notify
+            // await syncSportsMatches();
+        } else {
+            console.log('No upcoming matches found in the requested timeframe.');
+        }
+    } catch (error) {
+        console.error('Auto-sync check failed:', error);
+    }
+}
+
+
 // ============================================================
 // MOBILE SETUP
 // ============================================================
 function initMobile() {
+
+    if (window.innerWidth <= 768) {
+    const tasksPanel = document.getElementById('tasks-panel');
+    if (tasksPanel) {
+      tasksPanel.style.flex = '1 1 40vh';  // Grow but limit
+      tasksPanel.style.overflow = 'hidden';
+      const body = document.getElementById('timeline-body');
+      if (body) body.style.overflowY = 'auto';
+    }
+  }
+
     const isMobile = window.innerWidth < 769;
+
     // Show mobile hamburger
     const ham = document.querySelector('.mobile-only.icon-btn');
     if (ham) ham.style.display = isMobile ? 'flex' : 'none';
+
     // Show sidebar toggle in notes
     const st = document.getElementById('sidebar-toggle');
     if (st) st.style.display = isMobile ? 'flex' : 'none';
-    // Tasks layout
+
+    // === TASKS TAB MOBILE LAYOUT (only when Tasks tab is active) ===
     const layout = document.getElementById('tasks-layout');
     if (layout) {
         layout.style.flexDirection = isMobile ? 'column' : 'row';
-        // On mobile remove the border-right from split-left
-        const sl = document.getElementById('tasks-panel');
-        if (sl) {
-            sl.style.borderRight = isMobile ? 'none' : '';
-            sl.style.borderBottom = isMobile ? '1px solid var(--border)' : '';
-            sl.style.flex = isMobile ? '0 0 50%' : '1';
+
+        const tasksPanel = document.getElementById('tasks-panel');   // split-left
+        const projectsPanel = document.getElementById('projects-panel'); // split-right
+
+        if (tasksPanel) {
+            tasksPanel.style.borderRight = isMobile ? 'none' : '';
+            tasksPanel.style.borderBottom = isMobile ? '1px solid var(--border)' : '';
+            tasksPanel.style.flex = isMobile ? '0 0 auto' : '1';   // content height on mobile
         }
-        const sr = document.getElementById('projects-panel');
-        if (sr) sr.style.flex = isMobile ? '0 0 50%' : '1';
+        if (projectsPanel) {
+            projectsPanel.style.flex = isMobile ? '1' : '1';       // take remaining space on mobile
+        }
     }
 }
 
@@ -2239,6 +4025,7 @@ window.addEventListener('load', async () => {
     updateClock();
     setInterval(updateClock, 10000);
     initMobile();
+    makeKaeruClickable();
 
     if (tab === 'tasks') {
         await loadTasks();
@@ -2248,6 +4035,9 @@ window.addEventListener('load', async () => {
         initNoteEditor();
     } else if (tab === 'timeless') {
         await loadTimeless();
+    }
+    else if (tab === 'links') {
+        await loadLinks();
     }
 });
 
