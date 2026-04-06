@@ -3401,8 +3401,15 @@ async function reorderLinks(sourceId, targetId) {
     }
 }
 
-function showLinkModal(linkId = null) {
+document.addEventListener('DOMContentLoaded', () => {
+    function showLinkModal(linkId = null) {
     editingLinkId = linkId;
+    const titleElem = document.getElementById('link-modal-title');
+    const modal = document.getElementById('link-edit-modal');
+
+    // Debugging: If these log 'null', the elements aren't found
+    console.log("Title Element:", titleElem);
+    console.log("Modal Element:", modal);
     
     if (linkId) {
         const link = links.find(l => l.id === linkId);
@@ -3420,6 +3427,9 @@ function showLinkModal(linkId = null) {
     document.getElementById('link-edit-modal').style.display = 'flex';
     setTimeout(() => document.getElementById('link-title').focus(), 50);
 }
+});
+
+
 
 function closeLinkEditModal() {
     document.getElementById('link-edit-modal').style.display = 'none';
