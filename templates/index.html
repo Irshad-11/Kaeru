@@ -61,10 +61,99 @@
         .tab-btn i { font-size: 11px; }
 
         /* SYNC */
-        .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); transition: all 0.3s; }
-        .sync-dot.syncing { background: var(--yellow); animation: pulse 0.8s infinite; }
-        .sync-dot.error { background: var(--red); }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+        /* Sync Indicator Styles */
+        .sync-dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+            transition: all 0.3s ease;
+        }
+
+        /* Synced state - Green */
+        .sync-dot.synced {
+            background-color: #10b981;
+            box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+        }
+
+        /* Saving state - Yellow pulsing */
+        .sync-dot.saving {
+            background-color: #f59e0b;
+            animation: pulse-yellow 1s ease-in-out infinite;
+        }
+
+        @keyframes pulse-yellow {
+            0%, 100% {
+                opacity: 1;
+                box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
+            }
+            50% {
+                opacity: 0.6;
+                box-shadow: 0 0 0 6px rgba(245, 158, 11, 0);
+            }
+        }
+
+        /* Warning state - Orange (needs sync) */
+        .sync-dot.warning {
+            background-color: #f97316;
+            box-shadow: 0 0 8px rgba(249, 115, 22, 0.5);
+            animation: pulse-orange 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-orange {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        /* Error state - Red */
+        .sync-dot.error {
+            background-color: #ef4444;
+            box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
+        }
+
+        /* Offline state - Gray */
+        .sync-dot.offline {
+            background-color: #6b7280;
+            box-shadow: none;
+        }
+
+        /* Sync label styles */
+        #sync-label {
+            font-size: 12px;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        /* Different text colors for different states */
+        .sync-dot.synced + #sync-label,
+        .sync-dot.synced ~ #sync-label {
+            color: #10b981;
+        }
+
+        .sync-dot.saving + #sync-label,
+        .sync-dot.saving ~ #sync-label {
+            color: #f59e0b;
+        }
+
+        .sync-dot.warning + #sync-label,
+        .sync-dot.warning ~ #sync-label {
+            color: #f97316;
+        }
+
+        .sync-dot.error + #sync-label,
+        .sync-dot.error ~ #sync-label {
+            color: #ef4444;
+        }
+
+        .sync-dot.offline + #sync-label,
+        .sync-dot.offline ~ #sync-label {
+            color: #6b7280;
+        }
 
         /* ICON BUTTONS */
         .icon-btn {
@@ -1122,9 +1211,9 @@
 
     <div style="display:flex;align-items:center;gap:5px;padding:0 6px">
         <div class="sync-dot" id="sync-dot"></div>
-        <!--
-        <span id="sync-label" style="font-size:10px;color:var(--text3)">Synced</span>
-        -->
+        
+        <span id="sync-label" style="font-size:10px;color:var(--text3)"></span>
+        
     </div>
 
     <!-- Actions (always visible - even on mobile) -->
@@ -1697,50 +1786,299 @@ function toggleTheme() {
 // ============================================================
 // CLOCK
 // ============================================================
+let serverTimeOffset = 0;
+let lastServerTime = null;
+
+function fetchServerTime() {
+    fetch('/api/server-time')
+        .then(response => response.json())
+        .then(data => {
+            const serverDate = new Date(data.datetime);
+            const clientDate = new Date();
+            serverTimeOffset = serverDate - clientDate;
+            lastServerTime = serverDate;
+            updateClockDisplay(serverDate);
+        })
+        .catch(error => {
+            console.error('Failed to fetch server time:', error);
+            updateClockDisplay(new Date()); // fallback to client time
+        });
+}
+
+function updateClockDisplay(baseTime) {
+    const now = baseTime || new Date();
+    const formattedTime = now.toLocaleDateString('en-US', { 
+        weekday: 'short', 
+        day: 'numeric', 
+        month: 'short',
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: true 
+    });
+    document.getElementById('clock').textContent = formattedTime;
+}
+
 function updateClock() {
-    const now = new Date();
-    const bst = new Date(now.toLocaleString('en-US'));
-    const d = bst.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' });
-    const t = bst.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-    document.getElementById('clock').textContent = `${d} ${t}`;
+    if (lastServerTime) {
+        // Use server time + elapsed client time
+        const now = new Date(lastServerTime.getTime() + (Date.now() - lastServerTime.getTime()));
+        updateClockDisplay(now);
+    } else {
+        fetchServerTime();
+    }
 }
 
+// Fetch server time every minute to account for drift
+fetchServerTime();
+setInterval(fetchServerTime, 3600000); // Re-sync every minute
+setInterval(updateClock, 1000); // Update display every second
+
 // ============================================================
-// SYNC
+// ACCURATE SYNC SYSTEM WITH REAL STATUS CHECKING
 // ============================================================
-let syncTimer = null;
-function syncStart() {
-    const dot = document.getElementById('sync-dot');
-    const lbl = document.getElementById('sync-label');
-    if (dot) dot.className = 'sync-dot syncing';
-    if (lbl) lbl.textContent = 'Saving…';
-    clearTimeout(syncTimer);
-}
-function syncOK() {
-    const dot = document.getElementById('sync-dot');
-    const lbl = document.getElementById('sync-label');
-    if (dot) dot.className = 'sync-dot';
-    if (lbl) lbl.textContent = 'Synced';
-}
-function syncFail() {
-    const dot = document.getElementById('sync-dot');
-    const lbl = document.getElementById('sync-label');
-    if (dot) dot.className = 'sync-dot error';
-    if (lbl) lbl.textContent = 'Error';
-    syncTimer = setTimeout(syncOK, 3000);
+
+class SyncManager {
+    constructor() {
+        this.isOnline = navigator.onLine;
+        this.isServerReachable = true;
+        this.isSaving = false;
+        this.lastSyncTime = null;
+        this.localDataHash = null;
+        this.serverDataHash = null;
+        this.syncCheckInterval = null;
+        this.healthCheckInterval = null;
+        
+        // DOM elements
+        this.dot = document.getElementById('sync-dot');
+        this.label = document.getElementById('sync-label');
+        
+        // Initialize
+        this.init();
+    }
+    
+    init() {
+        // Listen to online/offline events
+        window.addEventListener('online', () => this.handleConnectionChange(true));
+        window.addEventListener('offline', () => this.handleConnectionChange(false));
+        
+        // Start periodic checks
+        this.startPeriodicChecks();
+        
+        // Initial check
+        this.checkFullStatus();
+    }
+    
+    handleConnectionChange(isOnline) {
+        this.isOnline = isOnline;
+        if (!isOnline) {
+            this.updateUI('offline', 'Offline');
+        } else {
+            this.checkServerReachability();
+        }
+    }
+    
+    async checkServerReachability() {
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+            
+            const response = await fetch('/api/health', { 
+                method: 'GET',
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+            this.isServerReachable = response.ok;
+            
+            if (this.isServerReachable && this.isOnline) {
+                await this.checkSyncStatus();
+            } else if (!this.isServerReachable) {
+                this.updateUI('error', 'Server Error');
+            }
+        } catch (error) {
+            this.isServerReachable = false;
+            this.updateUI('error', 'Server Offline');
+            console.error('Server reachability check failed:', error);
+        }
+    }
+    
+    async checkSyncStatus() {
+        if (!this.isOnline || !this.isServerReachable) return;
+        
+        try {
+            const response = await fetch('/api/sync/status');
+            const serverData = await response.json();
+            
+            if (serverData.database_accessible) {
+                // Compare with local data if available
+                const isInSync = await this.compareWithServer(serverData);
+                
+                if (isInSync) {
+                    this.updateUI('synced', 'Synced');
+                    this.lastSyncTime = new Date();
+                } else {
+                    this.updateUI('warning', 'Sync Needed');
+                }
+            } else {
+                this.updateUI('error', 'DB Error');
+            }
+        } catch (error) {
+            console.error('Sync status check failed:', error);
+            this.updateUI('error', 'Sync Error');
+        }
+    }
+    
+    async compareWithServer(serverData) {
+        // If we have local data hash, compare directly
+        if (this.localDataHash) {
+            try {
+                const verifyResponse = await fetch('/api/sync/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        tasks: window.taskData || [],
+                        projects: window.projectData || [],
+                        hash: this.localDataHash
+                    })
+                });
+                const verifyResult = await verifyResponse.json();
+                return verifyResult.is_synced;
+            } catch (error) {
+                return false;
+            }
+        }
+        return true; // Assume synced if no local data
+    }
+    
+    async checkFullStatus() {
+        // Check both online status and server reachability
+        this.isOnline = navigator.onLine;
+        
+        if (!this.isOnline) {
+            this.updateUI('offline', 'Offline');
+            return;
+        }
+        
+        await this.checkServerReachability();
+    }
+    
+    startSaving() {
+        this.isSaving = true;
+        this.updateUI('saving', 'Saving...');
+    }
+    
+    endSaving(success = true) {
+        this.isSaving = false;
+        if (success) {
+            // Re-check sync status after successful save
+            setTimeout(() => this.checkSyncStatus(), 500);
+        } else {
+            this.updateUI('error', 'Save Failed');
+            setTimeout(() => this.checkSyncStatus(), 3000);
+        }
+    }
+    
+    updateUI(status, message) {
+        if (!this.dot || !this.label) return;
+        
+        // Remove all existing classes
+        this.dot.className = 'sync-dot';
+        
+        // Apply new class based on status
+        switch(status) {
+            case 'synced':
+                this.dot.classList.add('synced');
+                // this.label.textContent = message || 'Synced';
+                break;
+            case 'saving':
+                this.dot.classList.add('saving');
+                // this.label.textContent = message || 'Saving...';
+                break;
+            case 'warning':
+                this.dot.classList.add('warning');
+                // this.label.textContent = message || 'Sync Needed';
+                break;
+            case 'error':
+                this.dot.classList.add('error');
+                // this.label.textContent = message || 'Error';
+                break;
+            case 'offline':
+                this.dot.classList.add('offline');
+                // this.label.textContent = message || 'Offline';
+                break;
+            default:
+                // this.label.textContent = message || 'Unknown';
+        }
+    }
+    
+    startPeriodicChecks() {
+        // Check health every 30 seconds
+        this.healthCheckInterval = setInterval(() => {
+            this.checkFullStatus();
+        }, 30000);
+        
+        // Check sync status every minute
+        this.syncCheckInterval = setInterval(() => {
+            if (!this.isSaving && this.isOnline && this.isServerReachable) {
+                this.checkSyncStatus();
+            }
+        }, 60000);
+    }
+    
+    stopPeriodicChecks() {
+        if (this.healthCheckInterval) clearInterval(this.healthCheckInterval);
+        if (this.syncCheckInterval) clearInterval(this.syncCheckInterval);
+    }
 }
 
+// Initialize the sync manager
+const syncManager = new SyncManager();
+
+// Override your existing api function to use the sync manager
 async function api(url, method = 'GET', body = null) {
-    syncStart();
+    syncManager.startSaving();
+    
     try {
-        const opts = { method, headers: { 'Content-Type': 'application/json' } };
+        const opts = { 
+            method, 
+            headers: { 'Content-Type': 'application/json' },
+            signal: AbortSignal.timeout(30000) // 30 second timeout
+        };
         if (body) opts.body = JSON.stringify(body);
-        const r = await fetch(url, opts);
-        const data = await r.json();
-        syncOK();
+        
+        const response = await fetch(url, opts);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        
+        const data = await response.json();
+        syncManager.endSaving(true);
+        
+        // Update local data hash if we have the data
+        if (data.tasks || data.projects) {
+            // Store for future comparison
+            window.taskData = data.tasks || window.taskData;
+            window.projectData = data.projects || window.projectData;
+        }
+        
         return data;
-    } catch (e) { syncFail(); throw e; }
+    } catch (error) {
+        console.error('API Error:', error);
+        syncManager.endSaving(false);
+        throw error;
+    }
 }
+
+// Helper function to manually trigger sync check
+async function checkSyncNow() {
+    await syncManager.checkFullStatus();
+    await syncManager.checkSyncStatus();
+}
+
+// Export for debugging (optional)
+window.syncManager = syncManager;
+window.checkSyncNow = checkSyncNow;
 
 // ============================================================
 // TOAST

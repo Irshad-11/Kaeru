@@ -25,6 +25,8 @@ PASSWORD_FILE = os.path.join(BASE_DIR, "password.txt")
 
 
 
+
+
 # Team IDs for Football-Data.org
 TEAM_IDS = {
     "Real Madrid": 86,
@@ -425,8 +427,10 @@ def init_db():
         
         if not db_existed_before:
             if conn.execute("SELECT COUNT(*) FROM tasks").fetchone()[0] == 0:
-                today = datetime.now().strftime("%Y-%m-%d")
-                tomorrow = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
+                utc_now = datetime.utcnow()
+                dhaka_now = utc_now + timedelta(hours=6)
+                today = dhaka_now.strftime("%Y-%m-%d")
+                tomorrow = (dhaka_now + timedelta(days=1)).strftime("%Y-%m-%d")
                 conn.executemany(
                     "INSERT INTO tasks (title, completed, due_date) VALUES (?, ?, ?)",
                     [
@@ -893,9 +897,25 @@ def timeless():
 
 @app.route('/api/tasks', methods=['GET'])
 def get_tasks():
+    # Force UTC+6 (Dhaka time) for overdue calculations
+    utc_now = datetime.utcnow()
+    dhaka_now = utc_now + timedelta(hours=6)
+    today_dhaka = dhaka_now.date()
+    
     with get_db() as conn:
         rows = conn.execute("SELECT * FROM tasks ORDER BY due_date ASC, id ASC").fetchall()
-        return jsonify([dict(row) for row in rows])
+        tasks = []
+        for row in rows:
+            task = dict(row)
+            # Calculate overdue status based on Dhaka time (UTC+6)
+            if task['due_date']:
+                due_date_obj = datetime.strptime(task['due_date'], '%Y-%m-%d').date()
+                # Task is overdue if due date is before today in Dhaka time
+                task['is_overdue'] = due_date_obj < today_dhaka and not task['completed']
+            else:
+                task['is_overdue'] = False
+            tasks.append(task)
+        return jsonify(tasks)
 
 
 @app.route('/api/tasks', methods=['POST'])
@@ -945,14 +965,18 @@ def edit_task(task_id):
 
 @app.route('/api/tasks/history', methods=['GET'])
 def get_task_history():
+    # Use Dhaka time (UTC+6) for 30-day calculation
+    utc_now = datetime.utcnow()
+    dhaka_now = utc_now + timedelta(hours=6)
+    thirty_days_ago_dhaka = (dhaka_now - timedelta(days=30)).strftime("%Y-%m-%d")
+    
     with get_db() as conn:
-        thirty_days_ago = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
         rows = conn.execute('''
             SELECT id, title, due_date, completed, created_at
             FROM tasks
             WHERE completed = 1 AND due_date >= ?
             ORDER BY due_date DESC, id DESC
-        ''', (thirty_days_ago,)).fetchall()
+        ''', (thirty_days_ago_dhaka,)).fetchall()
         return jsonify([dict(row) for row in rows])
 
 
@@ -1570,8 +1594,129 @@ def import_data():
 
 
 
+@app.route('/api/server-time', methods=['GET'])
+def get_server_time():
+    """Return server's current time in Dhaka timezone (UTC+6)"""
+    utc_now = datetime.utcnow()
+    dhaka_time = utc_now + timedelta(hours=6)
+    
+    return jsonify({
+        'datetime': dhaka_time.isoformat(),
+        'date': dhaka_time.strftime('%Y-%m-%d'),
+        'time': dhaka_time.strftime('%I:%M %p').lstrip('0').lower(),
+        'datetime_formatted': dhaka_time.strftime('%a %b %d, %I:%M %p').lstrip('0').replace(' 0', ' '),
+        'weekday_short': dhaka_time.strftime('%a'),
+        'day': int(dhaka_time.strftime('%d')),
+        'month_short': dhaka_time.strftime('%b'),
+        'hour_12': dhaka_time.strftime('%I').lstrip('0'),
+        'minute': dhaka_time.strftime('%M'),
+        'ampm': dhaka_time.strftime('%p').lower()
+    })
 
 
+
+@app.route('/api/health', methods=['GET'])
+def health_check():
+    """Simple health check endpoint"""
+    try:
+        # Just check if we can import and basic response
+        return jsonify({
+            'status': 'ok',
+            'timestamp': datetime.utcnow().isoformat(),
+            'server': 'running'
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'error': str(e)
+        }), 500
+
+@app.route('/api/sync/status', methods=['GET'])
+def sync_status():
+    """Check if database is accessible and return status"""
+    try:
+        with get_db() as conn:
+            # Check if tables exist and get counts (don't rely on updated_at columns)
+            task_count = conn.execute("SELECT COUNT(*) FROM tasks").fetchone()[0]
+            project_count = conn.execute("SELECT COUNT(*) FROM projects").fetchone()[0]
+            note_count = conn.execute("SELECT COUNT(*) FROM notes").fetchone()[0]
+            
+            # Get the most recent task by id (as a proxy for last update)
+            latest_task = conn.execute(
+                "SELECT id, due_date, created_at FROM tasks ORDER BY id DESC LIMIT 1"
+            ).fetchone()
+            
+            latest_project = conn.execute(
+                "SELECT id, added_date, last_updated FROM projects ORDER BY id DESC LIMIT 1"
+            ).fetchone()
+            
+            return jsonify({
+                'status': 'ok',
+                'database_accessible': True,
+                'counts': {
+                    'tasks': task_count,
+                    'projects': project_count,
+                    'notes': note_count
+                },
+                'latest': {
+                    'task_id': latest_task['id'] if latest_task else None,
+                    'task_date': latest_task['due_date'] if latest_task else None,
+                    'project_id': latest_project['id'] if latest_project else None
+                },
+                'server_time': datetime.utcnow().isoformat()
+            })
+    except Exception as e:
+        print(f"Sync status error: {str(e)}")  # Debug log
+        return jsonify({
+            'status': 'error',
+            'database_accessible': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/sync/verify', methods=['POST'])
+def verify_sync():
+    """Verify frontend data matches backend"""
+    try:
+        frontend_data = request.get_json()
+        
+        with get_db() as conn:
+            # Get actual backend data for comparison
+            backend_tasks = [dict(row) for row in conn.execute(
+                "SELECT id, title, completed, due_date FROM tasks ORDER BY id"
+            ).fetchall()]
+            
+            backend_projects = [dict(row) for row in conn.execute(
+                "SELECT id, title FROM projects ORDER BY id"
+            ).fetchall()]
+            
+            # Create simple hash for comparison
+            import hashlib
+            import json
+            
+            backend_string = json.dumps({
+                'tasks': backend_tasks,
+                'projects': backend_projects
+            }, sort_keys=True)
+            backend_hash = hashlib.md5(backend_string.encode()).hexdigest()
+            
+            frontend_string = json.dumps({
+                'tasks': frontend_data.get('tasks', []),
+                'projects': frontend_data.get('projects', [])
+            }, sort_keys=True)
+            frontend_hash = hashlib.md5(frontend_string.encode()).hexdigest()
+            
+            return jsonify({
+                'is_synced': backend_hash == frontend_hash,
+                'backend_tasks_count': len(backend_tasks),
+                'backend_projects_count': len(backend_projects),
+                'frontend_tasks_count': len(frontend_data.get('tasks', []))
+            })
+    except Exception as e:
+        print(f"Verify sync error: {str(e)}")  # Debug log
+        return jsonify({
+            'error': str(e),
+            'is_synced': False
+        }), 500
 
 # ====================== YEAR CONVERSION HELPERS ======================
 
