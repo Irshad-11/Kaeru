@@ -2003,23 +2003,23 @@ class SyncManager {
         switch(status) {
             case 'synced':
                 this.dot.classList.add('synced');
-                this.label.textContent = 'Synced';
+                // this.label.textContent = 'Synced';
                 break;
             case 'saving':
                 this.dot.classList.add('saving');
-                this.label.textContent = 'Saving...';
+                // this.label.textContent = 'Saving...';
                 break;
             case 'warning':
                 this.dot.classList.add('warning');
-                this.label.textContent = 'Sync Needed';
+                // this.label.textContent = 'Sync Needed';
                 break;
             case 'error':
                 this.dot.classList.add('error');
-                this.label.textContent = 'Error';
+                // this.label.textContent = 'Error';
                 break;
             case 'offline':
                 this.dot.classList.add('offline');
-                this.label.textContent = 'Offline';
+                // this.label.textContent = 'Offline';
                 break;
         }
     }
