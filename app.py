@@ -483,60 +483,58 @@ def login():
     <style>
         body { font-family: 'Sora', sans-serif; }
         .glow { box-shadow: 0 0 20px rgba(16,185,129,0.25); }
+        
         @keyframes pulse-border {
             0%, 100% { border-color: rgba(16,185,129,0.3); }
             50% { border-color: rgba(16,185,129,0.7); }
         }
         .pulse-border { animation: pulse-border 2s ease-in-out infinite; }
         
+        .pulse-dot { animation: pulse-dot 2s ease-in-out infinite; }
         @keyframes pulse-dot {
             0%, 100% { opacity: 1; transform: scale(1); }
             50% { opacity: 0.5; transform: scale(1.2); }
         }
-        
-        .pulse-dot {
-            animation: pulse-dot 2s ease-in-out infinite;
+
+        /* Centered Password Dots & Anti-Save */
+        .no-save-input {
+            -webkit-text-security: disc;
+            text-security: disc;
+            text-align: center;
         }
-        
-        /* Directional Keyframes for Perfect Synchronization */
-        @keyframes letterOutLeft {
-            0% { transform: translateX(0) scale(1); opacity: 1; filter: blur(0); letter-spacing: 0; }
-            100% { transform: translateX(-15px) scale(0.7); opacity: 0; filter: blur(3px); letter-spacing: -2px; }
-        }
-        
-        @keyframes letterInRight {
-            0% { transform: translateX(15px) scale(0.7); opacity: 0; filter: blur(3px); letter-spacing: -2px; }
-            100% { transform: translateX(0) scale(1); opacity: 1; filter: blur(0); letter-spacing: 0; }
-        }
-        
-        @keyframes letterOutRight {
-            0% { transform: translateX(0) scale(1); opacity: 1; filter: blur(0); letter-spacing: 0; }
-            100% { transform: translateX(15px) scale(0.7); opacity: 0; filter: blur(3px); letter-spacing: -2px; }
-        }
-        
-        @keyframes letterInLeft {
-            0% { transform: translateX(-15px) scale(0.7); opacity: 0; filter: blur(3px); letter-spacing: -2px; }
-            100% { transform: translateX(0) scale(1); opacity: 1; filter: blur(0); letter-spacing: 0; }
-        }
-        
-        .text-container {
+
+        /* Shimmering Button Effect */
+        .btn-shimmer {
             position: relative;
-            height: 42px;
             overflow: hidden;
-            display: inline-block;
         }
-        
-        .switching-text {
+        .btn-shimmer::after {
+            content: '';
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
+            top: -50%; left: -50%;
+            width: 200%; height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.2), transparent);
+            transform: rotate(45deg);
+            animation: shimmer 3s infinite;
+        }
+        @keyframes shimmer {
+            0% { transform: translateX(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) rotate(45deg); }
+        }
+
+        /* ONE-WAY Animation: Always In Left -> Out Right */
+        @keyframes letterInLeft {
+            0% { transform: translateX(-20px) scale(0.8); opacity: 0; filter: blur(4px); }
+            100% { transform: translateX(0) scale(1); opacity: 1; filter: blur(0); }
+        }
+        @keyframes letterOutRight {
+            0% { transform: translateX(0) scale(1); opacity: 1; filter: blur(0); }
+            100% { transform: translateX(20px) scale(0.8); opacity: 0; filter: blur(4px); }
         }
         
-        .letter {
-            display: inline-block;
-            white-space: pre;
-        }
+        .text-container { position: relative; height: 42px; overflow: hidden; display: inline-block; }
+        .switching-text { position: absolute; top: 0; left: 0; width: 100%; }
+        .letter { display: inline-block; white-space: pre; }
         
         .version-badge {
             background: rgba(16, 185, 129, 0.1);
@@ -544,7 +542,6 @@ def login():
             border-radius: 20px;
             padding: 2px 8px;
             font-size: 10px;
-            font-weight: 500;
             color: #10b981;
             backdrop-filter: blur(4px);
         }
@@ -557,30 +554,26 @@ def login():
             transition: all 0.3s ease;
             font-size: 12px;
         }
-        
-        .repo-link:hover {
-            background: rgba(16, 185, 129, 0.1);
-            border-color: rgba(16, 185, 129, 0.3);
-            transform: translateY(-1px);
-        }
-        
-        .error-shake {
-            animation: shake 0.5s ease-in-out;
-        }
-        
+
+        .error-shake { animation: shake 0.5s ease-in-out; }
         @keyframes shake {
             0%, 100% { transform: translateX(0); }
             25% { transform: translateX(-5px); }
             75% { transform: translateX(5px); }
         }
-        
-        .fade-in {
-            animation: fadeIn 0.3s ease-in-out;
+
+        #error-message {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            max-height: 0;
+            opacity: 0;
+            transform: translateY(-10px);
+            overflow: hidden;
         }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
+        #error-message.visible {
+            max-height: 150px;
+            opacity: 1;
+            transform: translateY(0);
+            margin-top: 1rem;
         }
     </style>
 </head>
@@ -616,28 +609,28 @@ def login():
                             <span>v6.3.2</span>
                         </span>
                     </div>
-                    
                 </div>
-                
             </div>
         </div>
         
         <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 pulse-border">
-            <form method="post" class="space-y-4" id="login-form">
+            <form method="post" class="space-y-4" id="login-form" autocomplete="off">
                 <div>
                     <label class="text-xs font-medium text-zinc-400 uppercase tracking-wider">Access Key</label>
-                    <input type="password" name="key" id="access-key" autofocus
+                    <input type="text" name="key" id="access-key" autofocus
                            placeholder="Access Protected"
-                           class="mt-2 w-full px-4 py-3 bg-zinc-950 border border-zinc-700 focus:border-emerald-500 rounded-xl outline-none text-white text-sm placeholder:text-zinc-600 transition-colors">
+                           autocomplete="off"
+                           spellcheck="false"
+                           class="no-save-input mt-2 w-full px-4 py-3 bg-zinc-950 border border-zinc-700 focus:border-emerald-500 rounded-xl outline-none text-white text-sm placeholder:text-zinc-600 transition-colors">
                 </div>
                 <button type="submit"
-                        class="w-full bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-semibold py-3 rounded-xl transition-all active:scale-95 glow group">
+                        class="w-full bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-semibold py-3 rounded-xl transition-all active:scale-95 glow group btn-shimmer">
                     <span>Get in</span>
                     <i class="fa-solid fa-arrow-right ml-2 group-hover:translate-x-1 transition-transform"></i>
                 </button>
             </form>
             
-            <div id="error-message" class="mt-4 hidden fade-in">
+            <div id="error-message">
                 <div class="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-center">
                     <p class="text-red-400 text-xs mb-1">
                         <i class="fa-solid fa-lock mr-1"></i>
@@ -668,194 +661,118 @@ def login():
     </div>
     
     <script>
-        // Handle form submission with error display
-        document.getElementById('login-form').addEventListener('submit', async function(e) {
+        // Animation Configuration
+        const englishWord = 'Kaeru';
+        const japaneseWord = '代える';
+        const STAGGER = 60;
+        const DURATION = 500;
+        const WAIT_TIME = 4000;
+
+        // Login Handling
+        const loginForm = document.getElementById('login-form');
+        const errorDiv = document.getElementById('error-message');
+        const accessInput = document.getElementById('access-key');
+
+        loginForm.addEventListener('submit', async function(e) {
             e.preventDefault();
-            
             const formData = new FormData(this);
-            const errorDiv = document.getElementById('error-message');
             const submitBtn = this.querySelector('button[type="submit"]');
             const originalBtnText = submitBtn.innerHTML;
+            const formBox = document.querySelector('.bg-zinc-900');
             
-            // Disable button and show loading
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Verifying...';
+            errorDiv.classList.remove('visible');
             
             try {
-                const response = await fetch(window.location.href, {
-                    method: 'POST',
-                    body: formData
-                });
+                await new Promise(r => setTimeout(r, 600)); // Fast aesthetic delay
+                const response = await fetch(window.location.href, { method: 'POST', body: formData });
                 
                 if (response.ok) {
-                    // Success - redirect
                     window.location.href = '/tasks';
                 } else {
-                    // Show error message
-                    errorDiv.classList.remove('hidden');
-                    errorDiv.classList.add('error-shake');
-                    
-                    // Add shake animation to the form
-                    const formBox = document.querySelector('.bg-zinc-900');
+                    errorDiv.classList.add('visible');
                     formBox.classList.add('error-shake');
-                    
-                    // Clear the input
-                    document.getElementById('access-key').value = '';
-                    document.getElementById('access-key').focus();
-                    
-                    // Remove shake after animation
-                    setTimeout(() => {
-                        errorDiv.classList.remove('error-shake');
-                        formBox.classList.remove('error-shake');
-                    }, 500);
-                    
-                    // Auto-hide error after 5 seconds
-                    setTimeout(() => {
-                        errorDiv.classList.add('hidden');
-                    }, 5000);
+                    accessInput.value = '';
+                    accessInput.focus();
+                    setTimeout(() => formBox.classList.remove('error-shake'), 500);
+                    setTimeout(() => errorDiv.classList.remove('visible'), 5000);
                 }
             } catch (error) {
-                console.error('Login error:', error);
-                errorDiv.classList.remove('hidden');
+                console.error(error);
             } finally {
-                // Re-enable button
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = originalBtnText;
             }
         });
-        
-        // Clear error when typing
-        document.getElementById('access-key').addEventListener('input', function() {
-            const errorDiv = document.getElementById('error-message');
-            if (!errorDiv.classList.contains('hidden')) {
-                errorDiv.classList.add('hidden');
-            }
-        });
-        
-        // Split text into individual letters with spans
-        function splitIntoSpans(text, containerId) {
+
+        // ONE-WAY Letter Animation Logic
+        function prepareLetters(text, containerId) {
             const container = document.getElementById(containerId);
-            if (!container) return [];
-            
-            const letters = text.split('');
-            const spans = [];
-            container.innerHTML = '';
-            
-            letters.forEach((letter) => {
+            container.innerHTML = ''; // Wipes previous cycle clean
+            return text.split('').map(char => {
                 const span = document.createElement('span');
                 span.className = 'letter';
-                span.textContent = letter;
-                span.style.display = 'inline-block';
-                span.style.opacity = '0'; // Initialize invisible for clean IN animation
-                span.style.transition = 'all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55)';
+                span.textContent = char;
+                span.style.opacity = '0';
                 container.appendChild(span);
-                spans.push(span);
+                return span;
             });
-            
-            return spans;
         }
-        
-        // Animate letters one by one with magnetic easing
-        function animateLetters(letters, animName, callback) {
-            const delays = [];
-            const totalLetters = letters.length;
-            
-            // Calculate delays based on magnetic easing (faster at edges, slower in middle)
-            for (let i = 0; i < totalLetters; i++) {
-                // Normalize position between -1 and 1
-                const t = totalLetters > 1 ? (i / (totalLetters - 1)) * 2 - 1 : 0;
-                // Magnetic easing function: velocity increases at edges
-                const magneticEasing = Math.abs(t) < 0.3 ? 0.3 : Math.pow(Math.abs(t), 1.5);
-                // Delay between 10ms and 40ms based on position
-                let delay = 10 + (magneticEasing * 30);
-                delays.push(delay);
-            }
-            
-            // Apply animations sequentially
-            let completed = 0;
-            letters.forEach((letter, index) => {
-                const accumDelay = delays.slice(0, index + 1).reduce((a, b) => a + b, 0);
-                
-                setTimeout(() => {
-                    // Reset animation safely before applying the new one
-                    letter.style.animation = 'none';
-                    void letter.offsetWidth; // Trigger reflow to restart animation
-                    
-                    letter.style.animation = `${animName} 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards`;
-                    
+
+        async function animateWord(letters, animName) {
+            const promises = letters.map((l, i) => {
+                return new Promise(resolve => {
                     setTimeout(() => {
-                        completed++;
-                        if (completed === totalLetters && callback) {
-                            setTimeout(callback, 50);
-                        }
-                    }, 400); // 400ms is the duration of the CSS animation
-                }, accumDelay);
+                        l.style.animation = 'none';
+                        void l.offsetWidth; // Reflow
+                        l.style.animation = `${animName} ${DURATION}ms ease forwards`;
+                        setTimeout(resolve, DURATION);
+                    }, i * STAGGER);
+                });
             });
+            return Promise.all(promises);
         }
-        
-        // Initialize text with letter spans
-        const englishWord = 'Kaeru';
-        const japaneseWord = '代える';
-        
-        let englishLetterSpans = [];
-        let japaneseLetterSpans = [];
-        
-        // Split both texts into spans
-        function initializeTexts() {
-            const englishContainer = document.getElementById('english-letters');
-            const japaneseContainer = document.getElementById('japanese-letters');
+
+        async function runCycle() {
+            const engDiv = document.getElementById('english-text');
+            const japDiv = document.getElementById('japanese-text');
             
-            if (englishContainer && japaneseContainer) {
-                // Split texts
-                englishLetterSpans = splitIntoSpans(englishWord, 'english-letters');
-                japaneseLetterSpans = splitIntoSpans(japaneseWord, 'japanese-letters');
+            let engSpans = prepareLetters(englishWord, 'english-letters');
+            let japSpans = prepareLetters(japaneseWord, 'japanese-letters');
+
+            // Initial In
+            engDiv.style.display = 'block';
+            await animateWord(engSpans, 'letterInLeft');
+
+            while (true) {
+                await new Promise(r => setTimeout(r, WAIT_TIME));
+                
+                // Out Right
+                await animateWord(engSpans, 'letterOutRight');
+                engDiv.style.display = 'none';
+
+                // Switch to Jap and In Left
+                japDiv.style.display = 'block';
+                // Reset opacity to ensure clean entry
+                japSpans.forEach(s => s.style.opacity = '0');
+                await animateWord(japSpans, 'letterInLeft');
+
+                await new Promise(r => setTimeout(r, WAIT_TIME));
+
+                // Out Right
+                await animateWord(japSpans, 'letterOutRight');
+                japDiv.style.display = 'none';
+
+                // Switch back to Eng and In Left
+                engDiv.style.display = 'block';
+                // Reset opacity to ensure clean entry
+                engSpans.forEach(s => s.style.opacity = '0');
+                await animateWord(engSpans, 'letterInLeft');
             }
         }
-        
-        // Text switching with character-by-character animation
-        let showEnglish = true;
-        const englishTextDiv = document.getElementById('english-text');
-        const japaneseTextDiv = document.getElementById('japanese-text');
-        
-        function switchText() {
-            if (showEnglish) {
-                // Switch from English to Japanese
-                // 1. English slides OUT to the left
-                animateLetters(englishLetterSpans, 'letterOutLeft', () => {
-                    englishTextDiv.style.display = 'none';
-                });
-                
-                // 2. Japanese slides IN from the right (slight overlap)
-                japaneseTextDiv.style.display = 'block';
-                setTimeout(() => {
-                    animateLetters(japaneseLetterSpans, 'letterInRight');
-                }, 100); 
-            } else {
-                // Switch from Japanese to English
-                // 1. Japanese slides OUT to the right
-                animateLetters(japaneseLetterSpans, 'letterOutRight', () => {
-                    japaneseTextDiv.style.display = 'none';
-                });
-                
-                // 2. English slides IN from the left (slight overlap)
-                englishTextDiv.style.display = 'block';
-                setTimeout(() => {
-                    animateLetters(englishLetterSpans, 'letterInLeft');
-                }, 100);
-            }
-            showEnglish = !showEnglish;
-        }
-        
-        // Initialize everything
-        initializeTexts();
-        
-        // Start the switching cycle
-        let switchInterval = setInterval(switchText, 5000);
-        
-        // Initial animation on load
-        setTimeout(() => {
-            animateLetters(englishLetterSpans, 'letterInRight');
-        }, 100);
+
+        window.addEventListener('DOMContentLoaded', runCycle);
     </script>
 </body>
 </html>
