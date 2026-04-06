@@ -1784,13 +1784,14 @@ function toggleTheme() {
 }
 
 // ============================================================
-// CLOCK
+// CLOCK - Updates only on user interaction
 // ============================================================
 let serverTimeOffset = 0;
 let lastServerTime = null;
+let clockUpdateInterval = null;
 
 function fetchServerTime() {
-    fetch('/api/server-time')
+    return fetch('/api/server-time')
         .then(response => response.json())
         .then(data => {
             const serverDate = new Date(data.datetime);
@@ -1798,10 +1799,12 @@ function fetchServerTime() {
             serverTimeOffset = serverDate - clientDate;
             lastServerTime = serverDate;
             updateClockDisplay(serverDate);
+            return serverDate;
         })
         .catch(error => {
             console.error('Failed to fetch server time:', error);
             updateClockDisplay(new Date()); // fallback to client time
+            return null;
         });
 }
 
@@ -1815,7 +1818,8 @@ function updateClockDisplay(baseTime) {
         minute: '2-digit',
         hour12: true 
     });
-    document.getElementById('clock').textContent = formattedTime;
+    const clockElement = document.getElementById('clock');
+    if (clockElement) clockElement.textContent = formattedTime;
 }
 
 function updateClock() {
@@ -1823,18 +1827,31 @@ function updateClock() {
         // Use server time + elapsed client time
         const now = new Date(lastServerTime.getTime() + (Date.now() - lastServerTime.getTime()));
         updateClockDisplay(now);
-    } else {
-        fetchServerTime();
     }
 }
 
-// Fetch server time every minute to account for drift
-fetchServerTime();
-setInterval(fetchServerTime, 3600000); // Re-sync every minute
-setInterval(updateClock, 1000); // Update display every second
+function startClockUpdates() {
+    if (clockUpdateInterval) return;
+    clockUpdateInterval = setInterval(updateClock, 1000);
+}
+
+function stopClockUpdates() {
+    if (clockUpdateInterval) {
+        clearInterval(clockUpdateInterval);
+        clockUpdateInterval = null;
+    }
+}
+
+// Only fetch and update clock on user interaction
+function refreshClock() {
+    stopClockUpdates();
+    fetchServerTime().then(() => {
+        startClockUpdates();
+    });
+}
 
 // ============================================================
-// ACCURATE SYNC SYSTEM WITH REAL STATUS CHECKING
+// ACCURATE SYNC SYSTEM - Zero CPU usage, event-driven only
 // ============================================================
 
 class SyncManager {
@@ -1844,27 +1861,29 @@ class SyncManager {
         this.isSaving = false;
         this.lastSyncTime = null;
         this.localDataHash = null;
-        this.serverDataHash = null;
-        this.syncCheckInterval = null;
-        this.healthCheckInterval = null;
         
         // DOM elements
         this.dot = document.getElementById('sync-dot');
         this.label = document.getElementById('sync-label');
         
-        // Initialize
+        // NO INTERVALS - Initialize with event listeners only
         this.init();
     }
     
     init() {
-        // Listen to online/offline events
+        // Listen to online/offline events (browser native - no CPU cost)
         window.addEventListener('online', () => this.handleConnectionChange(true));
         window.addEventListener('offline', () => this.handleConnectionChange(false));
         
-        // Start periodic checks
-        this.startPeriodicChecks();
+        // Listen to page visibility (browser native - no CPU cost)
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                // Only check when tab becomes visible again
+                this.checkFullStatus();
+            }
+        });
         
-        // Initial check
+        // Initial check only once when page loads
         this.checkFullStatus();
     }
     
@@ -1873,6 +1892,7 @@ class SyncManager {
         if (!isOnline) {
             this.updateUI('offline', 'Offline');
         } else {
+            // Only check when connection is restored
             this.checkServerReachability();
         }
     }
@@ -1910,7 +1930,6 @@ class SyncManager {
             const serverData = await response.json();
             
             if (serverData.database_accessible) {
-                // Compare with local data if available
                 const isInSync = await this.compareWithServer(serverData);
                 
                 if (isInSync) {
@@ -1929,7 +1948,6 @@ class SyncManager {
     }
     
     async compareWithServer(serverData) {
-        // If we have local data hash, compare directly
         if (this.localDataHash) {
             try {
                 const verifyResponse = await fetch('/api/sync/verify', {
@@ -1947,11 +1965,10 @@ class SyncManager {
                 return false;
             }
         }
-        return true; // Assume synced if no local data
+        return true;
     }
     
     async checkFullStatus() {
-        // Check both online status and server reachability
         this.isOnline = navigator.onLine;
         
         if (!this.isOnline) {
@@ -1981,60 +1998,43 @@ class SyncManager {
     updateUI(status, message) {
         if (!this.dot || !this.label) return;
         
-        // Remove all existing classes
         this.dot.className = 'sync-dot';
         
-        // Apply new class based on status
         switch(status) {
             case 'synced':
                 this.dot.classList.add('synced');
-                // this.label.textContent = message || 'Synced';
+                this.label.textContent = 'Synced';
                 break;
             case 'saving':
                 this.dot.classList.add('saving');
-                // this.label.textContent = message || 'Saving...';
+                this.label.textContent = 'Saving...';
                 break;
             case 'warning':
                 this.dot.classList.add('warning');
-                // this.label.textContent = message || 'Sync Needed';
+                this.label.textContent = 'Sync Needed';
                 break;
             case 'error':
                 this.dot.classList.add('error');
-                // this.label.textContent = message || 'Error';
+                this.label.textContent = 'Error';
                 break;
             case 'offline':
                 this.dot.classList.add('offline');
-                // this.label.textContent = message || 'Offline';
+                this.label.textContent = 'Offline';
                 break;
-            default:
-                // this.label.textContent = message || 'Unknown';
         }
     }
     
-    startPeriodicChecks() {
-        // Check health every 30 seconds
-        this.healthCheckInterval = setInterval(() => {
-            this.checkFullStatus();
-        }, 30000);
-        
-        // Check sync status every minute
-        this.syncCheckInterval = setInterval(() => {
-            if (!this.isSaving && this.isOnline && this.isServerReachable) {
-                this.checkSyncStatus();
-            }
-        }, 60000);
-    }
-    
-    stopPeriodicChecks() {
-        if (this.healthCheckInterval) clearInterval(this.healthCheckInterval);
-        if (this.syncCheckInterval) clearInterval(this.syncCheckInterval);
+    // Manual refresh - call this on user interaction
+    async refresh() {
+        await this.checkFullStatus();
+        await this.checkSyncStatus();
     }
 }
 
-// Initialize the sync manager
+// Initialize the sync manager (NO INTERVALS RUNNING)
 const syncManager = new SyncManager();
 
-// Override your existing api function to use the sync manager
+// Modified api function
 async function api(url, method = 'GET', body = null) {
     syncManager.startSaving();
     
@@ -2042,7 +2042,7 @@ async function api(url, method = 'GET', body = null) {
         const opts = { 
             method, 
             headers: { 'Content-Type': 'application/json' },
-            signal: AbortSignal.timeout(30000) // 30 second timeout
+            signal: AbortSignal.timeout(30000)
         };
         if (body) opts.body = JSON.stringify(body);
         
@@ -2055,12 +2055,13 @@ async function api(url, method = 'GET', body = null) {
         const data = await response.json();
         syncManager.endSaving(true);
         
-        // Update local data hash if we have the data
         if (data.tasks || data.projects) {
-            // Store for future comparison
             window.taskData = data.tasks || window.taskData;
             window.projectData = data.projects || window.projectData;
         }
+        
+        // Refresh clock after any API operation
+        refreshClock();
         
         return data;
     } catch (error) {
@@ -2070,15 +2071,55 @@ async function api(url, method = 'GET', body = null) {
     }
 }
 
-// Helper function to manually trigger sync check
+// Manual refresh functions - call these on user interaction
 async function checkSyncNow() {
-    await syncManager.checkFullStatus();
-    await syncManager.checkSyncStatus();
+    await syncManager.refresh();
 }
 
-// Export for debugging (optional)
+// Setup user interaction listeners for clock updates
+function setupInteractionListeners() {
+    const interactionEvents = ['click', 'keydown', 'scroll', 'touchstart', 'mousemove'];
+    
+    let interactionTimeout;
+    const handleInteraction = () => {
+        // Refresh clock on interaction
+        if (!document.hidden) {
+            refreshClock();
+        }
+        
+        // Clear timeout
+        if (interactionTimeout) clearTimeout(interactionTimeout);
+        
+        // Stop clock updates after 10 seconds of no interaction
+        interactionTimeout = setTimeout(() => {
+            stopClockUpdates();
+        }, 10000);
+    };
+    
+    interactionEvents.forEach(event => {
+        window.addEventListener(event, handleInteraction);
+    });
+    
+    // Also refresh when tab becomes visible
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+            refreshClock();
+        } else {
+            stopClockUpdates();
+        }
+    });
+    
+    // Initial clock fetch
+    refreshClock();
+}
+
+// Initialize everything
+setupInteractionListeners();
+
+// Export for debugging
 window.syncManager = syncManager;
 window.checkSyncNow = checkSyncNow;
+window.refreshClock = refreshClock;
 
 // ============================================================
 // TOAST
@@ -4374,6 +4415,8 @@ window.addEventListener('load', async () => {
     setInterval(updateClock, 10000);
     initMobile();
     makeKaeruClickable();
+    checkSyncNow();
+    refreshClock();
 
     if (tab === 'tasks') {
         await loadTasks();
