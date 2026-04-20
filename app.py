@@ -323,7 +323,8 @@ def init_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 title TEXT NOT NULL,
                 added_date TEXT,
-                last_updated TEXT DEFAULT CURRENT_TIMESTAMP
+                last_updated TEXT DEFAULT CURRENT_TIMESTAMP,
+                position INTEGER DEFAULT 0
             )
         ''')
 
@@ -477,6 +478,7 @@ def login():
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kaeru — Access</title>
+    <link rel="icon" type="image/png" href="https://img.icons8.com/?size=100&id=ySZcrXaaOavG&format=png&color=000000">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -536,15 +538,44 @@ def login():
         .switching-text { position: absolute; top: 0; left: 0; width: 100%; }
         .letter { display: inline-block; white-space: pre; }
         
-        .version-badge {
-            background: rgba(16, 185, 129, 0.1);
-            border: 1px solid rgba(16, 185, 129, 0.3);
-            border-radius: 20px;
-            padding: 2px 8px;
-            font-size: 10px;
-            color: #10b981;
-            backdrop-filter: blur(4px);
-        }
+        .badge-squash {
+    /* Hard-edge cartoon shadow - subtle but deep */
+    box-shadow: 1.5px 1.5px 0px 0px #000;
+    animation: squash-pop 5s infinite;
+}
+
+.dot-status {
+    animation: dot-color-change 5s infinite;
+}
+
+/* 1. The Squash & Stretch Animation */
+@keyframes squash-pop {
+    0%, 45%, 100% { 
+        transform: scale(1, 1); 
+        background-color: #450a0a; /* Deep Dark Red */
+    }
+    47% { 
+        transform: scale(1.15, 0.85); /* Squash down */
+    }
+    50% { 
+        transform: scale(0.9, 1.2); /* Stretch up */
+        background-color: #064e3b; /* Deep Dark Green */
+    }
+    53%, 95% { 
+        transform: scale(1, 1); 
+        background-color: #064e3b;
+    }
+}
+
+/* 2. The Dot Color - Matches the dark theme */
+@keyframes dot-color-change {
+    0%, 45%, 100% { 
+        background-color: #b91c1c; /* Muted Red */
+    }
+    50%, 95% { 
+        background-color: #059669; /* Muted Green */
+    }
+}
         
         .repo-link {
             background: rgba(255, 255, 255, 0.05);
@@ -602,12 +633,13 @@ def login():
                                 <h1 class="text-3xl font-bold text-emerald-400 tracking-tight whitespace-nowrap" id="japanese-letters"></h1>
                             </div>
                         </div>
-                        <span class="version-badge inline-flex items-center gap-2">
-                            <span class="pulse-dot">
-                                <span class="w-2 h-2 bg-emerald-500 rounded-full inline-block"></span>
-                            </span>
-                            <span>v6.3.2</span>
-                        </span>
+                        <div class="flex items-center">
+    <span class="badge-squash font-mono inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg border-2 border-zinc-950 bg-zinc-900 text-[10px] font-black italic tracking-tight">
+        <div class="dot-status h-2 w-2 rounded-sm border border-black/40"></div>
+        
+        <span class="text-white/90">latest - v6.4.0</span>
+    </span>
+</div>
                     </div>
                 </div>
             </div>
@@ -623,8 +655,43 @@ def login():
                            spellcheck="false"
                            class="no-save-input mt-2 w-full px-4 py-3 bg-zinc-950 border border-zinc-700 focus:border-emerald-500 rounded-xl outline-none text-white text-sm placeholder:text-zinc-600 transition-colors">
                 </div>
+                <div class="flex items-center gap-3 group cursor-pointer">
+  <div class="relative flex items-center justify-center">
+    <input 
+      type="checkbox" 
+      id="save-login" 
+      class="
+        peer appearance-none w-5 h-5 
+        border-2 border-zinc-700 rounded-md bg-zinc-900
+        checked:bg-emerald-600 checked:border-emerald-500
+        hover:border-zinc-500 focus:outline-none focus:ring-2 
+        focus:ring-emerald-500/20 focus:ring-offset-2 focus:ring-offset-black
+        transition-all duration-200 ease-in-out cursor-pointer
+      "
+    >
+    <svg 
+      class="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 transition-opacity duration-200 pointer-events-none" 
+      xmlns="http://www.w3.org/2000/svg" 
+      viewBox="0 0 24 24" 
+      fill="none" 
+      stroke="currentColor" 
+      stroke-width="4" 
+      stroke-linecap="round" 
+      stroke-linejoin="round"
+    >
+      <polyline points="20 6 9 17 4 12"></polyline>
+    </svg>
+  </div>
+  
+  <label 
+    for="save-login" 
+    class="text-sm font-medium text-zinc-400 group-hover:text-zinc-200 transition-colors cursor-pointer select-none"
+  >
+    Remember me <span class="text-zinc-600 text-xs font-normal">(1 day)</span>
+  </label>
+</div>
                 <button type="submit"
-                        class="w-full bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-semibold py-3 rounded-xl transition-all active:scale-95 glow group btn-shimmer">
+                        class="w-full bg-emerald-600 hover:bg-emerald-400 text-zinc-950 font-semibold py-3 rounded-xl transition-all active:scale-95 glow group btn-shimmer">
                     <span>Get in</span>
                     <i class="fa-solid fa-arrow-right ml-2 group-hover:translate-x-1 transition-transform"></i>
                 </button>
@@ -661,119 +728,169 @@ def login():
     </div>
     
     <script>
-        // Animation Configuration
-        const englishWord = 'Kaeru';
-        const japaneseWord = '代える';
-        const STAGGER = 60;
-        const DURATION = 500;
-        const WAIT_TIME = 4000;
+    // Animation Configuration (Your original beautiful animation - unchanged)
+    const englishWord = 'Kaeru';
+    const japaneseWord = '代える';
+    const STAGGER = 60;
+    const DURATION = 500;
+    const WAIT_TIME = 4000;
 
-        // Login Handling
-        const loginForm = document.getElementById('login-form');
-        const errorDiv = document.getElementById('error-message');
-        const accessInput = document.getElementById('access-key');
+    // ====================== SAVE LOGIN FEATURE ======================
+    function encodeKey(key) {
+        const expire = Date.now() + (24 * 60 * 60 * 1000); // 1 day
+        const data = key + "|" + expire;
+        return btoa(data.split('').map(c => String.fromCharCode(c.charCodeAt(0) + 5)).join(''));
+    }
 
-        loginForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
+    function decodeKey(encoded) {
+        try {
+            const decoded = atob(encoded).split('').map(c => String.fromCharCode(c.charCodeAt(0) - 5)).join('');
+            const [key, expire] = decoded.split('|');
+            if (Date.now() > parseInt(expire)) {
+                localStorage.removeItem('kaeru_key');
+                return null;
+            }
+            return key;
+        } catch(e) {
+            return null;
+        }
+    }
+
+    function tryAutoLogin() {
+        const saved = localStorage.getItem('kaeru_key');
+        if (saved) {
+            const key = decodeKey(saved);
+            if (key) {
+                document.getElementById('access-key').value = key;
+                document.getElementById('save-login').checked = true;
+                // Auto submit after a small delay
+                setTimeout(() => {
+                    document.getElementById('login-form').dispatchEvent(new Event('submit'));
+                }, 800);
+            }
+        }
+    }
+
+    // ====================== LOGIN HANDLING (Merged) ======================
+    const loginForm = document.getElementById('login-form');
+    const errorDiv = document.getElementById('error-message');
+    const accessInput = document.getElementById('access-key');
+
+    loginForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const key = document.getElementById('access-key').value.trim();
+        const saveChecked = document.getElementById('save-login').checked;
+
+        if (!key) return;
+
+        // Save to localStorage if checked
+        if (saveChecked) {
+            localStorage.setItem('kaeru_key', encodeKey(key));
+        } else {
+            localStorage.removeItem('kaeru_key');
+        }
+
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const originalBtnText = submitBtn.innerHTML;
+        const formBox = document.querySelector('.bg-zinc-900');
+
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Verifying...';
+        errorDiv.classList.remove('visible');
+
+        try {
+            await new Promise(r => setTimeout(r, 600));
+            
             const formData = new FormData(this);
-            const submitBtn = this.querySelector('button[type="submit"]');
-            const originalBtnText = submitBtn.innerHTML;
-            const formBox = document.querySelector('.bg-zinc-900');
-            
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Verifying...';
-            errorDiv.classList.remove('visible');
-            
-            try {
-                await new Promise(r => setTimeout(r, 600)); // Fast aesthetic delay
-                const response = await fetch(window.location.href, { method: 'POST', body: formData });
+            const response = await fetch(window.location.href, { 
+                method: 'POST', 
+                body: formData 
+            });
+            accessInput.value = '';
+            if (response.ok) {
                 
-                if (response.ok) {
-                    window.location.href = '/tasks';
-                } else {
-                    errorDiv.classList.add('visible');
-                    formBox.classList.add('error-shake');
-                    accessInput.value = '';
-                    accessInput.focus();
-                    setTimeout(() => formBox.classList.remove('error-shake'), 500);
-                    setTimeout(() => errorDiv.classList.remove('visible'), 5000);
-                }
-            } catch (error) {
-                console.error(error);
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = originalBtnText;
+                window.location.href = '/tasks';
+            } else {
+                errorDiv.classList.add('visible');
+                formBox.classList.add('error-shake');
+                accessInput.value = '';
+                accessInput.focus();
+                setTimeout(() => formBox.classList.remove('error-shake'), 500);
+                setTimeout(() => errorDiv.classList.remove('visible'), 5000);
             }
+        } catch (error) {
+            console.error(error);
+            errorDiv.classList.add('visible');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalBtnText;
+        }
+    });
+
+    // ====================== ANIMATION (Your original) ======================
+    function prepareLetters(text, containerId) {
+        const container = document.getElementById(containerId);
+        container.innerHTML = '';
+        return text.split('').map(char => {
+            const span = document.createElement('span');
+            span.className = 'letter';
+            span.textContent = char;
+            span.style.opacity = '0';
+            container.appendChild(span);
+            return span;
         });
+    }
 
-        // ONE-WAY Letter Animation Logic
-        function prepareLetters(text, containerId) {
-            const container = document.getElementById(containerId);
-            container.innerHTML = ''; // Wipes previous cycle clean
-            return text.split('').map(char => {
-                const span = document.createElement('span');
-                span.className = 'letter';
-                span.textContent = char;
-                span.style.opacity = '0';
-                container.appendChild(span);
-                return span;
+    async function animateWord(letters, animName) {
+        const promises = letters.map((l, i) => {
+            return new Promise(resolve => {
+                setTimeout(() => {
+                    l.style.animation = 'none';
+                    void l.offsetWidth;
+                    l.style.animation = `${animName} ${DURATION}ms ease forwards`;
+                    setTimeout(resolve, DURATION);
+                }, i * STAGGER);
             });
-        }
+        });
+        return Promise.all(promises);
+    }
 
-        async function animateWord(letters, animName) {
-            const promises = letters.map((l, i) => {
-                return new Promise(resolve => {
-                    setTimeout(() => {
-                        l.style.animation = 'none';
-                        void l.offsetWidth; // Reflow
-                        l.style.animation = `${animName} ${DURATION}ms ease forwards`;
-                        setTimeout(resolve, DURATION);
-                    }, i * STAGGER);
-                });
-            });
-            return Promise.all(promises);
-        }
+    async function runCycle() {
+        const engDiv = document.getElementById('english-text');
+        const japDiv = document.getElementById('japanese-text');
+        
+        let engSpans = prepareLetters(englishWord, 'english-letters');
+        let japSpans = prepareLetters(japaneseWord, 'japanese-letters');
 
-        async function runCycle() {
-            const engDiv = document.getElementById('english-text');
-            const japDiv = document.getElementById('japanese-text');
-            
-            let engSpans = prepareLetters(englishWord, 'english-letters');
-            let japSpans = prepareLetters(japaneseWord, 'japanese-letters');
+        engDiv.style.display = 'block';
+        await animateWord(engSpans, 'letterInLeft');
 
-            // Initial In
+        while (true) {
+            await new Promise(r => setTimeout(r, WAIT_TIME));
+            await animateWord(engSpans, 'letterOutRight');
+            engDiv.style.display = 'none';
+
+            japDiv.style.display = 'block';
+            japSpans.forEach(s => s.style.opacity = '0');
+            await animateWord(japSpans, 'letterInLeft');
+
+            await new Promise(r => setTimeout(r, WAIT_TIME));
+            await animateWord(japSpans, 'letterOutRight');
+            japDiv.style.display = 'none';
+
             engDiv.style.display = 'block';
+            engSpans.forEach(s => s.style.opacity = '0');
             await animateWord(engSpans, 'letterInLeft');
-
-            while (true) {
-                await new Promise(r => setTimeout(r, WAIT_TIME));
-                
-                // Out Right
-                await animateWord(engSpans, 'letterOutRight');
-                engDiv.style.display = 'none';
-
-                // Switch to Jap and In Left
-                japDiv.style.display = 'block';
-                // Reset opacity to ensure clean entry
-                japSpans.forEach(s => s.style.opacity = '0');
-                await animateWord(japSpans, 'letterInLeft');
-
-                await new Promise(r => setTimeout(r, WAIT_TIME));
-
-                // Out Right
-                await animateWord(japSpans, 'letterOutRight');
-                japDiv.style.display = 'none';
-
-                // Switch back to Eng and In Left
-                engDiv.style.display = 'block';
-                // Reset opacity to ensure clean entry
-                engSpans.forEach(s => s.style.opacity = '0');
-                await animateWord(engSpans, 'letterInLeft');
-            }
         }
+    }
 
-        window.addEventListener('DOMContentLoaded', runCycle);
-    </script>
+    // Initialize everything
+    window.addEventListener('DOMContentLoaded', () => {
+        runCycle();
+        tryAutoLogin();
+    });
+</script>
 </body>
 </html>
 '''
@@ -782,7 +899,13 @@ def login():
 @app.route('/logout')
 def logout():
     session.clear()
-    return redirect(url_for('login'))
+    # Clear saved login
+    return '''
+    <script>
+        localStorage.removeItem('kaeru_key');
+        window.location.href = '/login';
+    </script>
+    '''
 
 
 # ====================== ROUTES ======================
@@ -814,25 +937,29 @@ def timeless():
 
 @app.route('/api/tasks', methods=['GET'])
 def get_tasks():
-    # Force UTC+6 (Dhaka time) for overdue calculations
+    # Force Dhaka time (UTC+6)
     utc_now = datetime.utcnow()
     dhaka_now = utc_now + timedelta(hours=6)
     today_dhaka = dhaka_now.date()
-    
+    tomorrow_dhaka = (dhaka_now + timedelta(days=1)).date()
+
     with get_db() as conn:
         rows = conn.execute("SELECT * FROM tasks ORDER BY due_date ASC, id ASC").fetchall()
         tasks = []
         for row in rows:
             task = dict(row)
-            # Calculate overdue status based on Dhaka time (UTC+6)
             if task['due_date']:
                 due_date_obj = datetime.strptime(task['due_date'], '%Y-%m-%d').date()
-                # Task is overdue if due date is before today in Dhaka time
-                task['is_overdue'] = due_date_obj < today_dhaka and not task['completed']
+                task['is_overdue'] = (due_date_obj < today_dhaka) and not task['completed']
             else:
                 task['is_overdue'] = False
             tasks.append(task)
-        return jsonify(tasks)
+
+        return jsonify({
+            "tasks": tasks,
+            "today": today_dhaka.strftime('%Y-%m-%d'),
+            "tomorrow": tomorrow_dhaka.strftime('%Y-%m-%d')
+        })
 
 
 @app.route('/api/tasks', methods=['POST'])
@@ -902,12 +1029,23 @@ def get_task_history():
 @app.route('/api/projects', methods=['GET'])
 def get_projects():
     with get_db() as conn:
+        # Ensure position column exists
+        cursor = conn.execute("PRAGMA table_info(projects)")
+        columns = [row[1] for row in cursor.fetchall()]
+        if 'position' not in columns:
+            conn.execute("ALTER TABLE projects ADD COLUMN position INTEGER DEFAULT 0")
+        
         projects = []
-        rows = conn.execute("SELECT * FROM projects ORDER BY id ASC").fetchall()
+        rows = conn.execute("""
+            SELECT * FROM projects 
+            ORDER BY position ASC, id ASC
+        """).fetchall()
+        
         for row in rows:
             p = dict(row)
             subs = conn.execute(
-                "SELECT * FROM subtasks WHERE project_id = ? ORDER BY id", (p['id'],)
+                "SELECT * FROM subtasks WHERE project_id = ? ORDER BY id", 
+                (p['id'],)
             ).fetchall()
             sub_list = [dict(s) for s in subs]
             completed_count = sum(1 for s in sub_list if s['completed'] == 1)
@@ -917,7 +1055,57 @@ def get_projects():
             p['total'] = len(sub_list)
             p['progress'] = round((completed_count / total) * 100)
             projects.append(p)
+        
         return jsonify(projects)
+
+
+# ====================== PROJECTS REORDER API (Drag & Drop) ======================
+
+@app.route('/api/projects/reorder', methods=['POST'])
+def reorder_projects():
+    """Reorder projects based on drag & drop from frontend"""
+    try:
+        data = request.get_json()
+        order = data.get('order', [])
+        
+        if not order:
+            return jsonify({"error": "No order data provided"}), 400
+
+        with get_db() as conn:
+            for item in order:
+                project_id = item.get('id')
+                position = item.get('position')
+                
+                if project_id is not None and position is not None:
+                    conn.execute(
+                        "UPDATE projects SET id = id WHERE id = ?",  # dummy to allow position update
+                        (project_id,)
+                    )
+                    # Actually we will add a 'position' column later if needed.
+                    # For now we reorder by updating a new position column or by id order.
+            
+            # Better approach: Add position column if not exists and update positions
+            # First ensure 'position' column exists
+            cursor = conn.execute("PRAGMA table_info(projects)")
+            columns = [row[1] for row in cursor.fetchall()]
+            
+            if 'position' not in columns:
+                conn.execute("ALTER TABLE projects ADD COLUMN position INTEGER DEFAULT 0")
+            
+            # Now update positions according to new order
+            for idx, item in enumerate(order):
+                conn.execute(
+                    "UPDATE projects SET position = ? WHERE id = ?",
+                    (idx, item['id'])
+                )
+            
+            conn.commit()
+        
+        return jsonify({"success": True, "message": "Projects reordered successfully"})
+        
+    except Exception as e:
+        print(f"Project reorder error: {str(e)}")
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route('/api/projects', methods=['POST'])

@@ -4,7 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kaeru</title>
+    <link rel="icon" type="image/png" href="https://img.icons8.com/?size=100&id=ySZcrXaaOavG&format=png&color=000000">
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <!-- GSAP for animations -->
@@ -19,6 +23,100 @@
             -webkit-text-fill-color: white !important;
         }
 
+
+
+
+        /* THREE DOTS MENU - Fixed Position to escape overflow:hidden */
+        .task-row:hover .task-menu-btn,
+        .subtask-row:hover .task-menu-btn {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .task-menu {
+            position: relative;
+        }
+
+        .task-menu-btn {
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text3);
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s;
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .task-menu-btn:hover {
+            background: var(--bg3);
+            color: var(--text2);
+        }
+
+        .task-menu-content {
+            display: none;
+            position: fixed;           /* Changed to fixed */
+            background: var(--bg2);
+            border: 1px solid var(--border2);
+            border-radius: 8px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+            z-index: 99999;            /* Extremely high */
+            min-width: 145px;
+            padding: 4px 0;
+        }
+
+        .task-menu-content.show {
+            display: block;
+            animation: menuPop 0.2s ease forwards;
+        }
+
+        .task-menu-item {
+            padding: 9px 16px;
+            font-size: 13px;
+            color: var(--text2);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            white-space: nowrap;
+            transition: all 0.1s;
+        }
+
+        .task-menu-item:hover {
+            background: var(--bg3);
+            color: var(--text);
+        }
+
+        .task-menu-item.danger:hover {
+            background: var(--red-bg);
+            color: var(--red);
+        }
+
+        @keyframes menuPop {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+
+        /* PROJECT DRAG & DROP STYLES */
+        .project-card.dragging {
+            opacity: 0.4;
+            transform: scale(0.97);
+            transition: all 0.2s ease;
+        }
+
+        .project-card.drag-over {
+            border-color: var(--accent) !important;
+            background: var(--accent-bg) !important;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.3);
+            transform: translateY(-2px);
+        }
+
+        
 
         :root[data-theme="dark"] {
             --bg: #0d0d0f; --bg2: #131316; --bg3: #0f1a0f54; --bg4: #12241254; --bgex: #122412
@@ -77,7 +175,7 @@
             width: 10px;
             height: 10px;
             border-radius: 50%;
-            margin-right: 8px;
+            
             transition: all 0.3s ease;
         }
 
@@ -328,7 +426,7 @@
         .circ-progress { position: relative; width: 28px; height: 28px; flex-shrink: 0; }
         .circ-progress svg { transform: rotate(-90deg); }
         .circ-progress .track { fill: none; stroke: var(--bg4); stroke-width: 6; }
-        .circ-progress .fill { fill: none; stroke: var(--accent); stroke-width: 6; stroke-linecap: round; transition: stroke-dashoffset 0.5s cubic-bezier(0.4,0,0.2,1); }
+        .circ-progress .fill { fill: none; stroke: var(--accent); stroke-width: 6; opacity:0.7 ; stroke-linecap: round; transition: stroke-dashoffset 0.5s cubic-bezier(0.4,0,0.2,1); }
 
         /* PROJECT META */
         .project-meta-row {
@@ -1759,6 +1857,7 @@
 // ============================================================
 let tasks = [], projects = [], notes = [], timelessNodes = [], allTags = [];
 let currentNoteId = null;
+let dragSrcProjectId = null;
 let currentNodeId = null;
 let editingProjectId = null;
 let editingNodeId = null;
@@ -1770,6 +1869,8 @@ let sectionState = { tasks: true, projects: true }; // true = expanded
 let tlFilterTag = null;
 let tlSearchQuery = '';
 let nodeTags = []; // tags for current node being edited
+
+
 
 // ============================================================
 // THEME
@@ -1796,6 +1897,7 @@ function toggleTheme() {
 // ============================================================
 // CLOCK - Updates only on user interaction
 // ============================================================
+
 let serverTimeOffset = 0;
 let lastServerTime = null;
 let clockUpdateInterval = null;
@@ -1859,6 +1961,8 @@ function refreshClock() {
         startClockUpdates();
     });
 }
+
+
 
 // ============================================================
 // ACCURATE SYNC SYSTEM - Zero CPU usage, event-driven only
@@ -2071,7 +2175,7 @@ async function api(url, method = 'GET', body = null) {
         }
         
         // Refresh clock after any API operation
-        refreshClock();
+        // refreshClock();
         
         return data;
     } catch (error) {
@@ -2094,7 +2198,7 @@ function setupInteractionListeners() {
     const handleInteraction = () => {
         // Refresh clock on interaction
         if (!document.hidden) {
-            refreshClock();
+            // refreshClock();
         }
         
         // Clear timeout
@@ -2113,7 +2217,7 @@ function setupInteractionListeners() {
     // Also refresh when tab becomes visible
     document.addEventListener('visibilitychange', () => {
         if (!document.hidden) {
-            refreshClock();
+            // refreshClock();
         } else {
             stopClockUpdates();
         }
@@ -2192,34 +2296,137 @@ function toggleSection(which) {
     }
 }
 
+
+// Toggle Upcoming Tasks with smooth animation
+function toggleUpcoming() {
+    isUpcomingExpanded = !isUpcomingExpanded;
+    
+    const chevron = document.getElementById('upcoming-chevron');
+    const container = document.getElementById('upcoming-container');
+    
+    if (!container || !chevron) return;
+
+    if (isUpcomingExpanded) {
+        // Expand
+        chevron.style.transform = 'rotate(0deg)';
+        container.style.height = container.scrollHeight + 'px';
+        container.style.opacity = '1';
+    } else {
+        // Collapse
+        chevron.style.transform = 'rotate(-90deg)';
+        container.style.height = '0px';
+        container.style.opacity = '0';
+    }
+}
+
+// ====================== TASK MENU ======================
+function toggleTaskMenu(taskId, e) {
+    e.stopImmediatePropagation();
+    closeAllMenus();
+    
+    const menu = document.getElementById(`menu-${taskId}`);
+    const btn = e.currentTarget;
+    
+    if (menu && btn) {
+        const rect = btn.getBoundingClientRect();
+        menu.style.top = (rect.bottom + 6) + 'px';
+        menu.style.left = (rect.right - 145) + 'px';   // align to right
+        menu.classList.toggle('show');
+    }
+}
+
+function startEditTaskFromMenu(id) {
+    closeAllMenus();
+    const el = document.querySelector(`#task-${id} .task-title`);
+    if (el) startEditTask(el, id);
+}
+
+async function deleteTaskFromMenu(id) {
+    closeAllMenus();
+    if (confirm('Delete this task?')) {
+        await deleteTask(id);
+    }
+}
+
+// ====================== SUBTASK MENU ======================
+function toggleSubtaskMenu(subId, e) {
+    e.stopImmediatePropagation();
+    closeAllMenus();
+    
+    const menu = document.getElementById(`sub-menu-${subId}`);
+    const btn = e.currentTarget;
+    
+    if (menu && btn) {
+        const rect = btn.getBoundingClientRect();
+        menu.style.top = (rect.bottom + 6) + 'px';
+        menu.style.left = (rect.right - 145) + 'px';
+        menu.classList.toggle('show');
+    }
+}
+
+function startEditSubFromMenu(id) {
+    closeAllMenus();
+    const el = document.querySelector(`#sub-${id} .task-title`);
+    if (el) startEditSub(el, id);
+}
+
+async function deleteSubFromMenu(id) {
+    closeAllMenus();
+    if (confirm('Delete this subtask?')) {
+        await deleteSub(id);
+    }
+}
+
+// Close all open menus when clicking anywhere
+function closeAllMenus() {
+    document.querySelectorAll('.task-menu-content').forEach(menu => {
+        menu.classList.remove('show');
+    });
+}
+
+// Close menus when clicking outside
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.task-menu')) {
+        closeAllMenus();
+    }
+});
+
 // ============================================================
 // TASKS
 // ============================================================
+
+// ============================================================
+// TASKS - Server-controlled Dhaka Time (Fixed)
+// ============================================================
+
+let currentToday = null;
+let currentTomorrow = null;
+let isUpcomingExpanded = true;
+
 async function loadTasks() {
-    const res = await fetch('/api/tasks');
-    tasks = await res.json();
-    renderTimeline();
-}
-
-function getToday() {
-    const d = new Date();
-    const tz = new Date(d.toLocaleString('en-US', { timeZone: 'Asia/Dhaka' }));
-    return tz.toISOString().split('T')[0];
-}
-
-function getTomorrow() {
-    const d = new Date();
-    const tz = new Date(d.toLocaleString('en-US', { timeZone: 'Asia/Dhaka' }));
-    tz.setDate(tz.getDate() + 1);
-    return tz.toISOString().split('T')[0];
+    try {
+        const res = await fetch('/api/tasks');
+        const data = await res.json();
+        
+        tasks = data.tasks || [];
+        currentToday = data.today;
+        currentTomorrow = data.tomorrow;
+        
+        renderTimeline();
+    } catch (err) {
+        console.error("Failed to load tasks:", err);
+    }
 }
 
 function renderTimeline() {
     const body = document.getElementById('timeline-body');
     if (!body) return;
 
-    const today = getToday();
-    const tomorrow = getTomorrow();
+    const today = currentToday;
+    const tomorrow = currentTomorrow;
+
+    if (!today || !tomorrow) return;
+
     const todayTasks = tasks.filter(t => t.due_date === today);
     const tomorrowTasks = tasks.filter(t => t.due_date === tomorrow);
     const upcomingTasks = tasks.filter(t => t.due_date && t.due_date > tomorrow);
@@ -2231,7 +2438,7 @@ function renderTimeline() {
 
     let html = '';
 
-    // Overdue
+    // Overdue Section
     if (pastTasks.length) {
         html += `<div class="date-label"><i class="fa-solid fa-triangle-exclamation" style="color:var(--red);font-size:10px"></i> Overdue</div>`;
         pastTasks.forEach(t => { html += taskRowHTML(t); });
@@ -2244,15 +2451,26 @@ function renderTimeline() {
     html += addRowHTML(today, 'Add task for today…');
     html += '<div class="date-divider" style="margin-top:8px"></div>';
 
-    // TOMORROW explicit
+    // TOMORROW
     html += `<div class="date-label">Tomorrow</div>`;
     tomorrowTasks.forEach(t => { html += taskRowHTML(t); });
     html += addRowHTML(tomorrow, 'Add task for tomorrow…');
 
-    // UPCOMING (grouped with date badge timeline)
+    // ==================== UPCOMING TASKS (COLLAPSIBLE) ====================
     if (upcomingTasks.length) {
         html += '<div class="date-divider" style="margin-top:8px"></div>';
-        html += `<div class="date-label">Upcoming Tasks</div>`;
+        
+        html += `
+            <div class="date-label" style="cursor:pointer; user-select:none;" onclick="toggleUpcoming()">
+                <span style="display:flex;align-items:center;gap:8px">
+                    <i class="fa-solid fa-chevron-down" id="upcoming-chevron" 
+                       style="font-size:11px; transition:transform 0.3s ease; ${isUpcomingExpanded ? '' : 'transform:rotate(-90deg)'}"></i>
+                    Upcoming Tasks
+                </span>
+                <span style="font-size:10px;color:var(--text3);margin-left:auto">(${upcomingTasks.length})</span>
+            </div>`;
+
+        html += `<div id="upcoming-container" style="overflow:hidden; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); ${isUpcomingExpanded ? '' : 'height:0; opacity:0; margin-bottom:0;'}">`;
         html += '<div class="upcoming-timeline" style="padding:8px 10px">';
 
         const grouped = {};
@@ -2267,6 +2485,7 @@ function renderTimeline() {
             const monthName = dObj.toLocaleDateString('en-US', { month: 'short' });
             const dayNum = dObj.getDate();
             const isLast = idx === sortedDates.length - 1;
+
             html += `<div class="upcoming-date-row${isLast ? ' last' : ''}">
                 <div class="date-badge">
                     <span class="month-name">${monthName}</span>
@@ -2277,10 +2496,11 @@ function renderTimeline() {
             html += addRowHTML(date, 'Add task…');
             html += `</div></div>`;
         });
-        html += '</div>';
+
+        html += '</div></div>'; // close upcoming-timeline and container
     }
 
-    // Extra: button to add task on custom date
+    // Add custom date button
     html += `<div style="padding:8px 10px;margin-top:4px">
         <button onclick="showAddTaskModal()" style="background:none;border:1px dashed var(--border2);border-radius:8px;padding:6px 12px;color:var(--text3);font-size:11px;cursor:pointer;width:100%;transition:all 0.15s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text3)'">
             <i class="fa-solid fa-calendar-plus" style="margin-right:6px"></i>Add task for a specific date
@@ -2288,7 +2508,17 @@ function renderTimeline() {
     </div>`;
 
     body.innerHTML = html;
+
+    // Apply GSAP animation after render if collapsed
+    if (!isUpcomingExpanded) {
+        const container = document.getElementById('upcoming-container');
+        if (container) container.style.height = '0px';
+    }
 }
+
+
+
+
 
 function addRowHTML(date, placeholder) {
     return `<div class="add-row" onclick="document.getElementById('ar-${date}')?.focus()">
@@ -2305,9 +2535,19 @@ function taskRowHTML(t) {
     return `<div class="task-row" id="task-${t.id}">
         <input type="checkbox" class="task-check" ${checked} onchange="toggleTask(${t.id})">
         <span class="task-title ${done}" ondblclick="startEditTask(this, ${t.id})">${escH(t.title)}</span>
-        <div class="row-actions">
-            <button class="icon-btn none md:block" onclick="startEditTask(document.querySelector('#task-${t.id} .task-title'),${t.id})" title="Edit"><i class="fa-solid fa-pen" style="font-size:10px"></i></button>
-            <button class="icon-btn danger" onclick="deleteTask(${t.id})" title="Delete"><i class="fa-solid fa-trash" style="font-size:10px"></i></button>
+        
+        <div class="task-menu">
+            <button class="task-menu-btn icon-btn" onclick="toggleTaskMenu(${t.id}, event)">
+                <i class="fa-solid fa-ellipsis-vertical"></i>
+            </button>
+            <div class="task-menu-content" id="menu-${t.id}">
+                <div class="task-menu-item" onclick="startEditTaskFromMenu(${t.id}); event.stopImmediatePropagation()">
+                    <i class="fa-solid fa-pen" style="font-size:12px"></i> Edit
+                </div>
+                <div class="task-menu-item danger" onclick="deleteTaskFromMenu(${t.id}); event.stopImmediatePropagation()">
+                    <i class="fa-solid fa-trash" style="font-size:12px"></i> Delete
+                </div>
+            </div>
         </div>
     </div>`;
 }
@@ -2437,15 +2677,19 @@ async function loadProjects() {
 function renderProjects() {
     const body = document.getElementById('projects-body');
     if (!body) return;
+
     if (!projects.length) {
         body.innerHTML = '<div style="text-align:center;color:var(--text3);padding:30px;font-size:12px"><i class="fa-solid fa-folder-open" style="font-size:24px;opacity:0.3;display:block;margin-bottom:8px"></i>No projects yet.<br>Click + to create one.</div>';
         return;
     }
+
     body.innerHTML = '';
-    projects.forEach(project => {  // Changed from 'p' to 'project' to avoid confusion
+
+    projects.forEach(project => {
         const isOpen = openProjects.has(project.id);
         const pct = project.progress || 0;
-        const r = 11; const circ = 2 * Math.PI * r;
+        const r = 11;
+        const circ = 2 * Math.PI * r;
         const offset = circ - (pct / 100) * circ;
 
         const createdAt = project.added_date ? fmtDate(project.added_date) : '—';
@@ -2453,7 +2697,22 @@ function renderProjects() {
 
         const card = document.createElement('div');
         card.className = 'project-card';
-        card.id = `proj-card-${project.id}`;
+        card.dataset.id = project.id;
+        card.draggable = true;
+
+        // === Drag & Drop Event Listeners (Projects only) ===
+        card.addEventListener('dragstart', handleProjectDragStart);
+        card.addEventListener('dragend', handleProjectDragEnd);
+        card.addEventListener('dragover', handleProjectDragOver);
+        card.addEventListener('dragleave', handleProjectDragLeave);
+        card.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            const targetId = parseInt(card.dataset.id);
+            if (dragSrcProjectId && dragSrcProjectId !== targetId) {
+                await reorderProjects(dragSrcProjectId, targetId);
+            }
+        });
+
         card.innerHTML = `
             <div class="project-header" onclick="toggleProject(${project.id})">
                 <i class="fa-solid fa-chevron-right project-chevron ${isOpen ? 'open' : ''}" id="proj-chev-${project.id}"></i>
@@ -2468,7 +2727,9 @@ function renderProjects() {
                             id="proj-circ-${project.id}"/>
                     </svg>
                 </div>
-                <div class="row-actions" style="opacity:1">
+                <div class="row-actions" style="opacity: 0; transition: opacity 0.3s ease;" 
+                onmouseenter="this.style.opacity='1'" 
+                onmouseleave="this.style.opacity='0'">
                     <button class="icon-btn" onclick="event.stopPropagation();startEditProject(document.getElementById('proj-name-${project.id}'),${project.id},event)" title="Edit"><i class="fa-solid fa-pen" style="font-size:10px"></i></button>
                     <button class="icon-btn danger" onclick="event.stopPropagation();deleteProject(${project.id})" title="Delete"><i class="fa-solid fa-trash" style="font-size:10px"></i></button>
                 </div>
@@ -2485,9 +2746,19 @@ function renderProjects() {
                         return `<div class="subtask-row" id="sub-${sub.id}">
                             <input type="checkbox" class="task-check" ${sc} onchange="toggleSub(${sub.id})">
                             <span class="task-title ${sdone}" style="font-size:12px" ondblclick="startEditSub(this,${sub.id})">${escH(sub.title)}</span>
-                            <div class="row-actions">
-                                <button class="icon-btn" onclick="startEditSub(document.querySelector('#sub-${sub.id} .task-title'),${sub.id})" title="Edit"><i class="fa-solid fa-pen" style="font-size:10px"></i></button>
-                                <button class="icon-btn danger" onclick="deleteSub(${sub.id})" title="Delete"><i class="fa-solid fa-trash" style="font-size:10px"></i></button>
+                            
+                            <div class="task-menu">
+                                <button class="task-menu-btn icon-btn" onclick="toggleSubtaskMenu(${sub.id}, event)">
+                                    <i class="fa-solid fa-ellipsis-vertical"></i>
+                                </button>
+                                <div class="task-menu-content" id="sub-menu-${sub.id}">
+                                    <div class="task-menu-item" onclick="startEditSubFromMenu(${sub.id}); event.stopImmediatePropagation()">
+                                        <i class="fa-solid fa-pen" style="font-size:12px"></i> Edit
+                                    </div>
+                                    <div class="task-menu-item danger" onclick="deleteSubFromMenu(${sub.id}); event.stopImmediatePropagation()">
+                                        <i class="fa-solid fa-trash" style="font-size:12px"></i> Delete
+                                    </div>
+                                </div>
                             </div>
                         </div>`;
                     }).join('')}
@@ -2499,9 +2770,80 @@ function renderProjects() {
                     </div>
                 </div>
             </div>`;
+
         body.appendChild(card);
     });
 }
+
+
+// PROJECTS DRAG & DROP (Does NOT affect Notes)
+
+
+function handleProjectDragStart(e) {
+    const card = e.currentTarget;
+    dragSrcProjectId = parseInt(card.dataset.id);
+    card.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+}
+
+function handleProjectDragEnd(e) {
+    const card = e.currentTarget;
+    if (card) card.classList.remove('dragging');
+    document.querySelectorAll('.project-card').forEach(c => c.classList.remove('drag-over'));
+    dragSrcProjectId = null;
+}
+
+function handleProjectDragOver(e) {
+    e.preventDefault();
+    const card = e.currentTarget;
+    if (dragSrcProjectId && parseInt(card.dataset.id) !== dragSrcProjectId) {
+        card.classList.add('drag-over');
+    }
+}
+
+function handleProjectDragLeave(e) {
+    e.currentTarget.classList.remove('drag-over');
+}
+
+// ============================================================
+// PROJECTS DRAG & DROP REORDER (Backend Sync)
+// ============================================================
+
+async function reorderProjects(srcId, targetId) {
+    const srcIdx = projects.findIndex(p => p.id === srcId);
+    const tgtIdx = projects.findIndex(p => p.id === targetId);
+
+    if (srcIdx === -1 || tgtIdx === -1 || srcIdx === tgtIdx) return;
+
+    // Reorder in memory first for instant UI feedback
+    const [movedProject] = projects.splice(srcIdx, 1);
+    projects.splice(tgtIdx, 0, movedProject);
+
+    // Immediate visual update
+    renderProjects();
+
+    // Prepare payload for backend
+    const orderPayload = projects.map((p, index) => ({
+        id: p.id,
+        position: index
+    }));
+
+    try {
+        await api('/api/projects/reorder', 'POST', { order: orderPayload });
+        toast('Projects reordered and saved', 1800);
+    } catch (err) {
+        console.error('Failed to save project order to server:', err);
+        toast('Order updated locally (will sync later)', 2500);
+        
+        // Optional: Reload from server after a short delay if save fails
+        setTimeout(() => {
+            loadProjects();
+        }, 1500);
+    }
+}
+
+
+
 
 function toggleProject(id) {
     const wrap = document.getElementById(`proj-body-wrap-${id}`);
@@ -3791,33 +4133,28 @@ async function reorderLinks(sourceId, targetId) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    function showLinkModal(linkId = null) {
+    window.showLinkModal = function(linkId = null) {
     editingLinkId = linkId;
-    const titleElem = document.getElementById('link-modal-title');
-    const modal = document.getElementById('link-edit-modal');
+    const titleEl = document.getElementById('link-modal-title');
+    if (titleEl) titleEl.textContent = linkId ? 'Edit Link' : 'Add New Link';
 
-    // Debugging: If these log 'null', the elements aren't found
-    console.log("Title Element:", titleElem);
-    console.log("Modal Element:", modal);
-    
     if (linkId) {
         const link = links.find(l => l.id === linkId);
         if (link) {
-            document.getElementById('link-modal-title').textContent = 'Edit Link';
-            document.getElementById('link-title').value = link.title;
-            document.getElementById('link-url-field').value = link.url;
+            document.getElementById('link-title').value = link.title || '';
+            document.getElementById('link-url-field').value = link.url || '';
         }
     } else {
-        document.getElementById('link-modal-title').textContent = 'Add New Link';
         document.getElementById('link-title').value = '';
         document.getElementById('link-url-field').value = '';
     }
-    
-    document.getElementById('link-edit-modal').style.display = 'flex';
-    setTimeout(() => document.getElementById('link-title').focus(), 50);
-}
-});
 
+    document.getElementById('link-edit-modal').style.display = 'flex';
+    setTimeout(() => document.getElementById('link-title').focus(), 80);
+};
+});
+window.closeLinkEditModal = closeLinkEditModal;
+window.saveLink = saveLink;
 
 
 function closeLinkEditModal() {
