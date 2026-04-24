@@ -116,6 +116,635 @@
             transform: translateY(-2px);
         }
 
+
+        /* ══════════════════════════════════════════
+            PLANNER CALENDAR STYLES
+            ══════════════════════════════════════════ */
+            
+            /* Layout */
+            .planner-root {
+                display: flex;
+                flex: 1;
+                overflow: hidden;
+                height: 100%;
+            }
+            
+            /* Left: calendar area */
+            .planner-cal-area {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+                min-width: 0;
+            }
+            
+            /* Right: day detail panel */
+            .planner-detail-panel {
+                width: 300px;
+                min-width: 300px;
+                border-left: 1px solid var(--border);
+                display: flex;
+                flex-direction: column;
+                background: var(--bg2);
+                overflow: hidden;
+                transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+            }
+            
+            /* Calendar toolbar */
+            .planner-toolbar {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 10px 16px;
+                border-bottom: 1px solid var(--border);
+                background: var(--bg2);
+                flex-shrink: 0;
+                flex-wrap: wrap;
+            }
+            
+            .planner-month-nav {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+            }
+            
+            .planner-month-label {
+                font-size: 14px;
+                font-weight: 700;
+                color: var(--text);
+                min-width: 140px;
+                text-align: center;
+                letter-spacing: 0.01em;
+            }
+            
+            .planner-today-btn {
+                padding: 4px 10px;
+                font-size: 11px;
+                font-weight: 600;
+                border-radius: 6px;
+                border: 1px solid var(--border2);
+                background: none;
+                color: var(--text2);
+                cursor: pointer;
+                font-family: 'Sora', sans-serif;
+                transition: all 0.15s;
+            }
+            .planner-today-btn:hover { background: var(--bg3); color: var(--text); }
+            
+            .planner-view-toggle {
+                display: flex;
+                gap: 2px;
+                background: var(--bg3);
+                border-radius: 8px;
+                padding: 3px;
+                border: 1px solid var(--border);
+            }
+            
+            .planner-view-btn {
+                padding: 4px 12px;
+                font-size: 11px;
+                font-weight: 600;
+                border-radius: 6px;
+                border: none;
+                background: none;
+                color: var(--text3);
+                cursor: pointer;
+                font-family: 'Sora', sans-serif;
+                transition: all 0.15s;
+            }
+            .planner-view-btn.active {
+                background: var(--bg2);
+                color: var(--accent);
+                box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+            }
+            
+            .planner-display-toggle {
+                display: flex;
+                gap: 2px;
+                background: var(--bg3);
+                border-radius: 8px;
+                padding: 3px;
+                border: 1px solid var(--border);
+                margin-left: auto;
+            }
+            
+            .planner-display-btn {
+                padding: 4px 10px;
+                font-size: 11px;
+                font-weight: 600;
+                border-radius: 6px;
+                border: none;
+                background: none;
+                color: var(--text3);
+                cursor: pointer;
+                font-family: 'Sora', sans-serif;
+                transition: all 0.15s;
+            }
+            .planner-display-btn.active {
+                background: var(--bg2);
+                color: var(--accent);
+                box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+            }
+            
+            /* Calendar grid wrapper */
+            .planner-grid-wrap {
+                flex: 1;
+                overflow-y: auto;
+                overflow-x: hidden;
+                padding: 12px 16px 16px;
+            }
+            
+            /* Day-of-week header */
+            .planner-dow-row {
+                display: grid;
+                grid-template-columns: repeat(7, 1fr);
+                gap: 2px;
+                margin-bottom: 4px;
+            }
+            .planner-dow-cell {
+                text-align: center;
+                font-size: 10px;
+                font-weight: 700;
+                color: var(--text3);
+                text-transform: uppercase;
+                letter-spacing: 0.07em;
+                padding: 4px 0;
+            }
+            
+            /* Monthly grid */
+            .planner-month-grid {
+                display: grid;
+                grid-template-columns: repeat(7, 1fr);
+                gap: 3px;
+            }
+            
+            .planner-day-cell {
+                min-height: 72px;
+                border-radius: 8px;
+                border: 1px solid transparent;
+                padding: 5px 6px;
+                cursor: pointer;
+                transition: all 0.15s;
+                position: relative;
+                display: flex;
+                flex-direction: column;
+                background: var(--bg2);
+            }
+            .planner-day-cell:hover {
+                border-color: var(--accent-border);
+                background: var(--accent-bg);
+            }
+            .planner-day-cell.other-month {
+                opacity: 0.35;
+            }
+            .planner-day-cell.today-cell {
+                border-color: var(--accent-border);
+                background: var(--accent-bg);
+            }
+            .planner-day-cell.selected-cell {
+                border-color: var(--accent) !important;
+                box-shadow: 0 0 0 2px rgba(16,185,129,0.18);
+            }
+            .planner-day-cell.today-cell .pday-num {
+                color: var(--accent);
+                font-weight: 700;
+            }
+            
+            .pday-num {
+                font-size: 12px;
+                font-weight: 600;
+                color: var(--text2);
+                line-height: 1;
+                margin-bottom: 3px;
+                flex-shrink: 0;
+            }
+            
+            /* Dot display mode */
+            .pday-dots {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 3px;
+                align-items: flex-start;
+                flex: 1;
+            }
+            .pday-dot {
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+                background: var(--accent);
+                opacity: 0.7;
+                flex-shrink: 0;
+            }
+            .pday-dot.done-dot {
+                background: var(--text3);
+                opacity: 0.4;
+            }
+            .pday-dot.recurring-dot {
+                background: var(--blue);
+                opacity: 0.7;
+            }
+            
+            /* Heatmap display mode */
+            .planner-day-cell.heatmap-cell {
+                cursor: pointer;
+            }
+            /* heatmap bg applied via JS inline style */
+            
+            /* Week view */
+            .planner-week-grid {
+                display: grid;
+                grid-template-columns: repeat(7, 1fr);
+                gap: 6px;
+            }
+            .planner-week-col {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+                min-height: 320px;
+                border-radius: 10px;
+                border: 1px solid var(--border);
+                overflow: hidden;
+                background: var(--bg2);
+                cursor: pointer;
+                transition: border-color 0.15s;
+            }
+            .planner-week-col:hover { border-color: var(--accent-border); }
+            .planner-week-col.today-col { border-color: var(--accent-border); background: var(--accent-bg); }
+            .planner-week-col.selected-col { border-color: var(--accent) !important; box-shadow: 0 0 0 2px rgba(16,185,129,0.18); }
+            
+            .pweek-header {
+                padding: 8px 8px 6px;
+                border-bottom: 1px solid var(--border);
+                background: var(--bg2);
+                flex-shrink: 0;
+            }
+            .pweek-dow {
+                font-size: 10px;
+                font-weight: 700;
+                color: var(--text3);
+                text-transform: uppercase;
+                letter-spacing: 0.06em;
+            }
+            .pweek-day {
+                font-size: 18px;
+                font-weight: 700;
+                color: var(--text);
+                line-height: 1.1;
+            }
+            .today-col .pweek-day { color: var(--accent); }
+            
+            .pweek-tasks {
+                flex: 1;
+                overflow-y: auto;
+                padding: 4px 6px;
+                display: flex;
+                flex-direction: column;
+                gap: 2px;
+            }
+            
+            .pweek-task-chip {
+                font-size: 10px;
+                padding: 3px 6px;
+                border-radius: 5px;
+                background: var(--bg3);
+                color: var(--text2);
+                border: 1px solid var(--border);
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                line-height: 1.3;
+                cursor: pointer;
+                transition: all 0.1s;
+            }
+            .pweek-task-chip:hover { background: var(--accent-bg); border-color: var(--accent-border); color: var(--accent); }
+            .pweek-task-chip.done-chip { text-decoration: line-through; opacity: 0.45; }
+            .pweek-task-chip.recurring-chip { border-left: 2px solid var(--blue); }
+            
+            /* ── Detail panel ── */
+            .planner-detail-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 12px 14px 10px;
+                border-bottom: 1px solid var(--border);
+                flex-shrink: 0;
+            }
+            .planner-detail-date {
+                font-size: 13px;
+                font-weight: 700;
+                color: var(--text);
+            }
+            .planner-detail-sub {
+                font-size: 10px;
+                color: var(--text3);
+                margin-top: 1px;
+            }
+            
+            .planner-detail-body {
+                flex: 1;
+                overflow-y: auto;
+                padding: 10px 14px;
+            }
+            
+            .planner-detail-task-row {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 6px 8px;
+                border-radius: 8px;
+                transition: background 0.1s;
+                cursor: default;
+                border: 1px solid transparent;
+                margin-bottom: 3px;
+            }
+            .planner-detail-task-row:hover {
+                background: var(--bg3);
+                border-color: var(--border);
+            }
+            .planner-detail-task-row.recurring-row {
+                border-left: 2px solid var(--blue);
+            }
+            
+            .pdetail-check {
+                appearance: none;
+                -webkit-appearance: none;
+                width: 15px;
+                height: 15px;
+                border-radius: 4px;
+                border: 1px solid var(--border2);
+                background: var(--bg3);
+                cursor: pointer;
+                position: relative;
+                flex-shrink: 0;
+            }
+            .pdetail-check:checked {
+                background: #065f46;
+                border-color: #065f46;
+            }
+            .pdetail-check:checked::after {
+                content: "★";
+                position: absolute;
+                top: 50%; left: 50%;
+                transform: translate(-50%, -55%);
+                font-size: 10px;
+                color: white;
+            }
+            
+            .pdetail-title {
+                flex: 1;
+                font-size: 12px;
+                color: var(--text);
+                min-width: 0;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .pdetail-title.done { text-decoration: line-through; color: var(--text3); }
+            .pdetail-recurring-badge {
+                font-size: 9px;
+                color: var(--blue);
+                background: rgba(59,130,246,0.1);
+                border-radius: 4px;
+                padding: 1px 5px;
+                flex-shrink: 0;
+            }
+            
+            .pdetail-actions {
+                display: flex;
+                gap: 1px;
+                opacity: 0;
+                transition: opacity 0.15s;
+                flex-shrink: 0;
+            }
+            .planner-detail-task-row:hover .pdetail-actions { opacity: 1; }
+            
+            /* Add task row in detail panel */
+            .pdetail-add-row {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 7px 8px;
+                border-radius: 8px;
+                cursor: text;
+                color: var(--text3);
+                font-size: 12px;
+                transition: background 0.1s;
+                margin-top: 4px;
+            }
+            .pdetail-add-row:hover { background: var(--bg3); color: var(--text2); }
+            .pdetail-add-input {
+                flex: 1;
+                background: none;
+                border: none;
+                outline: none;
+                color: var(--text);
+                font-size: 12px;
+                font-family: 'Sora', sans-serif;
+            }
+            .pdetail-add-input::placeholder { color: var(--text3); }
+            
+            /* recurring options row in detail footer */
+            .planner-detail-footer {
+                padding: 10px 14px;
+                border-top: 1px solid var(--border);
+                flex-shrink: 0;
+            }
+            .recurring-options {
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+                margin-top: 8px;
+                padding: 8px;
+                background: var(--bg3);
+                border-radius: 8px;
+                border: 1px solid var(--border);
+            }
+            .recurring-option-row {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .recurring-option-label {
+                font-size: 11px;
+                color: var(--text2);
+                flex: 1;
+            }
+            
+            /* ── Add Task Modal (planner) ── */
+            #planner-task-modal {
+                display: none;
+                position: fixed;
+                inset: 0;
+                background: rgba(0,0,0,0.55);
+                z-index: 10000;
+                align-items: center;
+                justify-content: center;
+            }
+            #planner-task-modal.show { display: flex; }
+            
+            .planner-modal-box {
+                background: var(--bg2);
+                border: 1px solid var(--border2);
+                border-radius: 14px;
+                width: 360px;
+                max-width: 95vw;
+                box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+                animation: modalFadeIn 0.2s ease;
+            }
+            @keyframes modalFadeIn {
+                from { opacity: 0; transform: translateY(-10px) scale(0.97); }
+                to   { opacity: 1; transform: translateY(0) scale(1); }
+            }
+            
+            /* ── Mobile bottom sheet (day detail) ── */
+            .planner-sheet-backdrop {
+                display: none;
+                position: fixed;
+                inset: 0;
+                background: rgba(0,0,0,0.5);
+                z-index: 1500;
+            }
+            .planner-sheet-backdrop.open { display: block; }
+            
+            .planner-mobile-sheet {
+                display: none;
+                position: fixed;
+                left: 0; right: 0; bottom: 0;
+                background: var(--bg2);
+                border-top: 1px solid var(--border2);
+                border-radius: 20px 20px 0 0;
+                z-index: 1600;
+                flex-direction: column;
+                max-height: 75vh;
+                box-shadow: 0 -8px 32px rgba(0,0,0,0.3);
+                transform: translateY(100%);
+                transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+            }
+            .planner-mobile-sheet.open {
+                display: flex;
+                transform: translateY(0);
+            }
+            
+            .sheet-drag-handle {
+                width: 36px;
+                height: 4px;
+                background: var(--border2);
+                border-radius: 4px;
+                margin: 10px auto 0;
+                flex-shrink: 0;
+            }
+            
+            .sheet-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 10px 16px 8px;
+                border-bottom: 1px solid var(--border);
+                flex-shrink: 0;
+            }
+            .sheet-body {
+                flex: 1;
+                overflow-y: auto;
+                padding: 10px 16px 20px;
+            }
+            
+            /* Recurring toggle switch */
+            .toggle-switch {
+                position: relative;
+                width: 32px;
+                height: 18px;
+                flex-shrink: 0;
+            }
+            .toggle-switch input { opacity: 0; width: 0; height: 0; }
+            .toggle-slider {
+                position: absolute;
+                inset: 0;
+                background: var(--border2);
+                border-radius: 18px;
+                cursor: pointer;
+                transition: background 0.2s;
+            }
+            .toggle-slider::before {
+                content: '';
+                position: absolute;
+                width: 12px; height: 12px;
+                left: 3px; top: 3px;
+                background: white;
+                border-radius: 50%;
+                transition: transform 0.2s;
+            }
+            .toggle-switch input:checked + .toggle-slider { background: var(--accent); }
+            .toggle-switch input:checked + .toggle-slider::before { transform: translateX(14px); }
+            
+            /* Recurring freq select */
+            .planner-freq-select {
+                padding: 4px 8px;
+                border-radius: 6px;
+                border: 1px solid var(--border2);
+                background: var(--bg3);
+                color: var(--text2);
+                font-size: 11px;
+                font-family: 'Sora', sans-serif;
+                outline: none;
+                cursor: pointer;
+            }
+            
+            /* Edit inline in detail panel */
+            .pdetail-edit-input {
+                flex: 1;
+                background: var(--bg3);
+                border: 1px solid var(--accent);
+                border-radius: 6px;
+                color: var(--text);
+                font-size: 12px;
+                font-family: 'Sora', sans-serif;
+                outline: none;
+                padding: 2px 6px;
+            }
+            
+            /* No-task placeholder */
+            .planner-empty {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                padding: 32px 20px;
+                color: var(--text3);
+                font-size: 12px;
+                gap: 8px;
+            }
+            .planner-empty i { font-size: 24px; opacity: 0.4; }
+            
+            /* ── Responsive ── */
+            @media (max-width: 768px) {
+                .planner-detail-panel {
+                    display: none; /* Hidden on mobile — use sheet instead */
+                }
+                .planner-day-cell {
+                    min-height: 48px;
+                    padding: 3px 4px;
+                }
+                .pday-num { font-size: 11px; }
+                .planner-grid-wrap { padding: 8px 8px 12px; }
+                .planner-month-grid { gap: 2px; }
+                .planner-week-grid { grid-template-columns: repeat(7, 1fr); gap: 3px; }
+                .planner-week-col { min-height: 180px; }
+                .pweek-day { font-size: 14px; }
+                .planner-toolbar { gap: 6px; padding: 8px 10px; }
+                .planner-month-label { min-width: 110px; font-size: 13px; }
+            }
+            
+            @media (max-width: 480px) {
+                .planner-view-btn { padding: 4px 8px; font-size: 10px; }
+                .planner-display-btn { padding: 4px 7px; font-size: 10px; }
+                .planner-month-label { min-width: 90px; font-size: 12px; }
+                .planner-week-col { min-height: 140px; }
+                .pweek-header { padding: 5px 5px 4px; }
+                .pweek-dow { font-size: 9px; }
+                .pweek-day { font-size: 12px; }
+                .pday-dot { width: 5px; height: 5px; }
+            }
+
         
 
         :root[data-theme="dark"] {
@@ -1302,6 +1931,9 @@
         <button class="tab-btn {% if tab == 'tasks' %}active{% endif %}" onclick="location.href='/tasks'" title="Tasks">
             <i class="fa-solid fa-list-check"></i><span class="tab-text">Tasks</span>
         </button>
+        <button class="tab-btn {% if tab == 'planner' %}active{% endif %}" onclick="location.href='/planner'" title="Planner">
+            <i class="fa-solid fa-calendar-days"></i><span class="tab-text">Planner</span>
+        </button>
         <button class="tab-btn {% if tab == 'notes' %}active{% endif %}" onclick="location.href='/notes'" title="Notes">
             <i class="fa-solid fa-note-sticky"></i><span class="tab-text">Notes</span>
         </button>
@@ -1619,7 +2251,161 @@
     </div>
 </div>
 
+
+{% elif tab == 'planner' %}
+<!-- PLANNER TAB -->
+<div class="planner-root" id="planner-root">
+ 
+    <!-- ── Left: Calendar Area ── -->
+    <div class="planner-cal-area">
+ 
+        <!-- Toolbar -->
+        <div class="planner-toolbar">
+            <!-- Month navigation -->
+            <div class="planner-month-nav">
+                <button class="icon-btn" onclick="plannerPrevPeriod()" title="Previous">
+                    <i class="fa-solid fa-chevron-left" style="font-size:10px"></i>
+                </button>
+                <span class="planner-month-label" id="planner-month-label">April 2026</span>
+                <button class="icon-btn" onclick="plannerNextPeriod()" title="Next">
+                    <i class="fa-solid fa-chevron-right" style="font-size:10px"></i>
+                </button>
+            </div>
+ 
+            <button class="planner-today-btn" onclick="plannerGoToday()">Today</button>
+ 
+            <!-- View toggle: Monthly / Weekly -->
+            <div class="planner-view-toggle">
+                <button class="planner-view-btn active" id="planner-view-monthly" onclick="setPlannerView('monthly')">Monthly</button>
+                <button class="planner-view-btn" id="planner-view-weekly" onclick="setPlannerView('weekly')">Weekly</button>
+            </div>
+ 
+            <!-- Display toggle: Dots / Heatmap -->
+            <div class="planner-display-toggle">
+                <button class="planner-display-btn active" id="planner-disp-dots" onclick="setPlannerDisplay('dots')">
+                    <i class="fa-solid fa-circle" style="font-size:8px;margin-right:3px"></i>Dots
+                </button>
+                <button class="planner-display-btn" id="planner-disp-heatmap" onclick="setPlannerDisplay('heatmap')">
+                    <i class="fa-solid fa-fire" style="font-size:9px;margin-right:3px"></i>Heat
+                </button>
+            </div>
+ 
+            <!-- Add task button -->
+            <button class="icon-btn" onclick="openPlannerAddModal()" title="Add task" style="color:var(--accent);margin-left:4px">
+                <i class="fa-solid fa-plus"></i>
+            </button>
+        </div>
+ 
+        <!-- Calendar Grid -->
+        <div class="planner-grid-wrap" id="planner-grid-wrap">
+            <!-- JS renders grid here -->
+        </div>
+    </div>
+ 
+    <!-- ── Right: Day Detail Panel (desktop) ── -->
+    <div class="planner-detail-panel" id="planner-detail-panel">
+        <div class="planner-detail-header" id="planner-detail-header">
+            <div>
+                <div class="planner-detail-date" id="planner-detail-date">Select a day</div>
+                <div class="planner-detail-sub" id="planner-detail-sub">Click any day to see tasks</div>
+            </div>
+            <button class="icon-btn" onclick="openPlannerAddModal(plannerSelectedDate)" title="Add task for this day">
+                <i class="fa-solid fa-plus" style="font-size:11px"></i>
+            </button>
+        </div>
+        <div class="planner-detail-body" id="planner-detail-body">
+            <div class="planner-empty">
+                <i class="fa-regular fa-calendar"></i>
+                <span>Click a day to view tasks</span>
+            </div>
+        </div>
+    </div>
+</div>
+ 
+<!-- ── Mobile bottom sheet ── -->
+<div class="planner-sheet-backdrop" id="planner-sheet-backdrop" onclick="closePlannerSheet()"></div>
+<div class="planner-mobile-sheet" id="planner-mobile-sheet">
+    <div class="sheet-drag-handle"></div>
+    <div class="sheet-header">
+        <div>
+            <div class="planner-detail-date" id="sheet-detail-date">Date</div>
+            <div class="planner-detail-sub" id="sheet-detail-sub"></div>
+        </div>
+        <div style="display:flex;gap:4px">
+            <button class="icon-btn" onclick="openPlannerAddModal(plannerSelectedDate)" title="Add task">
+                <i class="fa-solid fa-plus" style="font-size:11px"></i>
+            </button>
+            <button class="icon-btn" onclick="closePlannerSheet()">
+                <i class="fa-solid fa-xmark" style="font-size:11px"></i>
+            </button>
+        </div>
+    </div>
+    <div class="sheet-body" id="sheet-detail-body"></div>
+</div>
+ 
+<!-- ── Add / Edit Task Modal ── -->
+<div id="planner-task-modal" onclick="if(event.target===this)closePlannerTaskModal()">
+    <div class="planner-modal-box">
+        <div class="modal-header">
+            <span class="modal-title" id="planner-modal-title">Add Task</span>
+            <button class="icon-btn" onclick="closePlannerTaskModal()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="planner-modal-task-id" value="">
+ 
+            <div class="field-group">
+                <div class="field-label">Task Title</div>
+                <input class="field-input" id="planner-modal-title-input" type="text" placeholder="What do you need to do?">
+            </div>
+ 
+            <div class="field-group">
+                <div class="field-label">Date</div>
+                <input class="field-input" id="planner-modal-date-input" type="date">
+            </div>
+ 
+            <!-- Recurring section -->
+            <div class="field-group">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+                    <div class="field-label" style="margin-bottom:0">Recurring Task</div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="planner-modal-recurring" onchange="toggleRecurringOptions()">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+ 
+                <div id="planner-recurring-opts" style="display:none">
+                    <div class="recurring-options">
+                        <div class="recurring-option-row">
+                            <span class="recurring-option-label">Frequency</span>
+                            <select class="planner-freq-select" id="planner-modal-freq">
+                                <option value="daily">Daily</option>
+                                <option value="weekly" selected>Weekly</option>
+                                <option value="monthly">Monthly</option>
+                            </select>
+                        </div>
+                        <div class="recurring-option-row">
+                            <span class="recurring-option-label">End date (optional)</span>
+                            <input type="date" class="planner-freq-select" id="planner-modal-end-date" style="padding:4px 8px">
+                        </div>
+                        <div style="font-size:10px;color:var(--text3);line-height:1.4">
+                            <i class="fa-solid fa-info-circle" style="margin-right:3px"></i>
+                            Recurring tasks repeat automatically. You can pause them from the detail panel — no need to delete.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="closePlannerTaskModal()">Cancel</button>
+            <button class="btn-primary" onclick="savePlannerTask()">Save Task</button>
+        </div>
+    </div>
+</div>
+
+
+
     {% endif %}
+    
 
     </div><!-- /main -->
 </div><!-- /app -->
@@ -4753,6 +5539,765 @@ function initNoteEditor() {
     });
 }
 
+
+
+// ── State ──────────────────────────────────────────────────
+let plannerView       = 'monthly';   // 'monthly' | 'weekly'
+let plannerDisplay    = 'dots';      // 'dots' | 'heatmap'
+let plannerCursor     = new Date();  // current month/week being shown
+let plannerSelectedDate = null;      // currently selected day string YYYY-MM-DD
+let plannerAllTasks   = [];          // [{id, title, completed, due_date, recurring, recurring_freq, recurring_end, recurring_paused}]
+
+// ── Bootstrap ──────────────────────────────────────────────
+async function initPlanner() {
+    // Set cursor to today
+    plannerCursor = new Date();
+    plannerSelectedDate = null;
+
+    // Load tasks from backend
+    await loadPlannerTasks();
+
+    // Render
+    renderPlannerCalendar();
+}
+
+// ── Load tasks ─────────────────────────────────────────────
+async function loadPlannerTasks() {
+    try {
+        const res = await fetch('/api/tasks');
+        const data = await res.json();
+        // data may be { tasks: [...] } or [...]
+        const raw = Array.isArray(data) ? data : (data.tasks || []);
+
+        // Expand recurring tasks into virtual entries
+        plannerAllTasks = expandRecurringTasks(raw);
+    } catch (e) {
+        console.error('Planner loadTasks error:', e);
+    }
+}
+
+// ── Expand recurring tasks into virtual date entries ────────
+function expandRecurringTasks(tasks) {
+    const result = [];
+    const today = new Date();
+    today.setHours(0,0,0,0);
+
+    // Look-ahead: 365 days
+    const lookAheadDays = 365;
+    const maxDate = new Date(today);
+    maxDate.setDate(maxDate.getDate() + lookAheadDays);
+
+    for (const t of tasks) {
+        if (!t.recurring || t.recurring === 0 || t.recurring_paused === 1) {
+            // Normal task — just add as-is
+            result.push({...t, isVirtual: false});
+            continue;
+        }
+
+        // Recurring task — generate future occurrences
+        if (!t.due_date) {
+            result.push({...t, isVirtual: false});
+            continue;
+        }
+
+        let cursor = parseLocalDate(t.due_date);
+        const endDate = t.recurring_end ? parseLocalDate(t.recurring_end) : maxDate;
+        const freq = t.recurring_freq || 'weekly';
+
+        // Add the original task
+        result.push({...t, isVirtual: false});
+
+        // Generate future occurrences
+        let count = 0;
+        while (count < 500) {
+            // Advance cursor
+            if (freq === 'daily') {
+                cursor = new Date(cursor); cursor.setDate(cursor.getDate() + 1);
+            } else if (freq === 'weekly') {
+                cursor = new Date(cursor); cursor.setDate(cursor.getDate() + 7);
+            } else if (freq === 'monthly') {
+                cursor = new Date(cursor); cursor.setMonth(cursor.getMonth() + 1);
+            } else {
+                break;
+            }
+
+            if (cursor > endDate || cursor > maxDate) break;
+
+            const dateStr = formatDate(cursor);
+            // Don't duplicate if same date already exists for this task title
+            const alreadyExists = tasks.some(x => x.due_date === dateStr && x.title === t.title && x.id !== t.id);
+            if (!alreadyExists) {
+                result.push({
+                    ...t,
+                    id: t.id,                // keep original id so CRUD routes to source
+                    due_date: dateStr,
+                    isVirtual: true,         // marks it as a generated copy
+                    sourceId: t.id
+                });
+            }
+            count++;
+        }
+    }
+
+    return result;
+}
+
+// ── Helpers ────────────────────────────────────────────────
+function parseLocalDate(str) {
+    // YYYY-MM-DD → local midnight Date
+    const [y, m, d] = str.split('-').map(Number);
+    return new Date(y, m - 1, d);
+}
+
+function formatDate(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const dy = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${dy}`;
+}
+
+function todayStr() {
+    return formatDate(new Date());
+}
+
+function getTasksForDate(dateStr) {
+    const targetDate = new Date(dateStr);
+    return plannerAllTasks.filter(task => {
+        // 1. Same-day regular task
+        if (task.due_date === dateStr) return true;
+        
+        // 2. Recurring task logic
+        if (task.recurring_type && !task.recurring_paused) {
+            const startDate = new Date(task.recurring_start || task.due_date);
+            if (targetDate < startDate) return false;
+            
+            // Basic "Daily" check
+            if (task.recurring_type === 'daily') return true;
+            
+            // Basic "Weekly" check
+            if (task.recurring_type === 'weekly') {
+                return startDate.getDay() === targetDate.getDay();
+            }
+        }
+        return false;
+    });
+}
+
+function getTaskCountsForMonth(year, month) {
+    // Returns { 'YYYY-MM-DD': count, ... }
+    const counts = {};
+    const prefix = `${year}-${String(month + 1).padStart(2, '0')}-`;
+    for (const t of plannerAllTasks) {
+        if (t.due_date && t.due_date.startsWith(prefix)) {
+            counts[t.due_date] = (counts[t.due_date] || 0) + 1;
+        }
+    }
+    return counts;
+}
+
+// ── View / Display setters ──────────────────────────────────
+function setPlannerView(v) {
+    plannerView = v;
+    document.getElementById('planner-view-monthly').classList.toggle('active', v === 'monthly');
+    document.getElementById('planner-view-weekly').classList.toggle('active', v === 'weekly');
+    renderPlannerCalendar();
+}
+
+function setPlannerDisplay(d) {
+    plannerDisplay = d;
+    document.getElementById('planner-disp-dots').classList.toggle('active', d === 'dots');
+    document.getElementById('planner-disp-heatmap').classList.toggle('active', d === 'heatmap');
+    renderPlannerCalendar();
+}
+
+// ── Navigation ──────────────────────────────────────────────
+function plannerPrevPeriod() {
+    if (plannerView === 'monthly') {
+        plannerCursor = new Date(plannerCursor.getFullYear(), plannerCursor.getMonth() - 1, 1);
+    } else {
+        plannerCursor = new Date(plannerCursor);
+        plannerCursor.setDate(plannerCursor.getDate() - 7);
+    }
+    renderPlannerCalendar();
+}
+
+function plannerNextPeriod() {
+    if (plannerView === 'monthly') {
+        plannerCursor = new Date(plannerCursor.getFullYear(), plannerCursor.getMonth() + 1, 1);
+    } else {
+        plannerCursor = new Date(plannerCursor);
+        plannerCursor.setDate(plannerCursor.getDate() + 7);
+    }
+    renderPlannerCalendar();
+}
+
+function plannerGoToday() {
+    plannerCursor = new Date();
+    renderPlannerCalendar();
+}
+
+// ── Master Render ───────────────────────────────────────────
+function renderPlannerCalendar() {
+    const wrap = document.getElementById('planner-grid-wrap');
+    if (!wrap) return;
+
+    // Update label
+    const label = document.getElementById('planner-month-label');
+    if (plannerView === 'monthly') {
+        label.textContent = plannerCursor.toLocaleString('default', { month: 'long', year: 'numeric' });
+    } else {
+        // Show week range
+        const weekStart = getWeekStart(plannerCursor);
+        const weekEnd   = new Date(weekStart); weekEnd.setDate(weekEnd.getDate() + 6);
+        const opts = { month: 'short', day: 'numeric' };
+        label.textContent = weekStart.toLocaleDateString('default', opts) + ' – ' + weekEnd.toLocaleDateString('default', { ...opts, year: 'numeric' });
+    }
+
+    if (plannerView === 'monthly') {
+        renderMonthGrid(wrap);
+    } else {
+        renderWeekGrid(wrap);
+    }
+}
+
+// ── Monthly grid ────────────────────────────────────────────
+function renderMonthGrid(wrap) {
+    const year  = plannerCursor.getFullYear();
+    const month = plannerCursor.getMonth(); // 0-indexed
+
+    const counts   = getTaskCountsForMonth(year, month);
+    const maxCount = Math.max(...Object.values(counts), 1);
+
+    const firstDay = new Date(year, month, 1).getDay(); // 0=Sun
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const prevMonthDays = new Date(year, month, 0).getDate();
+
+    const todayS = todayStr();
+
+    let html = `<div class="planner-dow-row">`;
+    ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(d => {
+        html += `<div class="planner-dow-cell">${d}</div>`;
+    });
+    html += `</div><div class="planner-month-grid" id="planner-month-grid">`;
+
+    // Leading cells from previous month
+    for (let i = firstDay - 1; i >= 0; i--) {
+        const d = prevMonthDays - i;
+        const dateStr = formatDate(new Date(year, month - 1, d));
+        html += buildDayCell(dateStr, d, true, counts, maxCount, todayS);
+    }
+
+    // Current month days
+    for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = formatDate(new Date(year, month, d));
+        html += buildDayCell(dateStr, d, false, counts, maxCount, todayS);
+    }
+
+    // Trailing cells to fill grid
+    const totalCells = firstDay + daysInMonth;
+    const trailingCount = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
+    for (let d = 1; d <= trailingCount; d++) {
+        const dateStr = formatDate(new Date(year, month + 1, d));
+        html += buildDayCell(dateStr, d, true, counts, maxCount, todayS);
+    }
+
+    html += `</div>`;
+    wrap.innerHTML = html;
+}
+
+function buildDayCell(dateStr, dayNum, otherMonth, counts, maxCount, todayS) {
+    const isToday    = dateStr === todayS;
+    const isSelected = dateStr === plannerSelectedDate;
+    const count      = counts[dateStr] || 0;
+    const tasks      = getTasksForDate(dateStr);
+
+    let cls = 'planner-day-cell';
+    if (otherMonth)  cls += ' other-month';
+    if (isToday)     cls += ' today-cell';
+    if (isSelected)  cls += ' selected-cell';
+
+    let inner = `<div class="pday-num">${dayNum}</div>`;
+
+    if (plannerDisplay === 'heatmap') {
+        cls += ' heatmap-cell';
+        // inline heatmap bg set after
+    } else {
+        // Dots mode
+        if (tasks.length > 0) {
+            inner += `<div class="pday-dots">`;
+            tasks.slice(0, 12).forEach(t => {
+                let dotCls = 'pday-dot';
+                if (t.completed) dotCls += ' done-dot';
+                else if (t.recurring) dotCls += ' recurring-dot';
+                inner += `<div class="${dotCls}"></div>`;
+            });
+            inner += `</div>`;
+        }
+    }
+
+    // heatmap inline style will be patched below
+    const heatStyle = (plannerDisplay === 'heatmap' && count > 0)
+        ? `;${getHeatmapStyle(count, maxCount)}`
+        : '';
+
+    return `<div class="${cls}" style="${heatStyle}" onclick="plannerSelectDay('${dateStr}')" data-date="${dateStr}">${inner}</div>`;
+}
+
+function getHeatmapStyle(count, maxCount) {
+    const ratio = count / maxCount;
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    if (isDark) {
+        // Green tint: darker = more tasks
+        const alpha = 0.12 + ratio * 0.55;
+        return `background:rgba(16,185,129,${alpha.toFixed(2)});border-color:rgba(16,185,129,${(alpha * 1.5).toFixed(2)})`;
+    } else {
+        const alpha = 0.10 + ratio * 0.50;
+        return `background:rgba(5,150,105,${alpha.toFixed(2)});border-color:rgba(5,150,105,${(alpha * 1.4).toFixed(2)})`;
+    }
+}
+
+// ── Weekly grid ─────────────────────────────────────────────
+function renderWeekGrid(wrap) {
+    const weekStart = getWeekStart(plannerCursor);
+    const todayS    = todayStr();
+
+    let html = `<div class="planner-week-grid">`;
+
+    for (let i = 0; i < 7; i++) {
+        const day     = new Date(weekStart);
+        day.setDate(day.getDate() + i);
+        const dateStr = formatDate(day);
+        const tasks   = getTasksForDate(dateStr);
+        const isToday = dateStr === todayS;
+        const isSel   = dateStr === plannerSelectedDate;
+
+        const dowNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+        let colCls = 'planner-week-col';
+        if (isToday) colCls += ' today-col';
+        if (isSel)   colCls += ' selected-col';
+
+        html += `<div class="${colCls}" onclick="plannerSelectDay('${dateStr}')">
+            <div class="pweek-header">
+                <div class="pweek-dow">${dowNames[day.getDay()]}</div>
+                <div class="pweek-day">${day.getDate()}</div>
+            </div>
+            <div class="pweek-tasks">`;
+
+        tasks.forEach(t => {
+            let chipCls = 'pweek-task-chip';
+            if (t.completed)  chipCls += ' done-chip';
+            if (t.recurring)  chipCls += ' recurring-chip';
+            html += `<div class="${chipCls}" title="${escapeHtml(t.title)}">${escapeHtml(t.title)}</div>`;
+        });
+
+        if (tasks.length === 0) {
+            html += `<div style="font-size:10px;color:var(--text3);padding:4px 2px">No tasks</div>`;
+        }
+
+        html += `</div></div>`;
+    }
+
+    html += `</div>`;
+    wrap.innerHTML = html;
+}
+
+function getWeekStart(d) {
+    const day = d.getDay(); // 0 = Sun
+    const start = new Date(d);
+    start.setDate(d.getDate() - day);
+    start.setHours(0,0,0,0);
+    return start;
+}
+
+// ── Day selection & detail panel ────────────────────────────
+function plannerSelectDay(dateStr) {
+    plannerSelectedDate = dateStr;
+
+    // Update selected visual
+    renderPlannerCalendar(); // re-render to update selected state
+
+    // Decide desktop vs mobile
+    const isMobile = window.innerWidth <= 768;
+    if (isMobile) {
+        openPlannerSheet(dateStr);
+    } else {
+        renderDetailPanel(dateStr);
+    }
+}
+
+function renderDetailPanel(dateStr) {
+    const d = parseLocalDate(dateStr);
+    const todayS = todayStr();
+
+    const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+    const dateLabel = document.getElementById('planner-detail-date');
+    const dateSub   = document.getElementById('planner-detail-sub');
+    const body      = document.getElementById('planner-detail-body');
+    if (!dateLabel) return;
+
+    dateLabel.textContent = `${dayNames[d.getDay()]}, ${monthNames[d.getMonth()]} ${d.getDate()}`;
+    dateSub.textContent   = dateStr === todayS ? 'Today' : '';
+
+    body.innerHTML = buildDetailBody(dateStr, false);
+}
+
+function buildDetailBody(dateStr, isMobile) {
+    const tasks = getTasksForDate(dateStr);
+    let html = '';
+
+    if (tasks.length === 0) {
+        html += `<div class="planner-empty">
+            <i class="fa-regular fa-calendar-xmark"></i>
+            <span>No tasks for this day</span>
+        </div>`;
+    } else {
+        tasks.forEach(t => {
+            const isDone     = t.completed === 1;
+            const isRecurr   = t.recurring === 1;
+
+            // Show pause/resume if recurring
+            let recurBadge = '';
+            if (isRecurr) {
+                if (t.recurring_paused) {
+                    recurBadge = `<span class="pdetail-recurring-badge" style="background:rgba(239,68,68,0.1);color:var(--red)">paused</span>`;
+                } else {
+                    recurBadge = `<span class="pdetail-recurring-badge">↻ ${t.recurring_freq || 'recurring'}</span>`;
+                }
+            }
+
+            html += `<div class="planner-detail-task-row ${isRecurr ? 'recurring-row' : ''}" id="pdt-${t.id}-${dateStr}">
+                <input type="checkbox" class="pdetail-check" ${isDone ? 'checked' : ''}
+                    onchange="plannerToggleTask(${t.id}, this.checked, '${dateStr}')">
+                <span class="pdetail-title ${isDone ? 'done' : ''}" id="pdt-title-${t.id}-${dateStr}">${escapeHtml(t.title)}</span>
+                ${recurBadge}
+                <div class="pdetail-actions">
+                    ${isRecurr ? `<button class="icon-btn" title="${t.recurring_paused ? 'Resume' : 'Pause'} recurring" 
+                        onclick="plannerToggleRecurring(${t.id}, ${t.recurring_paused ? 0 : 1}, '${dateStr}')" style="font-size:10px;${t.recurring_paused ? 'color:var(--accent)' : 'color:var(--text3)'}">
+                        <i class="fa-solid fa-${t.recurring_paused ? 'play' : 'pause'}"></i>
+                    </button>` : ''}
+                    <button class="icon-btn" title="Edit" onclick="plannerEditTask(${t.id}, '${dateStr}')" style="font-size:10px">
+                        <i class="fa-solid fa-pen"></i>
+                    </button>
+                    <button class="icon-btn danger" title="Delete" onclick="plannerDeleteTask(${t.id}, '${dateStr}')" style="font-size:10px">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
+            </div>`;
+        });
+    }
+
+    // Add task row
+    html += `<div class="pdetail-add-row" onclick="this.querySelector('input').focus()">
+        <i class="fa-solid fa-plus" style="font-size:10px;color:var(--accent)"></i>
+        <input class="pdetail-add-input" placeholder="Add task for this day…"
+            onkeydown="if(event.key==='Enter'&&this.value.trim())plannerQuickAddTask(this,'${dateStr}')">
+    </div>`;
+
+    return html;
+}
+
+// ── Mobile Sheet ─────────────────────────────────────────────
+function openPlannerSheet(dateStr) {
+    const d = parseLocalDate(dateStr);
+    const dayNames   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+    document.getElementById('sheet-detail-date').textContent = `${dayNames[d.getDay()]}, ${monthNames[d.getMonth()]} ${d.getDate()}`;
+    document.getElementById('sheet-detail-sub').textContent  = dateStr === todayStr() ? 'Today' : '';
+    document.getElementById('sheet-detail-body').innerHTML    = buildDetailBody(dateStr, true);
+
+    document.getElementById('planner-sheet-backdrop').classList.add('open');
+    document.getElementById('planner-mobile-sheet').classList.add('open');
+}
+
+function closePlannerSheet() {
+    document.getElementById('planner-sheet-backdrop').classList.remove('open');
+    document.getElementById('planner-mobile-sheet').classList.remove('open');
+}
+
+// ── Task CRUD ────────────────────────────────────────────────
+async function plannerToggleTask(taskId, checked, dateStr) {
+    try {
+        // 1. Show "Saving" status if SyncManager exists
+        if (window.syncManager) {
+            window.syncManager.updateUI('saving', 'Saving...');
+        }
+
+        // 2. Persist to DB
+        const response = await fetch(`/api/planner/tasks/${taskId}/toggle`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ completed: checked ? 1 : 0 })
+        });
+
+        if (!response.ok) throw new Error('Failed to save');
+
+        // 3. Update in-memory state so it stays after re-render
+        plannerAllTasks = plannerAllTasks.map(t => {
+            if (t.id === taskId) return { ...t, completed: checked ? 1 : 0 };
+            return t;
+        });
+
+        // 4. Update UI
+        renderPlannerCalendar();
+        if (plannerSelectedDate === dateStr) {
+            const bodyId = window.innerWidth <= 768 ? 'sheet-detail-body' : 'planner-detail-body';
+            document.getElementById(bodyId).innerHTML = buildDetailBody(dateStr, window.innerWidth <= 768);
+        }
+
+        // 5. Success UI
+        if (window.syncManager) {
+            window.syncManager.updateUI('synced', 'Synced');
+        }
+
+    } catch (e) {
+        console.error(e);
+        toast('Failed to update task');
+        if (window.syncManager) window.syncManager.updateUI('error', 'Error');
+    }
+}
+
+async function plannerDeleteTask(taskId, dateStr) {
+    if (!confirm('Delete this task?')) return;
+
+    try {
+        await fetch(`/api/tasks/${taskId}`, { method: 'DELETE' });
+
+        // Remove from in-memory (all instances of this id)
+        plannerAllTasks = plannerAllTasks.filter(t => t.id !== taskId);
+
+        renderPlannerCalendar();
+        if (plannerSelectedDate === dateStr) {
+            if (window.innerWidth <= 768) {
+                document.getElementById('sheet-detail-body').innerHTML = buildDetailBody(dateStr, true);
+            } else {
+                document.getElementById('planner-detail-body').innerHTML = buildDetailBody(dateStr, false);
+            }
+        }
+
+        if (typeof loadTasks === 'function') {
+            try { await loadTasks(); } catch(_) {}
+        }
+
+        toast('Task deleted');
+    } catch (e) {
+        toast('Failed to delete task');
+    }
+}
+
+function plannerEditTask(taskId, dateStr) {
+    // Find the task (original)
+    const task = plannerAllTasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    // Open modal pre-filled for edit
+    document.getElementById('planner-modal-title').textContent   = 'Edit Task';
+    document.getElementById('planner-modal-task-id').value       = taskId;
+    document.getElementById('planner-modal-title-input').value   = task.title;
+    document.getElementById('planner-modal-date-input').value    = task.due_date || dateStr;
+    document.getElementById('planner-modal-recurring').checked   = task.recurring === 1;
+    document.getElementById('planner-modal-freq').value          = task.recurring_freq || 'weekly';
+    document.getElementById('planner-modal-end-date').value      = task.recurring_end || '';
+    toggleRecurringOptions();
+
+    document.getElementById('planner-task-modal').classList.add('show');
+}
+
+async function plannerQuickAddTask(input, dateStr) {
+    const title = input.value.trim();
+    if (!title) return;
+    input.value = '';
+
+    try {
+        const res = await fetch('/api/tasks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title, due_date: dateStr, completed: 0 })
+        });
+        const data = await res.json();
+        const newTask = { id: data.id, title, completed: 0, due_date: dateStr, recurring: 0 };
+
+        plannerAllTasks.push(newTask);
+
+        renderPlannerCalendar();
+        if (plannerSelectedDate === dateStr) {
+            if (window.innerWidth <= 768) {
+                document.getElementById('sheet-detail-body').innerHTML = buildDetailBody(dateStr, true);
+            } else {
+                document.getElementById('planner-detail-body').innerHTML = buildDetailBody(dateStr, false);
+            }
+        }
+
+        if (typeof loadTasks === 'function') {
+            try { await loadTasks(); } catch(_) {}
+        }
+
+        toast('Task added');
+    } catch (e) {
+        toast('Failed to add task');
+    }
+}
+
+async function plannerToggleRecurring(taskId, pause, dateStr) {
+    // pause: 1 = pause, 0 = resume
+    try {
+        await fetch(`/api/tasks/${taskId}/recurring`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ recurring_paused: pause })
+        });
+
+        plannerAllTasks = plannerAllTasks.map(t => {
+            if (t.id === taskId) return { ...t, recurring_paused: pause };
+            return t;
+        });
+
+        // Re-expand recurring tasks
+        const raw = plannerAllTasks.filter(t => !t.isVirtual);
+        plannerAllTasks = expandRecurringTasks(raw);
+
+        renderPlannerCalendar();
+        if (plannerSelectedDate === dateStr) {
+            if (window.innerWidth <= 768) {
+                document.getElementById('sheet-detail-body').innerHTML = buildDetailBody(dateStr, true);
+            } else {
+                document.getElementById('planner-detail-body').innerHTML = buildDetailBody(dateStr, false);
+            }
+        }
+
+        toast(pause ? 'Recurring paused' : 'Recurring resumed');
+    } catch (e) {
+        toast('Failed to update recurring setting');
+    }
+}
+
+// ── Add/Edit Modal ────────────────────────────────────────────
+function openPlannerAddModal(dateStr) {
+    // Reset modal for add
+    document.getElementById('planner-modal-title').textContent   = 'Add Task';
+    document.getElementById('planner-modal-task-id').value       = '';
+    document.getElementById('planner-modal-title-input').value   = '';
+    document.getElementById('planner-modal-date-input').value    = dateStr || plannerSelectedDate || todayStr();
+    document.getElementById('planner-modal-recurring').checked   = false;
+    document.getElementById('planner-modal-freq').value          = 'weekly';
+    document.getElementById('planner-modal-end-date').value      = '';
+    toggleRecurringOptions();
+
+    document.getElementById('planner-task-modal').classList.add('show');
+    setTimeout(() => document.getElementById('planner-modal-title-input').focus(), 100);
+}
+
+function closePlannerTaskModal() {
+    document.getElementById('planner-task-modal').classList.remove('show');
+}
+
+function toggleRecurringOptions() {
+    const checked = document.getElementById('planner-modal-recurring').checked;
+    document.getElementById('planner-recurring-opts').style.display = checked ? 'block' : 'none';
+}
+
+async function savePlannerTask() {
+    const taskId    = document.getElementById('planner-modal-task-id').value;
+    const title     = document.getElementById('planner-modal-title-input').value.trim();
+    const dueDate   = document.getElementById('planner-modal-date-input').value;
+    const recurring = document.getElementById('planner-modal-recurring').checked ? 1 : 0;
+    const freq      = document.getElementById('planner-modal-freq').value;
+    const endDate   = document.getElementById('planner-modal-end-date').value || null;
+
+    if (!title) { toast('Please enter a task title'); return; }
+    if (!dueDate) { toast('Please select a date'); return; }
+
+    const payload = {
+        title,
+        due_date: dueDate,
+        completed: 0,
+        recurring,
+        recurring_freq: recurring ? freq : null,
+        recurring_end: recurring ? endDate : null
+    };
+
+    try {
+        if (taskId) {
+            // Edit
+            await fetch(`/api/tasks/${taskId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            // Update in-memory
+            plannerAllTasks = plannerAllTasks.map(t => {
+                if (t.id === parseInt(taskId)) return { ...t, ...payload, id: parseInt(taskId), isVirtual: false };
+                return t;
+            });
+        } else {
+            // Create
+            const res = await fetch('/api/tasks', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            const newTask = { id: data.id, ...payload, isVirtual: false };
+            plannerAllTasks.push(newTask);
+
+            // Expand recurring if needed
+            if (recurring) {
+                const raw = plannerAllTasks.filter(t => !t.isVirtual);
+                plannerAllTasks = expandRecurringTasks(raw);
+            }
+        }
+
+        closePlannerTaskModal();
+        renderPlannerCalendar();
+
+        // Refresh detail panel
+        if (plannerSelectedDate) {
+            if (window.innerWidth <= 768) {
+                document.getElementById('sheet-detail-body').innerHTML = buildDetailBody(plannerSelectedDate, true);
+            } else {
+                renderDetailPanel(plannerSelectedDate);
+            }
+        }
+
+        // Jump calendar to the task date
+        const taskDate = parseLocalDate(dueDate);
+        plannerCursor = taskDate;
+        renderPlannerCalendar();
+
+        if (typeof loadTasks === 'function') {
+            try { await loadTasks(); } catch(_) {}
+        }
+
+        toast(taskId ? 'Task updated' : 'Task added');
+    } catch (e) {
+        console.error(e);
+        toast('Failed to save task');
+    }
+}
+
+// ── Escape HTML helper ─────────────────────────────────────
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Keyboard shortcut: Escape closes modal / sheet ─────────
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+        closePlannerTaskModal();
+        closePlannerSheet();
+    }
+});
+
+
+
+
+
+
+
 // ============================================================
 // INIT
 // ============================================================
@@ -4777,6 +6322,10 @@ window.addEventListener('load', async () => {
     else if (tab === 'links') {
         await loadLinks();
     }
+    else if (tab === 'planner') {
+        await initPlanner();
+    }
+    
 });
 
 window.addEventListener('resize', initMobile);

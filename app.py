@@ -3,7 +3,7 @@
 import os
 import sqlite3
 from datetime import datetime, timedelta
-from datetime import datetime, timedelta
+
 import time
 import re
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
@@ -418,7 +418,20 @@ def init_db():
             conn.execute('ALTER TABLE links ADD COLUMN pinned INTEGER DEFAULT 0')
 
 
+        # Add this inside init_db() function, after creating the tasks table
 
+        # Add recurring task columns to tasks table (migration)
+        cursor = conn.execute("PRAGMA table_info(tasks);")
+        tasks_columns = [row[1] for row in cursor.fetchall()]
+
+        if 'recurring' not in tasks_columns:
+            conn.execute('ALTER TABLE tasks ADD COLUMN recurring INTEGER DEFAULT 0')
+        if 'recurring_freq' not in tasks_columns:
+            conn.execute('ALTER TABLE tasks ADD COLUMN recurring_freq TEXT DEFAULT "weekly"')
+        if 'recurring_end' not in tasks_columns:
+            conn.execute('ALTER TABLE tasks ADD COLUMN recurring_end TEXT')
+        if 'recurring_paused' not in tasks_columns:
+            conn.execute('ALTER TABLE tasks ADD COLUMN recurring_paused INTEGER DEFAULT 0')
 
 
         # ==================== SEEDING LOGIC ====================
@@ -932,6 +945,10 @@ def timeless():
     init_db()
     return render_template('index.html', tab='timeless')
 
+@app.route('/planner')
+def planner():
+    init_db()
+    return render_template('index.html', tab='planner')
 
 # ====================== TASKS API ======================
 
@@ -1562,10 +1579,9 @@ def import_links():
 
 
 # ====================== IMPORT/EXPORT API ======================
-
 @app.route('/api/export', methods=['POST'])
 def export_data():
-    """Export all data as JSON"""
+    """Export all data as JSON (updated with recurring task fields)"""
     try:
         data = request.get_json()
         if not data:
@@ -1581,9 +1597,9 @@ def export_data():
             return jsonify({"error": "Invalid access key"}), 401
         
         with get_db() as conn:
-            # Export all tables
+            # Export all tables with updated schema
             export = {
-                "version": "1.0",
+                "version": "2.0",  # Version bump for recurring tasks
                 "export_date": datetime.now().isoformat(),
                 "tasks": [dict(row) for row in conn.execute("SELECT * FROM tasks").fetchall()],
                 "projects": [dict(row) for row in conn.execute("SELECT * FROM projects").fetchall()],
@@ -1601,9 +1617,11 @@ def export_data():
         print(f"Export error: {str(e)}")  # Debug
         return jsonify({"error": f"Export failed: {str(e)}"}), 500
 
+
+
 @app.route('/api/import', methods=['POST'])
 def import_data():
-    """Import data from JSON backup"""
+    """Import data from JSON backup (handles both v1 and v2 formats)"""
     data = request.get_json()
     access_key = data.get('access_key', '')
     backup_data = data.get('data', {})
@@ -1635,13 +1653,30 @@ def import_data():
             # Reset autoincrement counters
             conn.execute("DELETE FROM sqlite_sequence")
             
-            # Import tasks
+            # Check tasks table columns for recurring fields
+            cursor = conn.execute("PRAGMA table_info(tasks)")
+            task_columns = [row[1] for row in cursor.fetchall()]
+            has_recurring_fields = all(col in task_columns for col in ['recurring', 'recurring_freq', 'recurring_end', 'recurring_paused'])
+            
+            # Import tasks (handle both old and new format)
             for task in backup_data.get('tasks', []):
-                conn.execute(
-                    "INSERT INTO tasks (id, title, completed, due_date, created_at) VALUES (?, ?, ?, ?, ?)",
-                    (task.get('id'), task.get('title'), task.get('completed', 0), 
-                     task.get('due_date'), task.get('created_at'))
-                )
+                # Check if task has recurring fields, add defaults if missing
+                if has_recurring_fields:
+                    conn.execute(
+                        """INSERT INTO tasks (id, title, completed, due_date, created_at, 
+                           recurring, recurring_freq, recurring_end, recurring_paused) 
+                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                        (task.get('id'), task.get('title'), task.get('completed', 0), 
+                         task.get('due_date'), task.get('created_at'),
+                         task.get('recurring', 0), task.get('recurring_freq', 'weekly'),
+                         task.get('recurring_end'), task.get('recurring_paused', 0))
+                    )
+                else:
+                    conn.execute(
+                        "INSERT INTO tasks (id, title, completed, due_date, created_at) VALUES (?, ?, ?, ?, ?)",
+                        (task.get('id'), task.get('title'), task.get('completed', 0), 
+                         task.get('due_date'), task.get('created_at'))
+                    )
             
             # Import projects
             for project in backup_data.get('projects', []):
@@ -1840,6 +1875,101 @@ def debug_schema():
         cursor = conn.execute("PRAGMA table_info(timeless_nodes)")
         columns = cursor.fetchall()
         return jsonify([dict(col) for col in columns])
+    
+
+
+
+# ====================== PLANNER API ======================
+
+@app.route('/api/planner/tasks', methods=['GET'])
+def get_planner_tasks():
+    # Get range from query params (e.g., start=2026-04-01&end=2026-04-30)
+    start_date = request.args.get('start')
+    end_date = request.args.get('end')
+    
+    with get_db() as conn:
+        # 1. Fetch regular tasks in range
+        query = "SELECT * FROM tasks WHERE (due_date BETWEEN ? AND ?) OR (recurring_type IS NOT NULL AND recurring_paused = 0)"
+        rows = conn.execute(query, (start_date, end_date)).fetchall()
+        
+        # Convert to list of dicts
+        tasks = [dict(row) for row in rows]
+        
+    return jsonify(tasks)
+
+
+@app.route('/api/planner/tasks/<int:task_id>', methods=['PUT'])
+def update_planner_task(task_id):
+    """Update task with recurring settings"""
+    data = request.get_json()
+    
+    with get_db() as conn:
+        # Build update query dynamically
+        updates = []
+        params = []
+        
+        if 'title' in data:
+            updates.append("title = ?")
+            params.append(data['title'])
+        if 'completed' in data:
+            updates.append("completed = ?")
+            params.append(data['completed'])
+        if 'due_date' in data:
+            updates.append("due_date = ?")
+            params.append(data['due_date'])
+        if 'recurring' in data:
+            updates.append("recurring = ?")
+            params.append(1 if data['recurring'] else 0)
+        if 'recurring_freq' in data:
+            updates.append("recurring_freq = ?")
+            params.append(data['recurring_freq'])
+        if 'recurring_end' in data:
+            updates.append("recurring_end = ?")
+            params.append(data['recurring_end'] if data['recurring_end'] else None)
+        if 'recurring_paused' in data:
+            updates.append("recurring_paused = ?")
+            params.append(1 if data['recurring_paused'] else 0)
+        
+        if updates:
+            query = f"UPDATE tasks SET {', '.join(updates)} WHERE id = ?"
+            params.append(task_id)
+            conn.execute(query, params)
+            conn.commit()
+    
+    return jsonify({"success": True})
+
+
+@app.route('/api/planner/tasks/<int:task_id>/toggle', methods=['POST'])
+def toggle_planner_task(task_id):
+    data = request.get_json()
+    # Use 1 for true, 0 for false for SQLite compatibility
+    completed = 1 if data.get('completed') else 0
+    
+    with get_db() as conn:
+        conn.execute("UPDATE tasks SET completed = ? WHERE id = ?", (completed, task_id))
+        conn.commit()
+    
+    return jsonify({"success": True})
+
+
+@app.route('/api/planner/tasks/<int:task_id>/recurring', methods=['PUT'])
+def toggle_planner_recurring(task_id):
+    """Pause or resume recurring task"""
+    data = request.get_json()
+    paused = data.get('recurring_paused', 0)
+    
+    with get_db() as conn:
+        conn.execute("UPDATE tasks SET recurring_paused = ? WHERE id = ?", (paused, task_id))
+        conn.commit()
+    
+    return jsonify({"success": True})
+
+
+
+
+
+
+
 
 init_db()
 
