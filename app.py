@@ -490,9 +490,15 @@ def get_password():
 
 @app.before_request
 def check_auth():
+    # Allow login page + static files
     if request.path.startswith(('/static', '/login')) or request.path in ['/favicon.ico']:
         return
-    if 'authenticated' not in session:
+
+    # 🔐 Get key from header
+    client_key = request.headers.get('X-ACCESS-KEY')
+
+    # ❌ Block everything if key missing or wrong
+    if not client_key or client_key != get_password():
         return redirect(url_for('login'))
 
 
@@ -500,6 +506,7 @@ def check_auth():
 def login():
     if request.method == 'POST':
         key = request.form.get('key')
+
         if key == get_password():
             session_id = log_login()   # <-- NEW
             session['authenticated'] = True
@@ -764,6 +771,12 @@ def login():
     </div>
     
     <script>
+
+    localStorage.removeItem('kaeru_key');
+    window.__KAERU_KEY__ = null;
+
+
+
     // Animation Configuration (Your original beautiful animation - unchanged)
     const englishWord = 'Kaeru';
     const japaneseWord = '代える';
@@ -846,6 +859,8 @@ def login():
             accessInput.value = '';
             if (response.ok) {
                 
+                 window.__KAERU_KEY__ = key;
+
                 window.location.href = '/tasks';
             } else {
                 errorDiv.classList.add('visible');
