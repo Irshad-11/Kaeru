@@ -25,6 +25,15 @@
 
 
 
+        .session-card {
+            transition: all 0.2s ease;
+        }
+
+        .session-card:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow2);
+        }
+
 
         /* THREE DOTS MENU - Fixed Position to escape overflow:hidden */
         .task-row:hover .task-menu-btn,
@@ -1898,9 +1907,9 @@
     <!-- Add this right after the opening body tag or in the head -->
 <script>
     // Override console.log to show in UI for debugging
-    const originalLog = console.log;
-    console.log = function(...args) {
-        originalLog.apply(console, args);
+    // const originalLog = console.log;
+    // console.log = function(...args) {
+    //     originalLog.apply(console, args);
         
         // Create debug panel if it doesn't exist
         let debugPanel = document.getElementById('debug-panel');
@@ -1924,7 +1933,7 @@
 <div class="topbar">
     <div style="display:flex;align-items:center;gap:6px;margin-right:8px">
         <span class="hide-kaeru-on-mobile" style="font-size:13px;font-weight:700;color:var(--text)">代える</span>
-        <span style="font-size:13px;font-weight:700;color:var(--text);cursor:pointer;" onclick="openSettingsOverlay()">Kaeru</span>
+        <span style="font-size:13px;font-weight:700;color:var(--text);cursor:pointer;" onclick="openKaeruSettingsOverlay()">Kaeru</span>
     </div>
 
     <div class="tab-nav">
@@ -1966,8 +1975,8 @@
             <i class="fa-solid fa-clock-rotate-left"></i>
         </button>
         {% endif %}
-        <button class="icon-btn danger" onclick="location.href='/logout'" title="Logout">
-            <i class="fa-solid fa-right-from-bracket"></i>
+        <button onclick="openSettingsOverlay()" class="icon-btn" title="Settings" style="font-size:15px;">
+            <i class="fa-solid  fa-shield-halved"></i>
         </button>
     </div>
 
@@ -2413,6 +2422,63 @@
 <!-- TOAST -->
 <div id="toast"></div>
 
+<!-- SETTINGS OVERLAY -->
+<div id="settings-overlay" class="modal-overlay" style="display:none;">
+    <div class="modal-box" style="max-width:520px; width:95%;">
+        <div class="modal-header">
+            <div class="modal-title flex items-center gap-3">
+                <i class="fa-solid fa-shield-halved text-emerald-400"></i>
+                <span>Security &amp; Sessions</span>
+            </div>
+            <button onclick="closeSettingsOverlay()" class="icon-btn text-xl">✕</button>
+        </div>
+        
+        <div class="modal-body p-0">
+            <!-- Tabs inside overlay -->
+            <div class="flex border-b border-zinc-700 text-sm">
+                <button onclick="switchSettingsTab(0)" id="sett-tab-0" class="settings-tab-btn flex-1 py-3 font-medium active">Log History</button>
+                <button onclick="switchSettingsTab(1)" id="sett-tab-1" class="settings-tab-btn flex-1 py-3 font-medium">Change Password</button>
+            </div>
+
+            <!-- TAB 1: LOG HISTORY -->
+            <div id="settings-log-tab" class="p-5">
+                <div class="flex justify-between items-center mb-4">
+                    <p class="text-xs text-zinc-400">Active &amp; past sessions</p>
+                    <button onclick="clearLogHistory()" class="text-red-400 hover:text-red-500 text-xs flex items-center gap-1">
+                        <i class="fa-solid fa-trash"></i> Clear History
+                    </button>
+                </div>
+                <div id="session-list" class="space-y-3 max-h-[420px] overflow-y-auto pr-2"></div>
+            </div>
+
+            <!-- TAB 2: CHANGE PASSWORD -->
+            <div id="settings-password-tab" class="p-5 hidden">
+                <div class="space-y-5">
+                    <div>
+                        <div class="field-label">Current Access Key</div>
+                        <input id="curr-pass" type="password" class="field-input" placeholder="••••••••">
+                    </div>
+                    <div>
+                        <div class="field-label">New Access Key</div>
+                        <input id="new-pass" type="password" class="field-input" placeholder="New key (min 4 chars)">
+                    </div>
+                    <button onclick="performPasswordChange()" class="btn-primary w-full py-3">
+                        Change Password &amp; Logout All Devices
+                    </button>
+                    <p class="text-[10px] text-zinc-500 text-center">This will log you out from every device.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-footer border-t border-zinc-700 pt-4">
+            <button onclick="closeSettingsOverlay()" class="btn-secondary">Close</button>
+            <button onclick="logoutCurrentDevice()" class="bg-red-500/90 hover:bg-red-600 text-white px-6 py-2.5 rounded-xl text-sm font-medium flex items-center gap-2">
+                <i class="fa-solid fa-right-from-bracket"></i> Logout This Device
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- ========== MODALS ========== -->
 
 <!-- Add Project Modal -->
@@ -2559,14 +2625,14 @@
 
 
 <!-- Settings/Info Overlay -->
-<div class="modal-overlay" id="settings-overlay" style="display:none" onclick="if(event.target===this)closeSettingsOverlay()">
+<div class="modal-overlay" id="kaeru-settings-overlay" style="display:none" onclick="if(event.target===this)closeKaeruSettingsOverlay()">
     <div class="modal-box" style="max-width: 500px;">
         <div class="modal-header">
             <span class="modal-title">
                 <i class="fa-solid fa-torii-gate" style="margin-right: 10px; color: var(--accent);"></i>
                 Kaeru Workspace
             </span>
-            <button class="icon-btn" onclick="closeSettingsOverlay()">
+            <button class="icon-btn" onclick="closeKaeruSettingsOverlay()">
                 <i class="fa-solid fa-xmark"></i>
             </button>
         </div>
@@ -2577,7 +2643,7 @@
                     <i class="fa-solid fa-database" style="font-size: 24px; color: var(--accent);"></i>
                     <div>
                         <div style="font-size: 13px; font-weight: 600;">System Information</div>
-                        <div style="font-size: 11px; color: var(--text3);">Version 6.3.2 | By Irshad Hossain</div>
+                        <div style="font-size: 11px; color: var(--text3);">Version 7.3.1 | By Irshad Hossain</div>
                     </div>
                 </div>
                 <div id="system-stats" style="font-size: 11px; color: var(--text2);">
@@ -2607,7 +2673,7 @@
             </div>
         </div>
         <div class="modal-footer">
-            <button class="btn-secondary" onclick="closeSettingsOverlay()">Close</button>
+            <button class="btn-secondary" onclick="closeKaeruSettingsOverlay()">Close</button>
         </div>
     </div>
 </div>
@@ -2655,6 +2721,215 @@ let sectionState = { tasks: true, projects: true }; // true = expanded
 let tlFilterTag = null;
 let tlSearchQuery = '';
 let nodeTags = []; // tags for current node being edited
+
+
+
+
+
+
+
+
+
+
+let currentSettingsTab = 0;
+
+function openSettingsOverlay() {
+    document.getElementById('settings-overlay').style.display = 'flex';
+    loadSessionHistory();
+    switchSettingsTab(0);
+}
+
+function closeSettingsOverlay() {
+    document.getElementById('settings-overlay').style.display = 'none';
+}
+
+function switchSettingsTab(tab) {
+    currentSettingsTab = tab;
+    document.getElementById('settings-log-tab').classList.toggle('hidden', tab !== 0);
+    document.getElementById('settings-password-tab').classList.toggle('hidden', tab !== 1);
+    
+    document.querySelectorAll('.settings-tab-btn').forEach((b,i) => {
+        b.classList.toggle('active', i===tab);
+        b.classList.toggle('text-emerald-400', i===tab);
+    });
+}
+
+async function loadSessionHistory() {
+    try {
+        const res = await fetch('/api/settings/sessions');
+        const sessions = await res.json();
+        
+        // Store current session ID for later use
+        const currentSession = sessions.find(s => s.is_current === 1);
+        if (currentSession) {
+            window.currentSessionId = currentSession.session_id;
+        }
+
+        const container = document.getElementById('session-list');
+        let html = '';
+
+        sessions.forEach(s => {
+            const isCurrent = s.is_current === 1;
+            const isActive = s.status === 'active';
+
+            html += `
+    <div class="session-card bg-[var(--bg2)]  rounded-2xl p-5 flex gap-5 items-start hover:border-[var(--accent-border)] transition-all">
+        <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-3">
+                <span class="font-medium text-[var(--text)]">${s.device_name}</span>
+                ${isCurrent ? 
+                    `<span class="text-[10px] bg-[var(--accent-bg)] text-[var(--accent)] px-2.5 py-1 rounded-lg font-medium">This Device</span>` : 
+                    ''}
+            </div>
+            
+            <div class="text-sm text-[var(--text2)] mt-1">
+                ${s.os_name} • ${s.browser_name}
+            </div>
+            
+            <div class="text-xs text-[var(--text3)] mt-3 space-y-1">
+                <div>Logged in: ${new Date(s.login_time).toLocaleString()}</div>
+                ${s.logout_time ? 
+                    `<div>Logged out: ${new Date(s.logout_time).toLocaleString()}</div>` : 
+                    ''}
+            </div>
+        </div>
+
+        <div class="text-right flex flex-col items-end gap-3">
+            <span class="inline-flex items-center px-3 py-1 text-xs font-medium rounded-full 
+                ${isActive ? 
+                    'bg-[var(--accent-bg)] text-[var(--accent)] border border-[var(--accent-border)]' : 
+                    'bg-[var(--bg3)] text-[var(--text3)] border border-[var(--border)]'}">
+                ${isActive ? 'Active' : 'Logged Out'}
+            </span>
+            
+            ${isActive ? `
+                <button onclick="endSpecificSession('${s.session_id}')" 
+                        class="text-[var(--red)] hover:text-red-500 hover:bg-[var(--red-bg)] px-4 py-2 text-xs font-medium rounded-xl transition-all flex items-center gap-1">
+                    <i class="fa-solid fa-xmark"></i>
+                    End Session
+                </button>
+            ` : ''}
+        </div>
+    </div>
+`;
+        });
+
+        if (sessions.length === 0) {
+            html = `
+                <div class="text-center py-16 text-[var(--text3)]">
+                    <i class="fa-solid fa-history text-3xl mb-3 opacity-40"></i>
+                    <p>No session history yet</p>
+                </div>`;
+        }
+
+        container.innerHTML = html;
+
+    } catch (e) {
+        console.error('Failed to load sessions:', e);
+        const container = document.getElementById('session-list');
+        if (container) {
+            container.innerHTML = `<div class="text-center py-10 text-[var(--red)]">Failed to load session history</div>`;
+        }
+    }
+}
+
+async function endSpecificSession(sessionId) {
+    if (!confirm('⚠️ End this session?\n\nThis device will be logged out completely.')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/settings/sessions/${sessionId}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            toast('Session terminated');
+
+            // CRITICAL: If this is the current device
+            if (result.is_current_device === true || sessionId === currentSessionId) {
+                console.log("Clearing localStorage and redirecting to login...");
+
+                // Force clear localStorage
+                localStorage.removeItem('kaeru_key');
+                localStorage.clear();                    // Extra safety
+
+                // Small delay then redirect
+                setTimeout(() => {
+                    window.location.href = '/login';
+                }, 600);
+            } else {
+                // For other devices, just refresh the list
+                loadSessionHistory();
+            }
+        } else {
+            toast('Failed to terminate session');
+        }
+    } catch (error) {
+        console.error('Terminate session error:', error);
+        toast('Failed to end session. Please try again.');
+    }
+}
+
+let currentSessionId = null;
+
+async function clearLogHistory() {
+    if (!confirm('Clear ALL login history?')) return;
+    try {
+        await fetch('/api/settings/sessions/clear', { method: 'POST' });
+        toast('History cleared');
+        loadSessionHistory();
+    } catch(e) {
+        toast('Failed');
+    }
+}
+
+async function performPasswordChange() {
+    const curr = document.getElementById('curr-pass').value.trim();
+    const newp = document.getElementById('new-pass').value.trim();
+    
+    if (!curr || !newp) {
+        toast('Both fields required');
+        return;
+    }
+    
+    if (!confirm('This will log you out from ALL devices. Continue?')) return;
+    
+    try {
+        const res = await fetch('/api/settings/password', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({current_key: curr, new_key: newp})
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+            toast(data.message || 'Password changed successfully');
+            closeSettingsOverlay();
+            // Force full logout
+            localStorage.removeItem('kaeru_key');
+            window.location.href = '/login';
+        } else {
+            toast(data.error || 'Failed');
+        }
+    } catch(e) {
+        toast('Network error');
+    }
+}
+
+function logoutCurrentDevice() {
+    if (confirm('Logout from this device?')) {
+        localStorage.removeItem('kaeru_key');   // ← Add this line
+        window.location.href = '/logout';
+    }
+}
+
+// Add to your existing window.load or DOMContentLoaded
+// window.addEventListener('load', () => { ... existing ... });
+
 
 
 
@@ -3343,6 +3618,35 @@ function focusDateInput(date) {
     if (!date) return;
     showAddTaskModal(date);
     document.getElementById('global-date-picker').value = '';
+}
+
+
+
+// ==================== PLANNER HELPER FUNCTIONS ====================
+
+function getToday() {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function formatDate(d) {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function parseLocalDate(str) {
+    if (!str) return new Date();
+    const [y, m, d] = str.split('-').map(Number);
+    return new Date(y, m - 1, d);
+}
+
+function todayStr() {
+    return getToday();
 }
 
 function showAddTaskModal(date = '') {
@@ -4059,18 +4363,18 @@ function toggleTagsBar() {
 
 // Replace the loadTimeless function
 async function loadTimeless() {
-    console.log('Loading timeless nodes...');
+    // console.log('Loading timeless nodes...');
     const res = await fetch('/api/timeless');
     timelessNodes = await res.json();
     
-    console.log('Loaded nodes:', timelessNodes);
+    // console.log('Loaded nodes:', timelessNodes);
     timelessNodes.forEach(node => {
-        console.log(`Node ${node.id} - Title: "${node.title}", Tags raw: "${node.tags}", Tags list:`, node.tags_list);
+        // console.log(`Node ${node.id} - Title: "${node.title}", Tags raw: "${node.tags}", Tags list:`, node.tags_list);
     });
     
     // Force rebuild allTags
     allTags = [...new Set(timelessNodes.flatMap(n => n.tags_list || []))].sort();
-    console.log('All unique tags:', allTags);
+    // console.log('All unique tags:', allTags);
     
     renderTagsBar();
     applyTlFilters();
@@ -4321,7 +4625,7 @@ function navigateToNode(id) {
 }
 
 function selectNode(id) {
-    console.log('Selecting node:', id);
+    // console.log('Selecting node:', id);
     currentNodeId = id;
     renderTimelineVirtual();
     const node = timelessNodes.find(n => n.id === id);
@@ -4330,9 +4634,9 @@ function selectNode(id) {
         return;
     }
     
-    console.log('Selected node data:', node);
-    console.log('Node tags:', node.tags);
-    console.log('Node tags_list:', node.tags_list);
+    // console.log('Selected node data:', node);
+    // console.log('Node tags:', node.tags);
+    // console.log('Node tags_list:', node.tags_list);
 
     const detailBody = buildDetailHTML(node);
     const isMobile = window.innerWidth <= 768;
@@ -4348,7 +4652,7 @@ function selectNode(id) {
 }
 
 function buildDetailHTML(node) {
-    console.log('Building detail HTML for node:', node.id);
+    // console.log('Building detail HTML for node:', node.id);
     
     let html = `<div style="margin-bottom:14px">
         <div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:6px">${escH(node.title)}</div>
@@ -4407,23 +4711,23 @@ function buildDetailHTML(node) {
 }
 
 async function debugCheckDatabase() {
-    console.log('=== DEBUG: Checking database ===');
+    // console.log('=== DEBUG: Checking database ===');
     const response = await fetch('/api/timeless');
     const data = await response.json();
-    console.log('All nodes from API:', data);
+    // console.log('All nodes from API:', data);
     
     data.forEach(node => {
-        console.log(`Node ID: ${node.id}`);
-        console.log(`  Title: ${node.title}`);
-        console.log(`  Raw tags field: "${node.tags}"`);
-        console.log(`  Tags list:`, node.tags_list);
-        console.log(`  Type of tags: ${typeof node.tags}`);
+        // console.log(`Node ID: ${node.id}`);
+        // console.log(`  Title: ${node.title}`);
+        // console.log(`  Raw tags field: "${node.tags}"`);
+        // console.log(`  Tags list:`, node.tags_list);
+        // console.log(`  Type of tags: ${typeof node.tags}`);
     });
     
     // Also check if there's a tags endpoint
     const tagsResponse = await fetch('/api/timeless/tags');
     const tagsData = await tagsResponse.json();
-    console.log('All tags from /api/timeless/tags:', tagsData);
+    // console.log('All tags from /api/timeless/tags:', tagsData);
 }
 
 function closeDetail() {
@@ -4450,7 +4754,7 @@ function showNodeModal(node = null) {
         nodeTags = node.tags.split(',').map(t => t.trim()).filter(t => t);
     }
     
-    console.log('Opening modal with tags:', nodeTags); // Debug
+    // console.log('Opening modal with tags:', nodeTags); // Debug
     
     document.getElementById('node-modal-title').textContent = node ? 'Edit Node' : 'New Node';
     document.getElementById('node-title').value = node ? node.title : '';
@@ -4480,7 +4784,7 @@ function closeNodeModal() { document.getElementById('node-modal').style.display 
 
 // TAG INPUT SYSTEM
 function handleTagKeyPress(e) {
-    console.log('Tag input key pressed:', e.key, 'keyCode:', e.keyCode);
+    // console.log('Tag input key pressed:', e.key, 'keyCode:', e.keyCode);
     
     if (e.key === 'Enter' || e.key === ',' || e.keyCode === 13 || e.keyCode === 188) {
         e.preventDefault();
@@ -4492,7 +4796,7 @@ function handleTagKeyPress(e) {
         // Remove trailing comma if present
         val = val.replace(/,+$/, '');
         
-        console.log('Processing tag input, value:', val);
+        // console.log('Processing tag input, value:', val);
         
         if (val && val.length > 0) {
             addTagManually(val);
@@ -4508,22 +4812,22 @@ function handleTagKeyPress(e) {
 // New function to manually add tags
 function addTagManually(tag) {
     if (!tag || tag.trim() === '') {
-        console.log('Empty tag, ignoring');
+        // console.log('Empty tag, ignoring');
         return;
     }
     
     tag = tag.trim();
-    console.log('addTagManually called with:', tag);
-    console.log('Current nodeTags before add:', nodeTags);
+    // console.log('addTagManually called with:', tag);
+    // console.log('Current nodeTags before add:', nodeTags);
     
     if (nodeTags.includes(tag)) { 
         toast('Tag "' + tag + '" already added'); 
-        console.log('Tag already exists:', tag);
+        // console.log('Tag already exists:', tag);
         return; 
     }
     
     nodeTags.push(tag);
-    console.log('Tag added. New nodeTags:', nodeTags);
+    // console.log('Tag added. New nodeTags:', nodeTags);
     renderTagsPreview();
     toast('Tag "' + tag + '" added');
 }
@@ -4533,9 +4837,9 @@ function addTag(tag) {
 }
 
 function removeTag(tag) {
-    console.log('Removing tag:', tag);
+    // console.log('Removing tag:', tag);
     nodeTags = nodeTags.filter(t => t !== tag);
-    console.log('Updated nodeTags array:', nodeTags);
+    // console.log('Updated nodeTags array:', nodeTags);
     renderTagsPreview();
     toast('Tag "' + tag + '" removed');
 }
@@ -4544,7 +4848,7 @@ function renderTagsPreview() {
     const prev = document.getElementById('tags-preview');
     if (!prev) return;
     
-    console.log('Rendering tags preview. Current nodeTags:', nodeTags);
+    // console.log('Rendering tags preview. Current nodeTags:', nodeTags);
     
     if (!nodeTags || nodeTags.length === 0) {
         prev.innerHTML = '<div style="color:var(--text3); font-size:11px; padding:4px 0;">No tags added. Type a tag and press Enter.</div>';
@@ -4568,7 +4872,7 @@ function showTagSuggestions(val) {
     }
     
     const q = val.toLowerCase().trim();
-    console.log('Showing suggestions for:', q);
+    // console.log('Showing suggestions for:', q);
     
     // Get all existing tags from the system
     const allExistingTags = allTags || [];
@@ -4576,7 +4880,7 @@ function showTagSuggestions(val) {
         t.toLowerCase().includes(q) && !nodeTags.includes(t)
     );
     
-    console.log('Matches found:', matches);
+    // console.log('Matches found:', matches);
     
     if (!matches.length) { 
         sug.style.display = 'none'; 
@@ -4648,14 +4952,14 @@ async function saveNode() {
     });
 
     // CRITICAL: Make sure tags are properly formatted
-    console.log('=== SAVING NODE ===');
-    console.log('Current nodeTags array BEFORE save:', nodeTags);
-    console.log('nodeTags length:', nodeTags.length);
-    console.log('nodeTags type:', typeof nodeTags);
+    // console.log('=== SAVING NODE ===');
+    // console.log('Current nodeTags array BEFORE save:', nodeTags);
+    // console.log('nodeTags length:', nodeTags.length);
+    // console.log('nodeTags type:', typeof nodeTags);
     
     const tagsString = nodeTags.join(',');
-    console.log('Tags string to save:', tagsString);
-    console.log('Tags string length:', tagsString.length);
+    // console.log('Tags string to save:', tagsString);
+    // console.log('Tags string length:', tagsString.length);
 
     const payload = {
         title,
@@ -4667,15 +4971,15 @@ async function saveNode() {
         sources
     };
 
-    console.log('Full payload being sent:', JSON.stringify(payload, null, 2));
+    // console.log('Full payload being sent:', JSON.stringify(payload, null, 2));
 
     if (editingNodeId) {
         const response = await api(`/api/timeless/${editingNodeId}`, 'PUT', payload);
-        console.log('Update response:', response);
+        // console.log('Update response:', response);
         toast('Node updated');
     } else {
         const response = await api('/api/timeless', 'POST', payload);
-        console.log('Create response:', response);
+        // console.log('Create response:', response);
         toast('Node added');
     }
     closeNodeModal();
@@ -4711,7 +5015,7 @@ async function loadLinks() {
     try {
         const response = await fetch('/api/links');
         const data = await response.json();
-        console.log('Raw data from server:', data);
+        // console.log('Raw data from server:', data);
         
         // Ensure pinned is treated as boolean
         links = data.map(link => ({
@@ -4720,7 +5024,7 @@ async function loadLinks() {
             sort_order: link.sort_order || 0
         }));
         
-        console.log('Processed links:', links);
+        // console.log('Processed links:', links);
         renderLinks();
     } catch (error) {
         console.error('Error loading links:', error);
@@ -5164,53 +5468,67 @@ function makeKaeruClickable() {
         kaeruElement.style.transition = 'all 0.2s';
         kaeruElement.onmouseover = () => kaeruElement.style.opacity = '0.7';
         kaeruElement.onmouseout = () => kaeruElement.style.opacity = '1';
-        kaeruElement.onclick = () => openSettingsOverlay();
+        kaeruElement.onclick = () => openKaeruSettingsOverlay();
     }
 }
 
-function openSettingsOverlay() {
-    document.getElementById('settings-overlay').style.display = 'flex';
+function openKaeruSettingsOverlay() {
+    document.getElementById('kaeru-settings-overlay').style.display = 'flex';
     loadSystemStats();
 }
 
-function closeSettingsOverlay() {
-    document.getElementById('settings-overlay').style.display = 'none';
+function closeKaeruSettingsOverlay() {
+    document.getElementById('kaeru-settings-overlay').style.display = 'none';
 }
 
 async function loadSystemStats() {
     try {
-        // Fetch real counts from API
-        const [tasksRes, projectsRes, notesRes, timelessRes, linksRes] = await Promise.all([
-            fetch('/api/tasks'),
-            fetch('/api/projects'),
-            fetch('/api/notes'),
-            fetch('/api/timeless'),
-            fetch('/api/links')
-        ]);
         
-        const tasks = await tasksRes.json();
-        const projects = await projectsRes.json();
-        const notes = await notesRes.json();
-        const timeless = await timelessRes.json();
-        const links = await linksRes.json();
-        
+
+        const tasksRes = await fetch('/api/tasks');
+        const projectsRes = await fetch('/api/projects');
+        const notesRes = await fetch('/api/notes');
+        const timelessRes = await fetch('/api/timeless');
+        const linksRes = await fetch('/api/links');
+
+        const tasksData = await tasksRes.json();
+        const projectsData = await projectsRes.json();
+        const notesData = await notesRes.json();
+        const timelessData = await timelessRes.json();
+        const linksData = await linksRes.json();
+
+        // Safe counting
+        const taskCount = tasksData.tasks ? tasksData.tasks.length : 
+                         (Array.isArray(tasksData) ? tasksData.length : 0);
+
+        const projectCount = Array.isArray(projectsData) ? projectsData.length : 0;
+        const noteCount    = Array.isArray(notesData)    ? notesData.length    : 0;
+        const timelessCount = Array.isArray(timelessData) ? timelessData.length : 0;
+        const linkCount    = Array.isArray(linksData)    ? linksData.length    : 0;
+
         const statsHtml = `
-            <div><i class="fa-solid fa-tasks" style="width: 20px;"></i> Tasks: ${tasks.length}</div>
-            <div><i class="fa-solid fa-folder" style="width: 20px;"></i> Projects: ${projects.length}</div>
-            <div><i class="fa-solid fa-note-sticky" style="width: 20px;"></i> Notes: ${notes.length}</div>
-            <div><i class="fa-solid fa-infinity" style="width: 20px;"></i> Timeless Nodes: ${timeless.length}</div>
-            <div><i class="fa-solid fa-link" style="width: 20px;"></i> Links: ${links.length}</div>
-            <div style="margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--border);">
-                <i class="fa-solid fa-calendar" style="width: 20px;"></i> Last Sync: ${new Date().toLocaleString()}
+            <div><i class="fa-solid fa-tasks" style="width: 20px;"></i> Tasks: ${taskCount}</div>
+            <div><i class="fa-solid fa-folder" style="width: 20px;"></i> Projects: ${projectCount}</div>
+            <div><i class="fa-solid fa-note-sticky" style="width: 20px;"></i> Notes: ${noteCount}</div>
+            <div><i class="fa-solid fa-infinity" style="width: 20px;"></i> Timeless Nodes: ${timelessCount}</div>
+            <div><i class="fa-solid fa-link" style="width: 20px;"></i> Links: ${linkCount}</div>
+            <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border);">
+                <i class="fa-solid fa-calendar" style="width: 20px;"></i> 
+                Last Sync: ${new Date().toLocaleString()}
             </div>
         `;
-        
+
         const statsDiv = document.getElementById('system-stats');
         if (statsDiv) statsDiv.innerHTML = statsHtml;
+
+        // console.log("System stats loaded successfully");
+
     } catch (error) {
-        console.error('Error loading system stats:', error);
+        console.error("loadSystemStats error:", error);
         const statsDiv = document.getElementById('system-stats');
-        if (statsDiv) statsDiv.innerHTML = '<div style="color: var(--red);">Error loading statistics</div>';
+        if (statsDiv) {
+            statsDiv.innerHTML = `<div style="color:#ef4444;">Error loading stats</div>`;
+        }
     }
 }
 
@@ -5310,7 +5628,7 @@ async function confirmAccessKey() {
 
 async function performExport(accessKey) {
     try {
-        console.log('Exporting with access key:', accessKey);
+        // console.log('Exporting with access key:', accessKey);
         
         const response = await fetch('/api/export', {
             method: 'POST',
@@ -5318,7 +5636,7 @@ async function performExport(accessKey) {
             body: JSON.stringify({ access_key: accessKey })
         });
         
-        console.log('Response status:', response.status);
+        // console.log('Response status:', response.status);
         
         if (!response.ok) {
             const errorText = await response.text();
@@ -5329,7 +5647,7 @@ async function performExport(accessKey) {
         
         // Get the data as JSON
         const data = await response.json();
-        console.log('Export successful! Data size:', JSON.stringify(data).length);
+        // console.log('Export successful! Data size:', JSON.stringify(data).length);
         
         // Create download using Blob
         const jsonString = JSON.stringify(data, null, 2);
@@ -5454,11 +5772,11 @@ async function autoSyncSportsMatches() {
         // FIXED: The backend returns an object with a 'count' property and a 'matches' array.
         // We need to check data.count or data.matches.length
         if (data.count && data.count > 0) {
-            console.log(`Found ${data.count} upcoming matches`);
+            // console.log(`Found ${data.count} upcoming matches`);
             // Optionally auto-sync or just notify
             // await syncSportsMatches();
         } else {
-            console.log('No upcoming matches found in the requested timeframe.');
+            // console.log('No upcoming matches found in the requested timeframe.');
         }
     } catch (error) {
         console.error('Auto-sync check failed:', error);

@@ -4,6 +4,12 @@ import os
 import sqlite3
 from datetime import datetime, timedelta
 
+import uuid
+import json
+
+import platform
+
+
 import time
 import re
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
@@ -433,6 +439,21 @@ def init_db():
         if 'recurring_paused' not in tasks_columns:
             conn.execute('ALTER TABLE tasks ADD COLUMN recurring_paused INTEGER DEFAULT 0')
 
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS session_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id TEXT UNIQUE NOT NULL,
+                device_name TEXT,
+                os_name TEXT,
+                browser_name TEXT,
+                ip_address TEXT,
+                login_time TEXT DEFAULT CURRENT_TIMESTAMP,
+                last_active TEXT DEFAULT CURRENT_TIMESTAMP,
+                logout_time TEXT,
+                status TEXT DEFAULT 'active'   -- active | logged_out
+            )
+        ''')
+
 
         # ==================== SEEDING LOGIC ====================
         # Only seed default tasks when the database file is newly created
@@ -480,7 +501,9 @@ def login():
     if request.method == 'POST':
         key = request.form.get('key')
         if key == get_password():
+            session_id = log_login()   # <-- NEW
             session['authenticated'] = True
+            session['session_id'] = session_id   # store for later end-session
             return redirect(url_for('tasks'))
         return "<h1 style='text-align:center;margin-top:100px;color:#ef4444'>Invalid access key</h1>", 401
 
@@ -650,7 +673,7 @@ def login():
     <span class="badge-squash font-mono inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg border-2 border-zinc-950 bg-zinc-900 text-[10px] font-black italic tracking-tight">
         <div class="dot-status h-2 w-2 rounded-sm border border-black/40"></div>
         
-        <span class="text-white/90">latest - v6.4.0</span>
+        <span class="text-white/90">latest - v7.3.1</span>
     </span>
 </div>
                     </div>
@@ -911,8 +934,10 @@ def login():
 
 @app.route('/logout')
 def logout():
+    sess_id = session.get('session_id')
+    if sess_id:
+        end_session(sess_id)
     session.clear()
-    # Clear saved login
     return '''
     <script>
         localStorage.removeItem('kaeru_key');
@@ -1967,7 +1992,118 @@ def toggle_planner_recurring(task_id):
 
 
 
+def get_client_info():
+    """Simple UA parsing on backend (fallback). Better detection done in JS."""
+    user_agent = request.headers.get('User-Agent', '')
+    # Very basic detection
+    os_name = "Unknown"
+    if "Windows" in user_agent: os_name = "Windows"
+    elif "Mac" in user_agent or "Darwin" in user_agent: os_name = "macOS"
+    elif "Linux" in user_agent: os_name = "Linux"
+    elif "Android" in user_agent: os_name = "Android"
+    elif "iPhone" in user_agent or "iPad" in user_agent: os_name = "iOS"
 
+    browser = "Unknown"
+    if "Chrome" in user_agent and "Edg" not in user_agent: browser = "Chrome"
+    elif "Firefox" in user_agent: browser = "Firefox"
+    elif "Safari" in user_agent and "Chrome" not in user_agent: browser = "Safari"
+    elif "Edg" in user_agent: browser = "Edge"
+
+    device = "Desktop" if "Mobile" not in user_agent else "Mobile"
+
+    return {
+        "device_name": f"{device} ({platform.system() if platform else 'Device'})",
+        "os_name": os_name,
+        "browser_name": browser,
+        "ip": request.remote_addr
+    }
+
+def log_login(session_id=None):
+    if not session_id:
+        session_id = str(uuid.uuid4())
+    info = get_client_info()
+    with get_db() as conn:
+        conn.execute('''
+            INSERT INTO session_logs 
+            (session_id, device_name, os_name, browser_name, ip_address, status)
+            VALUES (?, ?, ?, ?, ?, 'active')
+        ''', (session_id, info['device_name'], info['os_name'], info['browser_name'], info['ip']))
+        conn.commit()
+    return session_id
+
+def end_session(session_id):
+    with get_db() as conn:
+        conn.execute("UPDATE session_logs SET status='logged_out', logout_time=CURRENT_TIMESTAMP WHERE session_id=?", (session_id,))
+        conn.commit()
+
+def clear_session_logs():
+    with get_db() as conn:
+        conn.execute("DELETE FROM session_logs")
+        conn.commit()
+
+
+
+@app.route('/api/settings/sessions', methods=['GET'])
+def get_sessions():
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT id, session_id, device_name, os_name, browser_name, 
+                   login_time, logout_time, status, 
+                   CASE WHEN session_id = ? THEN 1 ELSE 0 END as is_current
+            FROM session_logs 
+            ORDER BY login_time DESC
+        """, (session.get('session_id'),)).fetchall()
+        return jsonify([dict(row) for row in rows])
+
+@app.route('/api/settings/sessions/<session_id>', methods=['DELETE'])
+def terminate_session(session_id):
+    """End a specific session and handle current device cleanup"""
+    try:
+        # End the session in database
+        end_session(session_id)
+        
+        # If this is the CURRENT session of this browser → clear Flask session too
+        if session.get('session_id') == session_id:
+            session.clear()
+            
+        return jsonify({
+            "success": True, 
+            "message": "Session terminated successfully",
+            "is_current_device": session.get('session_id') == session_id
+        })
+        
+    except Exception as e:
+        print(f"Error terminating session: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/settings/sessions/clear', methods=['POST'])
+def clear_all_logs():
+    clear_session_logs()
+    return jsonify({"success": True})
+
+@app.route('/api/settings/password', methods=['POST'])
+def change_password():
+    data = request.get_json()
+    current_key = data.get('current_key')
+    new_key = data.get('new_key')
+
+    if current_key != get_password():
+        return jsonify({"error": "Current password incorrect"}), 401
+
+    if not new_key or len(new_key) < 4:
+        return jsonify({"error": "New password too short"}), 400
+
+    # Change password file
+    with open(PASSWORD_FILE, 'w') as f:
+        f.write(new_key)
+
+    # Logout ALL sessions (force re-login everywhere)
+    with get_db() as conn:
+        conn.execute("UPDATE session_logs SET status='logged_out', logout_time=CURRENT_TIMESTAMP")
+        conn.commit()
+
+    session.clear()
+    return jsonify({"success": True, "message": "Password changed. All devices logged out."})
 
 
 
