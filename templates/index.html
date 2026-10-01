@@ -1903,19 +1903,47 @@
         #link-modal .modal-box { max-width: 380px; }
 
         /* ===== v7.4.2 : SUBTLE GLARE THEME ===== */
+        /* ===== v7.5 : GENTLE DARK GRADIENT BACKGROUND ===== */
+        html::before, body::before, body::after {
+            content: ''; position: fixed; z-index: -1; pointer-events: none;
+            border-radius: 50%; will-change: transform, opacity;
+        }
+        /* deep emerald, top-left */
         body::before {
-            content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
-            background:
-                radial-gradient(55vmax 55vmax at 8% -12%, rgba(16,185,129,.11), transparent 60%),
-                radial-gradient(50vmax 50vmax at 108% 112%, rgba(20,184,166,.09), transparent 60%);
-            animation: appGlare 24s ease-in-out infinite;
+            width: 80vmax; height: 80vmax; top: -38vmax; left: -30vmax;
+            background: radial-gradient(circle at center, rgba(6,95,70,.30) 0%, rgba(6,95,70,.12) 38%, transparent 68%);
+            animation: bgDriftA 42s ease-in-out infinite alternate;
         }
-        :root[data-theme="light"] body::before { opacity: .45; }
-        @keyframes appGlare {
-            0%, 100% { filter: hue-rotate(0deg);   transform: scale(1); }
-            33%      { filter: hue-rotate(28deg);  transform: scale(1.06); }
-            66%      { filter: hue-rotate(-24deg); transform: scale(1.03); }
+        /* dark teal + midnight blue, bottom-right */
+        body::after {
+            width: 75vmax; height: 75vmax; bottom: -36vmax; right: -28vmax;
+            background: radial-gradient(circle at center, rgba(15,76,92,.28) 0%, rgba(30,41,99,.14) 40%, transparent 68%);
+            animation: bgDriftB 52s ease-in-out infinite alternate;
         }
+        /* faint olive-green wash drifting through the middle */
+        html::before {
+            width: 60vmax; height: 60vmax; top: 25vh; left: 45vw;
+            background: radial-gradient(circle at center, rgba(54,83,20,.16) 0%, transparent 65%);
+            animation: bgDriftC 64s ease-in-out infinite alternate;
+        }
+        @keyframes bgDriftA {
+            0%   { transform: translate3d(0, 0, 0) scale(1);        opacity: .85; }
+            50%  { transform: translate3d(14vmax, 10vmax, 0) scale(1.12); opacity: 1; }
+            100% { transform: translate3d(6vmax, 20vmax, 0) scale(1.05);  opacity: .8; }
+        }
+        @keyframes bgDriftB {
+            0%   { transform: translate3d(0, 0, 0) scale(1.05);     opacity: .8; }
+            50%  { transform: translate3d(-16vmax, -8vmax, 0) scale(1); opacity: 1; }
+            100% { transform: translate3d(-6vmax, -18vmax, 0) scale(1.1); opacity: .85; }
+        }
+        @keyframes bgDriftC {
+            0%   { transform: translate3d(0, 0, 0) scale(.95);      opacity: .5; }
+            50%  { transform: translate3d(-22vmax, 8vmax, 0) scale(1.1); opacity: .9; }
+            100% { transform: translate3d(-8vmax, -14vmax, 0) scale(1);  opacity: .6; }
+        }
+        :root[data-theme="light"] body::before,
+        :root[data-theme="light"] body::after,
+        :root[data-theme="light"] html::before { opacity: .35 !important; }
         .topbar { position: relative; }
         .topbar::after {
             content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px;
@@ -1926,8 +1954,25 @@
         @keyframes topbarSweep { from { background-position: 220% 0; } to { background-position: -220% 0; } }
         .tab-btn.active { box-shadow: 0 0 14px rgba(16,185,129,.18); }
         .project-card:hover, .link-card:hover { box-shadow: 0 0 0 1px var(--accent-border), 0 8px 24px rgba(16,185,129,.08); }
+
+        /* ===== v7.5 : PLANNER MOBILE (vertical week + task list) ===== */
+        .pm-tasks { margin-top: 16px; padding: 6px 0 28px; border-top: 1px solid var(--border); }
+        @media (max-width: 768px) {
+            .planner-week-grid { grid-template-columns: 1fr; gap: 8px; }
+            .planner-week-col { flex-direction: row; min-height: 56px; align-items: stretch; }
+            .pweek-header {
+                width: 58px; min-width: 58px; border-bottom: none;
+                border-right: 1px solid var(--border);
+                display: flex; flex-direction: column; align-items: center; justify-content: center;
+                padding: 6px 4px;
+            }
+            .pweek-dow { font-size: 10px; }
+            .pweek-day { font-size: 18px; }
+            .pweek-tasks { padding: 8px 10px; justify-content: center; gap: 4px; min-width: 0; overflow: visible; }
+            .pweek-task-chip { font-size: 12px; padding: 5px 8px; white-space: normal; overflow: visible; text-overflow: clip; }
+        }
         @media (prefers-reduced-motion: reduce) {
-            body::before, .topbar::after { animation: none; }
+            html::before, body::before, body::after, .topbar::after { animation: none; }
         }
     </style>
 </head>
@@ -6061,6 +6106,17 @@ function setPlannerView(v) {
     plannerView = v;
     document.getElementById('planner-view-monthly').classList.toggle('active', v === 'monthly');
     document.getElementById('planner-view-weekly').classList.toggle('active', v === 'weekly');
+    if (v === 'weekly') {
+        const now = new Date();
+        if (plannerCursor.getFullYear() === now.getFullYear() && plannerCursor.getMonth() === now.getMonth()) {
+            plannerCursor = now;                       // this month -> this week
+        } else if (plannerSelectedDate) {
+            const sd = parseLocalDate(plannerSelectedDate);
+            if (sd.getFullYear() === plannerCursor.getFullYear() && sd.getMonth() === plannerCursor.getMonth()) {
+                plannerCursor = sd;                    // other month -> week of selected day
+            }
+        }
+    }
     renderPlannerCalendar();
 }
 
@@ -6114,11 +6170,14 @@ function renderPlannerCalendar() {
         label.textContent = weekStart.toLocaleDateString('default', opts) + ' – ' + weekEnd.toLocaleDateString('default', { ...opts, year: 'numeric' });
     }
 
+    const keepScroll = wrap.scrollTop;
     if (plannerView === 'monthly') {
         renderMonthGrid(wrap);
     } else {
         renderWeekGrid(wrap);
     }
+    if (isPlannerMobile()) wrap.insertAdjacentHTML('beforeend', plannerMobileTasksHTML());
+    wrap.scrollTop = keepScroll;
 }
 
 // ── Monthly grid ────────────────────────────────────────────
@@ -6129,14 +6188,14 @@ function renderMonthGrid(wrap) {
     const counts   = getTaskCountsForMonth(year, month);
     const maxCount = Math.max(...Object.values(counts), 1);
 
-    const firstDay = new Date(year, month, 1).getDay(); // 0=Sun
+    const firstDay = (new Date(year, month, 1).getDay() + 1) % 7; // Sat-first: Sat=0 ... Fri=6
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const prevMonthDays = new Date(year, month, 0).getDate();
 
     const todayS = todayStr();
 
     let html = `<div class="planner-dow-row">`;
-    ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(d => {
+    ['Sat','Sun','Mon','Tue','Wed','Thu','Fri'].forEach(d => {
         html += `<div class="planner-dow-cell">${d}</div>`;
     });
     html += `</div><div class="planner-month-grid" id="planner-month-grid">`;
@@ -6263,9 +6322,10 @@ function renderWeekGrid(wrap) {
 }
 
 function getWeekStart(d) {
-    const day = d.getDay(); // 0 = Sun
+    // Week = Saturday -> Friday
+    const offset = (d.getDay() + 1) % 7;   // Sat=0, Sun=1 ... Fri=6
     const start = new Date(d);
-    start.setDate(d.getDate() - day);
+    start.setDate(d.getDate() - offset);
     start.setHours(0,0,0,0);
     return start;
 }
@@ -6378,11 +6438,127 @@ function closePlannerSheet() {
     document.getElementById('planner-mobile-sheet').classList.remove('open');
 }
 
+// ── Mobile: Today + Upcoming task list (shown under the calendar) ──
+function isPlannerMobile() { return window.innerWidth <= 768; }
+
+let _plannerWasMobile = window.innerWidth <= 768;
+window.addEventListener('resize', () => {
+    const m = window.innerWidth <= 768;
+    if (m !== _plannerWasMobile) {
+        _plannerWasMobile = m;
+        if (document.getElementById('planner-grid-wrap')) renderPlannerCalendar();
+    }
+});
+
+function plannerMobAddRow(date, placeholder) {
+    return `<div class="add-row" onclick="this.querySelector('input').focus()">
+        <i class="fa-solid fa-plus" style="font-size:10px;color:var(--accent)"></i>
+        <input class="add-row-input" placeholder="${placeholder}"
+            onkeydown="if(event.key==='Enter'&&this.value.trim())plannerQuickAddTask(this,'${date}')">
+    </div>`;
+}
+
+function plannerMobRowHTML(t) {
+    const key = `${t.id}_${t.due_date}`;
+    const done = t.completed ? 'done' : '';
+    const checked = t.completed ? 'checked' : '';
+    const badge = (t.recurring === 1 && !t.recurring_paused)
+        ? `<span class="pdetail-recurring-badge">↻ ${escapeHtml(t.recurring_freq || 'recurring')}</span>` : '';
+    return `<div class="task-row" id="pm-task-${key}">
+        <input type="checkbox" class="task-check" ${checked} onchange="plannerToggleTask(${t.id}, this.checked, '${t.due_date}')">
+        <span class="task-title ${done}">${escapeHtml(t.title)}</span>
+        ${badge}
+        <div class="task-menu">
+            <button class="task-menu-btn icon-btn" onclick="plannerMobMenu('${key}', event)">
+                <i class="fa-solid fa-ellipsis-vertical"></i>
+            </button>
+            <div class="task-menu-content" id="pm-menu-${key}">
+                <div class="task-menu-item" onclick="plannerMobCopy(${t.id}); event.stopImmediatePropagation()">
+                    <i class="fa-solid fa-copy" style="font-size:12px"></i> Copy name
+                </div>
+                <div class="task-menu-item" onclick="closeAllMenus(); plannerEditTask(${t.id}, '${t.due_date}'); event.stopImmediatePropagation()">
+                    <i class="fa-solid fa-pen" style="font-size:12px"></i> Edit
+                </div>
+                <div class="task-menu-item danger" onclick="closeAllMenus(); plannerDeleteTask(${t.id}, '${t.due_date}'); event.stopImmediatePropagation()">
+                    <i class="fa-solid fa-trash" style="font-size:12px"></i> Delete
+                </div>
+            </div>
+        </div>
+    </div>`;
+}
+
+function plannerMobMenu(key, e) {
+    e.stopImmediatePropagation();
+    closeAllMenus();
+    const menu = document.getElementById('pm-menu-' + key);
+    const btn = e.currentTarget;
+    if (menu && btn) {
+        const rect = btn.getBoundingClientRect();
+        menu.style.top = (rect.bottom + 6) + 'px';
+        menu.style.left = (rect.right - 145) + 'px';
+        menu.classList.toggle('show');
+    }
+}
+
+function plannerMobCopy(taskId) {
+    closeAllMenus();
+    const t = plannerAllTasks.find(x => x.id === taskId);
+    if (!t) return;
+    copyText(t.title).then(() => toast('Copied')).catch(() => toast('Copy failed'));
+}
+
+function plannerMobileTasksHTML() {
+    const today = todayStr();
+    const tmr = new Date(); tmr.setHours(0,0,0,0); tmr.setDate(tmr.getDate() + 1);
+    const tomorrow = formatDate(tmr);
+    const lim = new Date(); lim.setHours(0,0,0,0); lim.setDate(lim.getDate() + 14);
+    const limit = formatDate(lim);
+
+    const byOrder = (a, b) => (a.due_date === b.due_date ? a.id - b.id : (a.due_date < b.due_date ? -1 : 1));
+    const todayTasks    = plannerAllTasks.filter(t => t.due_date === today).sort(byOrder);
+    const tomorrowTasks = plannerAllTasks.filter(t => t.due_date === tomorrow).sort(byOrder);
+    const later         = plannerAllTasks.filter(t => t.due_date > tomorrow && t.due_date <= limit).sort(byOrder);
+
+    const doneCount = todayTasks.filter(t => t.completed).length;
+    const stat = todayTasks.length ? `<span style="margin-left:auto;font-size:10px;color:var(--text3);text-transform:none;letter-spacing:0">${doneCount}/${todayTasks.length} done</span>` : '';
+
+    let html = `<div class="pm-tasks">`;
+
+    html += `<div class="date-label">Today <span class="today-badge">Now</span>${stat}</div>`;
+    todayTasks.forEach(t => { html += plannerMobRowHTML(t); });
+    html += plannerMobAddRow(today, 'Add task for today…');
+
+    html += `<div class="date-divider" style="margin-top:8px"></div>`;
+    html += `<div class="date-label">Tomorrow</div>`;
+    tomorrowTasks.forEach(t => { html += plannerMobRowHTML(t); });
+    html += plannerMobAddRow(tomorrow, 'Add task for tomorrow…');
+
+    if (later.length) {
+        html += `<div class="date-divider" style="margin-top:8px"></div>`;
+        html += `<div class="date-label">Upcoming <span style="margin-left:auto;font-size:10px;color:var(--text3);text-transform:none;letter-spacing:0">next 2 weeks · ${later.length}</span></div>`;
+        let lastDate = '';
+        later.forEach(t => {
+            if (t.due_date !== lastDate) {
+                lastDate = t.due_date;
+                html += `<div style="padding:8px 10px 2px;font-size:10px;font-weight:600;color:var(--accent);letter-spacing:0.04em">${formatDateLabel(t.due_date)}</div>`;
+            }
+            html += plannerMobRowHTML(t);
+        });
+    }
+
+    html += `</div>`;
+    return html;
+}
+
 function plannerRefreshViews() {
     renderPlannerCalendar();
     if (!plannerSelectedDate) return;
-    if (window.innerWidth <= 768) openPlannerSheet(plannerSelectedDate);
-    else renderDetailPanel(plannerSelectedDate);
+    if (window.innerWidth <= 768) {
+        const sheet = document.getElementById('planner-mobile-sheet');
+        if (sheet && sheet.classList.contains('open')) openPlannerSheet(plannerSelectedDate);
+    } else {
+        renderDetailPanel(plannerSelectedDate);
+    }
 }
 
 // ── Task CRUD ────────────────────────────────────────────────
