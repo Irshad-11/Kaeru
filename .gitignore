@@ -5,5 +5,5 @@ kaeru.db
 v1.txt
 v2.txt
 actualapp.txt
-
+__pycache__/
 venv/

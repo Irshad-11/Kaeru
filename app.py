@@ -1,5 +1,3 @@
-
-
 import os
 import sqlite3
 from datetime import datetime, timedelta
@@ -522,12 +520,43 @@ def login():
         body { font-family: 'Sora', sans-serif; }
         .glow { box-shadow: 0 0 20px rgba(16,185,129,0.25); }
         
-        @keyframes pulse-border {
-            0%, 100% { border-color: rgba(16,185,129,0.3); }
-            50% { border-color: rgba(16,185,129,0.7); }
+        /* ===== v7.4.2 : DARK COLOR GLARE BACKGROUND ===== */
+        .bg-glare { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; background: #09090b; }
+        .bg-glare::before, .bg-glare::after {
+            content: ''; position: absolute; width: 70vmax; height: 70vmax;
+            border-radius: 50%; filter: blur(90px); opacity: .55;
         }
-        .pulse-border { animation: pulse-border 2s ease-in-out infinite; }
-        
+        .bg-glare::before {
+            top: -25vmax; left: -20vmax;
+            animation: glareA 12s infinite, glareMoveA 18s ease-in-out infinite alternate;
+        }
+        .bg-glare::after {
+            bottom: -30vmax; right: -20vmax;
+            animation: glareB 12s infinite, glareMoveB 22s ease-in-out infinite alternate;
+        }
+        @keyframes glareA {
+            0%, 30%   { background: #064e3b; }
+            35%, 65%  { background: #134e4a; }
+            70%, 95%  { background: #365314; }
+            100%      { background: #064e3b; }
+        }
+        @keyframes glareB {
+            0%, 30%   { background: #164e63; }
+            35%, 65%  { background: #14532d; }
+            70%, 95%  { background: #134e4a; }
+            100%      { background: #164e63; }
+        }
+        @keyframes glareMoveA { from { transform: translate(0,0) scale(1); } to { transform: translate(12vmax,8vmax) scale(1.15); } }
+        @keyframes glareMoveB { from { transform: translate(0,0) scale(1); } to { transform: translate(-10vmax,-9vmax) scale(1.1); } }
+
+        .pulse-border { animation: borderGlow 12s infinite; }
+        @keyframes borderGlow {
+            0%, 30%  { border-color: rgba(16,185,129,.45); box-shadow: 0 0 28px rgba(6,78,59,.45); }
+            35%, 65% { border-color: rgba(20,184,166,.45); box-shadow: 0 0 28px rgba(19,78,74,.45); }
+            70%, 95% { border-color: rgba(132,204,22,.35); box-shadow: 0 0 28px rgba(54,83,20,.45); }
+            100%     { border-color: rgba(16,185,129,.45); box-shadow: 0 0 28px rgba(6,78,59,.45); }
+        }
+
         .pulse-dot { animation: pulse-dot 2s ease-in-out infinite; }
         @keyframes pulse-dot {
             0%, 100% { opacity: 1; transform: scale(1); }
@@ -574,45 +603,28 @@ def login():
         .switching-text { position: absolute; top: 0; left: 0; width: 100%; }
         .letter { display: inline-block; white-space: pre; }
         
+        /* ===== v7.4.2 : NEW BADGE ANIMATION (shine sweep + float + ping) ===== */
         .badge-squash {
-    /* Hard-edge cartoon shadow - subtle but deep */
-    box-shadow: 1.5px 1.5px 0px 0px #000;
-    animation: squash-pop 5s infinite;
-}
+            position: relative; overflow: hidden;
+            background: #064e3b !important;
+            box-shadow: 1.5px 1.5px 0 0 #000;
+            animation: badgeFloat 3.2s ease-in-out infinite;
+        }
+        .badge-squash::after {
+            content: ''; position: absolute; top: 0; left: -60%;
+            width: 40%; height: 100%;
+            background: linear-gradient(100deg, transparent, rgba(255,255,255,.35), transparent);
+            transform: skewX(-20deg);
+            animation: badgeSweep 3.2s ease-in-out infinite;
+        }
+        .dot-status { background-color: #10b981; animation: dotPing 1.6s ease-out infinite; }
+        @keyframes badgeFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+        @keyframes badgeSweep { 0%,55% { left: -60%; } 100% { left: 130%; } }
+        @keyframes dotPing {
+            0%   { box-shadow: 0 0 0 0 rgba(16,185,129,.7); }
+            100% { box-shadow: 0 0 0 6px rgba(16,185,129,0); }
+        }
 
-.dot-status {
-    animation: dot-color-change 5s infinite;
-}
-
-/* 1. The Squash & Stretch Animation */
-@keyframes squash-pop {
-    0%, 45%, 100% { 
-        transform: scale(1, 1); 
-        background-color: #450a0a; /* Deep Dark Red */
-    }
-    47% { 
-        transform: scale(1.15, 0.85); /* Squash down */
-    }
-    50% { 
-        transform: scale(0.9, 1.2); /* Stretch up */
-        background-color: #064e3b; /* Deep Dark Green */
-    }
-    53%, 95% { 
-        transform: scale(1, 1); 
-        background-color: #064e3b;
-    }
-}
-
-/* 2. The Dot Color - Matches the dark theme */
-@keyframes dot-color-change {
-    0%, 45%, 100% { 
-        background-color: #b91c1c; /* Muted Red */
-    }
-    50%, 95% { 
-        background-color: #059669; /* Muted Green */
-    }
-}
-        
         .repo-link {
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.1);
@@ -645,7 +657,8 @@ def login():
     </style>
 </head>
 <body class="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
-    <div class="w-full max-w-sm">
+    <div class="bg-glare"></div>
+    <div class="w-full max-w-sm z-10">
         <div class="absolute top-4 right-4">
             <a href="https://github.com/Irshad-11/Kaeru" target="_blank" class="repo-link inline-flex items-center gap-2 text-zinc-400 hover:text-emerald-400 transition-all">
                 <i class="fa-brands fa-github text-sm"></i>
@@ -673,7 +686,7 @@ def login():
     <span class="badge-squash font-mono inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg border-2 border-zinc-950 bg-zinc-900 text-[10px] font-black italic tracking-tight">
         <div class="dot-status h-2 w-2 rounded-sm border border-black/40"></div>
         
-        <span class="text-white/90">latest - v7.3.1</span>
+        <span class="text-white/90">latest - v7.4.2</span>
     </span>
 </div>
                     </div>
@@ -1011,10 +1024,20 @@ def add_task():
     due_date = data.get('due_date')
     if not title:
         return jsonify({"error": "Title required"}), 400
+
+    recurring = 1 if data.get('recurring') else 0
+    recurring_freq = data.get('recurring_freq') or 'weekly'
+    recurring_end = data.get('recurring_end') or None
+
     with get_db() as conn:
-        conn.execute("INSERT INTO tasks (title, due_date) VALUES (?, ?)", (title, due_date))
+        cur = conn.execute(
+            """INSERT INTO tasks (title, due_date, recurring, recurring_freq, recurring_end)
+               VALUES (?, ?, ?, ?, ?)""",
+            (title, due_date, recurring, recurring_freq, recurring_end)
+        )
         conn.commit()
-    return jsonify({"success": True})
+        new_id = cur.lastrowid
+    return jsonify({"success": True, "id": new_id})
 
 
 @app.route('/api/tasks/<int:task_id>/toggle', methods=['POST'])
@@ -1033,18 +1056,54 @@ def delete_task(task_id):
     return jsonify({"success": True})
 
 
+@app.route('/api/tasks/overdue/complete', methods=['POST'])
+def complete_all_overdue():
+    today = (datetime.utcnow() + timedelta(hours=6)).strftime('%Y-%m-%d')
+    with get_db() as conn:
+        cur = conn.execute(
+            "UPDATE tasks SET completed = 1 WHERE completed = 0 AND due_date IS NOT NULL AND due_date < ?",
+            (today,)
+        )
+        conn.commit()
+    return jsonify({"success": True, "count": cur.rowcount})
+
+
+@app.route('/api/tasks/overdue/delete', methods=['POST'])
+def delete_all_overdue():
+    today = (datetime.utcnow() + timedelta(hours=6)).strftime('%Y-%m-%d')
+    with get_db() as conn:
+        cur = conn.execute(
+            "DELETE FROM tasks WHERE completed = 0 AND due_date IS NOT NULL AND due_date < ?",
+            (today,)
+        )
+        conn.commit()
+    return jsonify({"success": True, "count": cur.rowcount})
+
+
 @app.route('/api/tasks/<int:task_id>', methods=['PUT'])
 def edit_task(task_id):
     data = request.get_json()
     title = data.get('title', '').strip()
-    due_date = data.get('due_date')
     if not title:
         return jsonify({"error": "Title required"}), 400
+
+    fields = ["title = ?"]
+    params = [title]
+
+    if data.get('due_date') is not None:
+        fields.append("due_date = ?")
+        params.append(data['due_date'])
+
+    if 'recurring' in data:
+        rec = 1 if data['recurring'] else 0
+        fields += ["recurring = ?", "recurring_freq = ?", "recurring_end = ?"]
+        params += [rec, data.get('recurring_freq') or 'weekly', data.get('recurring_end') or None]
+        if not rec:
+            fields.append("recurring_paused = 0")
+
+    params.append(task_id)
     with get_db() as conn:
-        if due_date is not None:
-            conn.execute("UPDATE tasks SET title = ?, due_date = ? WHERE id = ?", (title, due_date, task_id))
-        else:
-            conn.execute("UPDATE tasks SET title = ? WHERE id = ?", (title, task_id))
+        conn.execute(f"UPDATE tasks SET {', '.join(fields)} WHERE id = ?", params)
         conn.commit()
     return jsonify({"success": True})
 

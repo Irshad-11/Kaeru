@@ -1901,33 +1901,38 @@
 
         /* LINK MODAL */
         #link-modal .modal-box { max-width: 380px; }
+
+        /* ===== v7.4.2 : SUBTLE GLARE THEME ===== */
+        body::before {
+            content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+            background:
+                radial-gradient(55vmax 55vmax at 8% -12%, rgba(16,185,129,.11), transparent 60%),
+                radial-gradient(50vmax 50vmax at 108% 112%, rgba(20,184,166,.09), transparent 60%);
+            animation: appGlare 24s ease-in-out infinite;
+        }
+        :root[data-theme="light"] body::before { opacity: .45; }
+        @keyframes appGlare {
+            0%, 100% { filter: hue-rotate(0deg);   transform: scale(1); }
+            33%      { filter: hue-rotate(28deg);  transform: scale(1.06); }
+            66%      { filter: hue-rotate(-24deg); transform: scale(1.03); }
+        }
+        .topbar { position: relative; }
+        .topbar::after {
+            content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+            background-size: 220% 100%; opacity: .55;
+            animation: topbarSweep 9s linear infinite; pointer-events: none;
+        }
+        @keyframes topbarSweep { from { background-position: 220% 0; } to { background-position: -220% 0; } }
+        .tab-btn.active { box-shadow: 0 0 14px rgba(16,185,129,.18); }
+        .project-card:hover, .link-card:hover { box-shadow: 0 0 0 1px var(--accent-border), 0 8px 24px rgba(16,185,129,.08); }
+        @media (prefers-reduced-motion: reduce) {
+            body::before, .topbar::after { animation: none; }
+        }
     </style>
 </head>
 <body>
-    <!-- Add this right after the opening body tag or in the head -->
-<script>
-    // Override console.log to show in UI for debugging
-    // const originalLog = console.log;
-    // console.log = function(...args) {
-    //     originalLog.apply(console, args);
-        
-        // Create debug panel if it doesn't exist
-        let debugPanel = document.getElementById('debug-panel');
-        if (!debugPanel && window.location.hash === '#debug') {
-            debugPanel = document.createElement('div');
-            debugPanel.id = 'debug-panel';
-            debugPanel.style.cssText = 'position:fixed; bottom:10px; right:10px; width:300px; max-height:200px; background:rgba(0,0,0,0.9); color:#0f0; font-size:10px; font-family:monospace; padding:8px; border-radius:5px; overflow-y:auto; z-index:10000;';
-            document.body.appendChild(debugPanel);
-        }
-        
-        if (debugPanel) {
-            const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
-            debugPanel.innerHTML += `<div>${new Date().toLocaleTimeString()}: ${msg}</div>`;
-            debugPanel.scrollTop = debugPanel.scrollHeight;
-        }
-    };
-</script>
-<div class="app">
+    <div class="app">
     <!-- TOPBAR -->
     <!-- TOPBAR - RESPONSIVE (Mobile shows tabs as icons only) -->
 <div class="topbar">
@@ -2643,7 +2648,7 @@
                     <i class="fa-solid fa-database" style="font-size: 24px; color: var(--accent);"></i>
                     <div>
                         <div style="font-size: 13px; font-weight: 600;">System Information</div>
-                        <div style="font-size: 11px; color: var(--text3);">Version 7.3.1 | By Irshad Hossain</div>
+                        <div style="font-size: 11px; color: var(--text3);">Version 7.4.2 | By Irshad Hossain</div>
                     </div>
                 </div>
                 <div id="system-stats" style="font-size: 11px; color: var(--text2);">
@@ -2730,6 +2735,50 @@ let nodeTags = []; // tags for current node being edited
 
 
 
+
+function copyText(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+        return navigator.clipboard.writeText(text);
+    }
+    return new Promise((resolve, reject) => {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy') ? resolve() : reject(); }
+        catch (e) { reject(e); }
+        ta.remove();
+    });
+}
+
+function copyTaskName(id) {
+    closeAllMenus();
+    const t = tasks.find(x => x.id === id);
+    if (!t) return;
+    copyText(t.title).then(() => toast('Copied')).catch(() => toast('Copy failed'));
+}
+
+function copyProjectSubtasks(id) {
+    const p = projects.find(x => x.id === id);
+    if (!p || !(p.subtasks || []).length) { toast('No subtasks to copy'); return; }
+    const text = p.subtasks.map(s => s.title).join('\n');
+    copyText(text).then(() => toast(`Copied ${p.subtasks.length} subtasks`)).catch(() => toast('Copy failed'));
+}
+
+async function markAllOverdue() {
+    if (!confirm('Mark ALL overdue tasks as done?')) return;
+    const r = await api('/api/tasks/overdue/complete', 'POST');
+    await loadTasks();
+    toast(`${r.count} tasks marked done`);
+}
+
+async function deleteAllOverdue() {
+    if (!confirm('Delete ALL overdue tasks? This cannot be undone.')) return;
+    const r = await api('/api/tasks/overdue/delete', 'POST');
+    await loadTasks();
+    toast(`${r.count} tasks deleted`);
+}
 
 let currentSettingsTab = 0;
 
@@ -3501,7 +3550,16 @@ function renderTimeline() {
 
     // Overdue Section
     if (pastTasks.length) {
-        html += `<div class="date-label"><i class="fa-solid fa-triangle-exclamation" style="color:var(--red);font-size:10px"></i> Overdue</div>`;
+        html += `<div class="date-label" style="justify-content:space-between">
+            <span style="display:flex;align-items:center;gap:8px">
+                <i class="fa-solid fa-triangle-exclamation" style="color:var(--red);font-size:10px"></i>
+                Overdue <span style="color:var(--text3)">(${pastTasks.length})</span>
+            </span>
+            <span style="display:flex;gap:2px">
+                <button class="icon-btn" title="Mark all done" onclick="markAllOverdue()" style="color:var(--accent)"><i class="fa-solid fa-check-double"></i></button>
+                <button class="icon-btn danger" title="Delete all" onclick="deleteAllOverdue()"><i class="fa-solid fa-trash"></i></button>
+            </span>
+        </div>`;
         pastTasks.forEach(t => { html += taskRowHTML(t); });
         html += '<div class="date-divider"></div>';
     }
@@ -3602,6 +3660,9 @@ function taskRowHTML(t) {
                 <i class="fa-solid fa-ellipsis-vertical"></i>
             </button>
             <div class="task-menu-content" id="menu-${t.id}">
+                <div class="task-menu-item" onclick="copyTaskName(${t.id}); event.stopImmediatePropagation()">
+                    <i class="fa-solid fa-copy" style="font-size:12px"></i> Copy name
+                </div>
                 <div class="task-menu-item" onclick="startEditTaskFromMenu(${t.id}); event.stopImmediatePropagation()">
                     <i class="fa-solid fa-pen" style="font-size:12px"></i> Edit
                 </div>
@@ -3820,6 +3881,7 @@ function renderProjects() {
                 <div class="row-actions" style="opacity: 0; transition: opacity 0.3s ease;" 
                 onmouseenter="this.style.opacity='1'" 
                 onmouseleave="this.style.opacity='0'">
+                    <button class="icon-btn" onclick="event.stopPropagation();copyProjectSubtasks(${project.id})" title="Copy all subtasks"><i class="fa-solid fa-copy" style="font-size:10px"></i></button>
                     <button class="icon-btn" onclick="event.stopPropagation();startEditProject(document.getElementById('proj-name-${project.id}'),${project.id},event)" title="Edit"><i class="fa-solid fa-pen" style="font-size:10px"></i></button>
                     <button class="icon-btn danger" onclick="event.stopPropagation();deleteProject(${project.id})" title="Delete"><i class="fa-solid fa-trash" style="font-size:10px"></i></button>
                 </div>
@@ -5979,26 +6041,7 @@ function todayStr() {
 }
 
 function getTasksForDate(dateStr) {
-    const targetDate = new Date(dateStr);
-    return plannerAllTasks.filter(task => {
-        // 1. Same-day regular task
-        if (task.due_date === dateStr) return true;
-        
-        // 2. Recurring task logic
-        if (task.recurring_type && !task.recurring_paused) {
-            const startDate = new Date(task.recurring_start || task.due_date);
-            if (targetDate < startDate) return false;
-            
-            // Basic "Daily" check
-            if (task.recurring_type === 'daily') return true;
-            
-            // Basic "Weekly" check
-            if (task.recurring_type === 'weekly') {
-                return startDate.getDay() === targetDate.getDay();
-            }
-        }
-        return false;
-    });
+    return plannerAllTasks.filter(t => t.due_date === dateStr);
 }
 
 function getTaskCountsForMonth(year, month) {
@@ -6335,6 +6378,13 @@ function closePlannerSheet() {
     document.getElementById('planner-mobile-sheet').classList.remove('open');
 }
 
+function plannerRefreshViews() {
+    renderPlannerCalendar();
+    if (!plannerSelectedDate) return;
+    if (window.innerWidth <= 768) openPlannerSheet(plannerSelectedDate);
+    else renderDetailPanel(plannerSelectedDate);
+}
+
 // ── Task CRUD ────────────────────────────────────────────────
 async function plannerToggleTask(taskId, checked, dateStr) {
     try {
@@ -6407,7 +6457,7 @@ async function plannerDeleteTask(taskId, dateStr) {
 
 function plannerEditTask(taskId, dateStr) {
     // Find the task (original)
-    const task = plannerAllTasks.find(t => t.id === taskId);
+    const task = plannerAllTasks.find(t => t.id === taskId && !t.isVirtual) || plannerAllTasks.find(t => t.id === taskId);
     if (!task) return;
 
     // Open modal pre-filled for edit
@@ -6427,31 +6477,15 @@ async function plannerQuickAddTask(input, dateStr) {
     const title = input.value.trim();
     if (!title) return;
     input.value = '';
-
     try {
         const res = await fetch('/api/tasks', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title, due_date: dateStr, completed: 0 })
+            body: JSON.stringify({ title, due_date: dateStr })
         });
-        const data = await res.json();
-        const newTask = { id: data.id, title, completed: 0, due_date: dateStr, recurring: 0 };
-
-        plannerAllTasks.push(newTask);
-
-        renderPlannerCalendar();
-        if (plannerSelectedDate === dateStr) {
-            if (window.innerWidth <= 768) {
-                document.getElementById('sheet-detail-body').innerHTML = buildDetailBody(dateStr, true);
-            } else {
-                document.getElementById('planner-detail-body').innerHTML = buildDetailBody(dateStr, false);
-            }
-        }
-
-        if (typeof loadTasks === 'function') {
-            try { await loadTasks(); } catch(_) {}
-        }
-
+        if (!res.ok) throw new Error('add failed');
+        await loadPlannerTasks();
+        plannerRefreshViews();
         toast('Task added');
     } catch (e) {
         toast('Failed to add task');
@@ -6461,7 +6495,7 @@ async function plannerQuickAddTask(input, dateStr) {
 async function plannerToggleRecurring(taskId, pause, dateStr) {
     // pause: 1 = pause, 0 = resume
     try {
-        await fetch(`/api/tasks/${taskId}/recurring`, {
+        await fetch(`/api/planner/tasks/${taskId}/recurring`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ recurring_paused: pause })
@@ -6524,71 +6558,32 @@ async function savePlannerTask() {
     const freq      = document.getElementById('planner-modal-freq').value;
     const endDate   = document.getElementById('planner-modal-end-date').value || null;
 
-    if (!title) { toast('Please enter a task title'); return; }
+    if (!title)   { toast('Please enter a task title'); return; }
     if (!dueDate) { toast('Please select a date'); return; }
 
     const payload = {
         title,
         due_date: dueDate,
-        completed: 0,
         recurring,
         recurring_freq: recurring ? freq : null,
-        recurring_end: recurring ? endDate : null
+        recurring_end:  recurring ? endDate : null
     };
 
     try {
-        if (taskId) {
-            // Edit
-            await fetch(`/api/tasks/${taskId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            // Update in-memory
-            plannerAllTasks = plannerAllTasks.map(t => {
-                if (t.id === parseInt(taskId)) return { ...t, ...payload, id: parseInt(taskId), isVirtual: false };
-                return t;
-            });
-        } else {
-            // Create
-            const res = await fetch('/api/tasks', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            const data = await res.json();
-            const newTask = { id: data.id, ...payload, isVirtual: false };
-            plannerAllTasks.push(newTask);
-
-            // Expand recurring if needed
-            if (recurring) {
-                const raw = plannerAllTasks.filter(t => !t.isVirtual);
-                plannerAllTasks = expandRecurringTasks(raw);
-            }
-        }
+        const res = await fetch(taskId ? `/api/tasks/${taskId}` : '/api/tasks', {
+            method: taskId ? 'PUT' : 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error('save failed');
 
         closePlannerTaskModal();
-        renderPlannerCalendar();
+        await loadPlannerTasks();          // server theke fresh data
+        plannerCursor = parseLocalDate(dueDate);
+        plannerSelectedDate = dueDate;
+        plannerRefreshViews();
 
-        // Refresh detail panel
-        if (plannerSelectedDate) {
-            if (window.innerWidth <= 768) {
-                document.getElementById('sheet-detail-body').innerHTML = buildDetailBody(plannerSelectedDate, true);
-            } else {
-                renderDetailPanel(plannerSelectedDate);
-            }
-        }
-
-        // Jump calendar to the task date
-        const taskDate = parseLocalDate(dueDate);
-        plannerCursor = taskDate;
-        renderPlannerCalendar();
-
-        if (typeof loadTasks === 'function') {
-            try { await loadTasks(); } catch(_) {}
-        }
-
+        if (typeof loadTasks === 'function') { try { await loadTasks(); } catch (_) {} }
         toast(taskId ? 'Task updated' : 'Task added');
     } catch (e) {
         console.error(e);
