@@ -5,6 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kaeru</title>
     <link rel="icon" type="image/png" href="https://img.icons8.com/?size=100&id=ySZcrXaaOavG&format=png&color=000000">
+    <!-- v7.4.3 : PWA -->
+    <link rel="manifest" href="/manifest.webmanifest">
+    <meta name="theme-color" content="#09090b">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Kaeru">
+    <link rel="apple-touch-icon" href="https://img.icons8.com/?size=180&id=ySZcrXaaOavG&format=png&color=000000">
+    <script>try{if(sessionStorage.getItem('kaeru_splash'))document.documentElement.classList.add('no-splash');else sessionStorage.setItem('kaeru_splash','1');}catch(e){}</script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,7 +21,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <!-- GSAP for animations -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <style>
 
 
@@ -1974,13 +1983,218 @@
         @media (prefers-reduced-motion: reduce) {
             html::before, body::before, body::after, .topbar::after { animation: none; }
         }
+
+        /* ============================================================
+           v7.4.3 ADDITIONS
+           ============================================================ */
+
+        /* ---- Splash (PWA) ---- */
+        #splash {
+            position: fixed; inset: 0; z-index: 9999; background: #09090b;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+            animation: splashOut .5s ease 1.7s forwards;
+        }
+        html.no-splash #splash { display: none; }
+        @keyframes splashOut { to { opacity: 0; visibility: hidden; } }
+        #splash .sp-orb {
+            width: 74px; height: 74px; border-radius: 50%; position: relative;
+            background: #10b981; box-shadow: 0 0 40px rgba(16,185,129,.45);
+            animation: spPulse 1.6s ease-in-out infinite;
+        }
+        #splash .sp-orb::before, #splash .sp-orb::after {
+            content: ''; position: absolute; top: 30px; width: 8px; height: 11px; border-radius: 50%; background: #052e22;
+            animation: petBlink 3s infinite;
+        }
+        #splash .sp-orb::before { left: 22px; } #splash .sp-orb::after { right: 22px; }
+        @keyframes spPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+        #splash .sp-name { font-size: 26px; font-weight: 700; color: #f0f0f5; letter-spacing: .5px; }
+        #splash .sp-name span { color: #10b981; margin-left: 8px; }
+        #splash .sp-foot { position: absolute; bottom: 34px; text-align: center; font-size: 11px; color: #6b6b80; line-height: 1.8; }
+        #splash .sp-foot b { color: #a8a8bc; font-weight: 600; }
+        #splash .sp-bar { width: 120px; height: 2px; border-radius: 2px; overflow: hidden; background: rgba(255,255,255,.06); }
+        #splash .sp-bar i { display: block; height: 100%; width: 40%; background: linear-gradient(90deg,#10b981,#3b82f6); animation: spBar 1.1s ease-in-out infinite; }
+        @keyframes spBar { 0% { transform: translateX(-100%); } 100% { transform: translateX(300%); } }
+
+        /* ---- Status line (the line under the navbar) ---- */
+        .topbar { position: relative; --sl1: #10b981; --sl2: #3b82f6; --sl-speed: 32s; --sl-op: .26; }
+        .topbar::after {
+            content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px;
+            background: linear-gradient(90deg, transparent 0%, var(--sl1) 30%, var(--sl2) 70%, transparent 100%);
+            background-size: 220% 100%; opacity: var(--sl-op);
+            animation: topbarSweep var(--sl-speed) linear infinite; pointer-events: none;
+            transition: opacity .6s ease;
+        }
+        /* idle = very calm & dim, working = a little livelier */
+        .topbar[data-sync="synced"]  { --sl1: #10b981; --sl2: #34d399; --sl-speed: 12s; --sl-op: .42; }
+        .topbar[data-sync="saving"]  { --sl1: #d99a0b; --sl2: #e8c547; --sl-speed: 3.4s; --sl-op: .6; }
+        .topbar[data-sync="warning"] { --sl1: #d99a0b; --sl2: #e0762a; --sl-speed: 7s;  --sl-op: .5; }
+        .topbar[data-sync="error"], .topbar[data-sync="offline"] { --sl1: #dc3d3d; --sl2: #ef6b6b; --sl-speed: 7s; --sl-op: .55; }
+        :root[data-theme="light"] .topbar { --sl-op: .5; }
+        :root[data-theme="light"] .topbar[data-sync="synced"]  { --sl1: #16a34a; --sl2: #22c55e; --sl-op: .7; }
+        :root[data-theme="light"] .topbar[data-sync="saving"]  { --sl1: #d97706; --sl2: #f59e0b; --sl-op: .85; }
+        :root[data-theme="light"] .topbar[data-sync="warning"] { --sl-op: .8; }
+        :root[data-theme="light"] .topbar[data-sync="error"], :root[data-theme="light"] .topbar[data-sync="offline"] { --sl1: #dc2626; --sl2: #f43f5e; --sl-op: .85; }
+        @media (prefers-reduced-motion: reduce) { .topbar::after { animation: none; } }
+
+        /* ---- Dot pet ---- */
+        #sync-dot.sync-dot {
+            --pc: #10b981; --pg: rgba(16,185,129,.28); --pe: #052e22;
+            position: relative; width: 20px; height: 20px; border-radius: 50% 50% 46% 46%;
+            cursor: pointer; background-color: var(--pc); box-shadow: 0 0 7px var(--pg);
+            transform-origin: 50% 100%; animation: petBreathe 3.8s ease-in-out infinite;
+            transition: background-color .3s ease, box-shadow .3s ease; flex-shrink: 0;
+        }
+        /* eyes: small by default, they grow on interaction */
+        .pet-eye { position: absolute; top: 7px; width: 2.5px; height: 3.5px; border-radius: 50%; background: var(--pe);
+            translate: var(--lx, 0px) var(--ly, 0px); scale: var(--es, 1);
+            transition: scale .22s cubic-bezier(.3,1.7,.5,1), translate .12s linear; animation: petBlink 5s infinite; }
+        .pet-eye.l { left: 5.5px; } .pet-eye.r { right: 5.5px; }
+        .pet-mouth { position: absolute; left: 7px; top: 12.5px; width: 6px; height: 3px; border-bottom: 1.5px solid var(--pe);
+            border-radius: 0 0 6px 6px; transition: all .22s ease; }
+        .pet-z { position: absolute; right: -7px; top: -9px; font-size: 9px; font-weight: 700; color: var(--text3);
+            font-style: normal; opacity: 0; pointer-events: none; }
+        .pet-fx { position: absolute; left: 50%; top: -2px; font-size: 11px; line-height: 1; pointer-events: none; z-index: 5;
+            animation: petFx .95s ease-out forwards; }
+        @keyframes petFx { 0% { opacity: 0; transform: translate(-50%, 4px) scale(.5); } 20% { opacity: 1; }
+            100% { opacity: 0; transform: translate(calc(-50% + var(--dx, 0px)), -26px) scale(1.1); } }
+
+        /* states */
+        #sync-dot.synced   { --pc: #10b981; --pg: rgba(16,185,129,.28); }
+        #sync-dot.saving   { --pc: #e0a010; --pg: rgba(224,160,16,.38); animation: petWork .6s ease-in-out infinite; --es: 1.6; }
+        #sync-dot.warning  { --pc: #e0a010; --pg: rgba(224,160,16,.3); animation: petBreathe 1.8s ease-in-out infinite; --es: 1.3; }
+        #sync-dot.error, #sync-dot.offline { --pc: #e04848; --pg: rgba(224,72,72,.38); --es: 1.9; --pe: #3b0a0a;
+            animation: petShake .5s ease-in-out 3, petBreathe 3.8s ease-in-out 1.5s infinite; }
+        #sync-dot.saving .pet-eye { animation: petDart .6s ease-in-out infinite; }
+        #sync-dot.saving .pet-mouth { width: 4px; height: 4px; left: 8px; top: 12px; border: 1.5px solid var(--pe); border-radius: 50%; }
+        #sync-dot.error .pet-mouth, #sync-dot.offline .pet-mouth { width: 5px; height: 5px; left: 7.5px; top: 12px; border: 1.5px solid var(--pe); border-radius: 50%; }
+        #sync-dot.offline .pet-eye { animation: none; }
+        #sync-dot.synced .pet-mouth { width: 8px; left: 6px; height: 4px; }
+
+        /* hover = curious: big eyes + smile */
+        #sync-dot:hover { --es: 1.9; }
+        #sync-dot:hover .pet-mouth { width: 9px; left: 5.5px; height: 5px; }
+
+        /* activities */
+        #sync-dot.pet-look .pet-eye { animation: petLook 1.6s ease-in-out; --es: 1.5; }
+        #sync-dot.pet-hop  { animation: petHop .6s cubic-bezier(.3,.7,.4,1); }
+        #sync-dot.pet-wave { animation: petWave 1.2s ease-in-out; }
+        #sync-dot.pet-poke { animation: petPoke .6s ease; --es: 2.1; }
+        #sync-dot.pet-spin { animation: petSpin .8s cubic-bezier(.4,0,.2,1); --es: 1.8; }
+        #sync-dot.pet-wink .pet-eye.r { animation: petWink 1s ease-in-out; }
+        #sync-dot.pet-yawn { animation: petYawn 1.8s ease-in-out; }
+        #sync-dot.pet-yawn .pet-mouth { width: 7px; height: 7px; left: 6.5px; top: 11px; border: 1.5px solid var(--pe); border-radius: 50%; }
+        #sync-dot.pet-yawn .pet-eye { height: 1.5px; animation: none; }
+        #sync-dot.pet-bounce { animation: petBounce 1.2s ease-in-out; --es: 1.6; }
+        #sync-dot.pet-dizzy { animation: petSpin 1.1s linear 2; --es: 1.2; }
+        #sync-dot.pet-dizzy .pet-mouth { width: 7px; height: 2px; border: 0; border-top: 1.5px solid var(--pe); border-radius: 0; top: 14px; }
+        #sync-dot.pet-sleep { animation: petSleep 4.5s ease-in-out infinite; --es: 1; }
+        #sync-dot.pet-sleep .pet-eye { height: 1.5px; top: 9px; animation: none; scale: 1; }
+        #sync-dot.pet-sleep .pet-mouth { width: 3px; height: 3px; left: 8.5px; border: 1.5px solid var(--pe); border-radius: 50%; }
+        #sync-dot.pet-sleep .pet-z { animation: petZ 2.6s ease-in-out infinite; }
+
+        @keyframes petBreathe { 0%,100% { transform: scale(1,1); } 50% { transform: scale(1.06,.94); } }
+        @keyframes petBlink { 0%,92%,100% { transform: scaleY(1); } 95% { transform: scaleY(.1); } }
+        @keyframes petWink { 0%,100% { transform: scaleY(1); } 30%,70% { transform: scaleY(.1); } }
+        @keyframes petLook { 0%,100% { transform: translateX(0); } 25% { transform: translateX(2.2px); } 70% { transform: translateX(-2.2px); } }
+        @keyframes petDart { 0%,100% { transform: translateX(-1.5px); } 50% { transform: translateX(1.5px); } }
+        @keyframes petWork { 0%,100% { transform: translateY(0) scale(1,1); } 50% { transform: translateY(-2px) scale(.96,1.05); } }
+        @keyframes petHop { 0% { transform: scale(1.1,.85); } 35% { transform: translateY(-9px) scale(.92,1.1); } 65% { transform: translateY(0) scale(1.12,.86); } 100% { transform: scale(1); } }
+        @keyframes petBounce { 0%,100% { transform: translateY(0); } 15% { transform: translateY(-8px) scale(.94,1.08); } 30% { transform: translateY(0) scale(1.1,.9); }
+            50% { transform: translateY(-5px); } 65% { transform: translateY(0) scale(1.06,.94); } 80% { transform: translateY(-2px); } }
+        @keyframes petWave { 0%,100% { transform: rotate(0); } 20% { transform: rotate(-14deg); } 45% { transform: rotate(12deg); } 70% { transform: rotate(-8deg); } }
+        @keyframes petPoke { 0% { transform: scale(1); } 20% { transform: scale(.78,1.18); } 50% { transform: scale(1.18,.82) rotate(6deg); } 100% { transform: scale(1); } }
+        @keyframes petSpin { 0% { transform: rotate(0) scale(1); } 50% { transform: rotate(180deg) scale(1.15); } 100% { transform: rotate(360deg) scale(1); } }
+        @keyframes petYawn { 0%,100% { transform: scale(1); } 30%,70% { transform: scale(1.12,.92); } }
+        @keyframes petShake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-2.5px); } 75% { transform: translateX(2.5px); } }
+        @keyframes petSleep { 0%,100% { transform: scale(1.02,.96); } 50% { transform: scale(1.08,.9); } }
+        @keyframes petZ { 0% { opacity: 0; transform: translate(0,4px); } 40% { opacity: .9; } 100% { opacity: 0; transform: translate(4px,-8px); } }
+        #sync-label { white-space: nowrap; max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
+        @media (max-width: 640px) { #sync-label { display: none; } }
+
+        /* Light theme: brighter, lighter pet colours (dark theme colours are untouched) */
+        :root[data-theme="light"] #sync-dot.sync-dot { --pc: #4ade80; --pg: rgba(34,197,94,.45); --pe: #0f2a1c; box-shadow: 0 1px 6px var(--pg); }
+        :root[data-theme="light"] #sync-dot.synced  { --pc: #4ade80; --pg: rgba(34,197,94,.45); }
+        :root[data-theme="light"] #sync-dot.saving  { --pc: #fcd34d; --pg: rgba(245,158,11,.5); }
+        :root[data-theme="light"] #sync-dot.warning { --pc: #fcd34d; --pg: rgba(245,158,11,.45); }
+        :root[data-theme="light"] #sync-dot.error, :root[data-theme="light"] #sync-dot.offline { --pc: #fb7185; --pg: rgba(244,63,94,.45); --pe: #4a0d0d; }
+
+        /* ---- Recurring tasks inside Tasks tab (minimized rows) ---- */
+        .task-row.rec-row { opacity: .92; }
+        .task-row.rec-row .task-title { font-size: 12px; }
+        .rec-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 9px; font-weight: 600; letter-spacing: .3px;
+            color: var(--blue); background: rgba(59,130,246,.10); border-radius: 6px; padding: 1px 6px; white-space: nowrap; flex-shrink: 0; }
+        .rec-badge i { font-size: 8px; }
+        .rec-hint { display: flex; align-items: center; gap: 6px; margin: 4px 10px 0; padding: 5px 10px; border-radius: 8px;
+            font-size: 10.5px; color: var(--text3); background: var(--bg3); cursor: pointer; }
+        .rec-hint:hover { color: var(--accent); }
+        .icon-btn.on { color: var(--blue) !important; background: rgba(59,130,246,.12); }
+
+        /* ---- Planner inner tabs + Recurring manager ---- */
+        .planner-shell { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+        .planner-subtabs { display: flex; align-items: center; gap: 4px; padding: 6px 12px; border-bottom: 1px solid var(--border);
+            background: var(--bg2); flex-shrink: 0; }
+        .planner-subtab { display: flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 8px; font-size: 12px;
+            font-weight: 500; color: var(--text3); background: none; border: none; cursor: pointer; transition: all .15s; }
+        .planner-subtab:hover { background: var(--bg3); color: var(--text2); }
+        .planner-subtab.active { background: var(--accent-bg); color: var(--accent); }
+        .rm-count { font-size: 10px; background: var(--bg3); color: var(--text2); border-radius: 8px; padding: 0 6px; min-width: 18px; text-align: center; }
+        .planner-pane { flex: 1; min-height: 0; display: flex; overflow: hidden; }
+        .planner-pane.off { display: none; }
+        .rm-wrap { flex: 1; overflow-y: auto; padding: 14px 16px 40px; }
+        .rm-inner { max-width: 860px; margin: 0 auto; }
+        .rm-top { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
+        .rm-search { flex: 1; min-width: 160px; background: var(--bg2); border: 1px solid var(--border2); color: var(--text);
+            border-radius: 9px; padding: 7px 11px; font-size: 12px; outline: none; font-family: inherit; }
+        .rm-search:focus { border-color: var(--accent); }
+        .rm-chips { display: flex; gap: 4px; flex-wrap: wrap; }
+        .rm-chip { font-size: 11px; padding: 4px 10px; border-radius: 14px; border: 1px solid var(--border2); background: none;
+            color: var(--text3); cursor: pointer; transition: all .15s; }
+        .rm-chip:hover { color: var(--text2); }
+        .rm-chip.active { color: var(--accent); border-color: var(--accent-border); background: var(--accent-bg); }
+        .rm-bulk { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+        .rm-btn { font-size: 11px; padding: 5px 10px; border-radius: 8px; border: 1px solid var(--border2); background: var(--bg2);
+            color: var(--text2); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all .15s; }
+        .rm-btn:hover { border-color: var(--accent); color: var(--accent); }
+        .rm-btn.danger:hover { border-color: var(--red); color: var(--red); }
+        .rm-summary { font-size: 11px; color: var(--text3); margin-bottom: 10px; }
+        .rm-card { display: flex; align-items: center; gap: 12px; padding: 11px 13px; background: var(--bg2); border: 1px solid var(--border);
+            border-radius: 12px; margin-bottom: 8px; transition: border-color .15s; }
+        .rm-card:hover { border-color: var(--accent-border); }
+        .rm-card.paused { opacity: .75; } .rm-card.ended { opacity: .55; }
+        .rm-main { flex: 1; min-width: 0; }
+        .rm-title { font-size: 13px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .rm-meta { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 4px; font-size: 10.5px; color: var(--text3); }
+        .rm-meta b { color: var(--text2); font-weight: 500; }
+        .rm-badge { font-size: 9.5px; font-weight: 600; padding: 1px 7px; border-radius: 8px; margin-left: 6px; vertical-align: middle; }
+        .rm-badge.active { color: var(--accent); background: var(--accent-bg); }
+        .rm-badge.paused { color: var(--yellow); background: rgba(245,158,11,.12); }
+        .rm-badge.ended { color: var(--text3); background: var(--bg3); }
+        .rm-actions { display: flex; gap: 2px; flex-shrink: 0; }
+        .rm-empty { text-align: center; padding: 50px 10px; color: var(--text3); font-size: 12px; }
+        .rm-empty i { font-size: 26px; opacity: .4; display: block; margin-bottom: 10px; }
+        @media (max-width: 640px) { .rm-card { flex-wrap: wrap; } .rm-actions { width: 100%; justify-content: flex-end; } }
+
+        /* ---- Security & Devices card extras ---- */
+        .dev-meta { display: flex; flex-wrap: wrap; gap: 3px 14px; }
+
+        /* ---- Smoothness: lighter background on phones ---- */
+        @media (max-width: 768px) {
+            html::before, body::before, body::after { animation: none; will-change: auto; }
+        }
     </style>
 </head>
 <body>
+    <!-- v7.4.3 : SPLASH -->
+    <div id="splash" aria-hidden="true">
+        <div class="sp-orb"></div>
+        <div class="sp-name">Kaeru<span>代える</span></div>
+        <div class="sp-bar"><i></i></div>
+        <div class="sp-foot"><b>Developer | Maintenance : Irshad Hossain</b><br>Personal Use Only</div>
+    </div>
     <div class="app">
     <!-- TOPBAR -->
     <!-- TOPBAR - RESPONSIVE (Mobile shows tabs as icons only) -->
-<div class="topbar">
+<div class="topbar" id="topbar" data-sync="idle">
     <div style="display:flex;align-items:center;gap:6px;margin-right:8px">
         <span class="hide-kaeru-on-mobile" style="font-size:13px;font-weight:700;color:var(--text)">代える</span>
         <span style="font-size:13px;font-weight:700;color:var(--text);cursor:pointer;" onclick="openKaeruSettingsOverlay()">Kaeru</span>
@@ -2009,7 +2223,7 @@
     <span id="clock" style="font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace;white-space:nowrap"></span>
 
     <div style="display:flex;align-items:center;gap:5px;padding:0 6px">
-        <div class="sync-dot" id="sync-dot"></div>
+        <div class="sync-dot" id="sync-dot" title="Kaeru pet - click to check connection"></div>
         
         <span id="sync-label" style="font-size:10px;color:var(--text3)"></span>
         
@@ -2076,6 +2290,9 @@
                 <div style="display:flex;align-items:center;gap:6px">
                     <button class="icon-btn" onclick="syncSportsMatches()" title="Sync Football Matches" style="color: var(--accent);">
                         <i class="fa-solid fa-futbol"></i>
+                    </button>
+                    <button class="icon-btn" id="rec-toggle" onclick="toggleFutureRecurring()" title="Show future recurring tasks" style="font-size:12px">
+                        <i class="fa-solid fa-repeat"></i>
                     </button>
                     <span id="today-stat" style="font-size:11px;color:var(--text3)"></span>
                     <!-- Quick-add date picker -->
@@ -2313,6 +2530,16 @@
 
 {% elif tab == 'planner' %}
 <!-- PLANNER TAB -->
+<div class="planner-shell">
+    <div class="planner-subtabs">
+        <button class="planner-subtab active" id="psub-calendar" onclick="setPlannerPane('calendar')">
+            <i class="fa-solid fa-calendar-days" style="font-size:11px"></i> Calendar
+        </button>
+        <button class="planner-subtab" id="psub-recurring" onclick="setPlannerPane('recurring')">
+            <i class="fa-solid fa-repeat" style="font-size:11px"></i> Recurring <span class="rm-count" id="rm-count">0</span>
+        </button>
+    </div>
+<div class="planner-pane" id="planner-pane-calendar">
 <div class="planner-root" id="planner-root">
  
     <!-- ── Left: Calendar Area ── -->
@@ -2380,7 +2607,32 @@
         </div>
     </div>
 </div>
- 
+</div><!-- /calendar pane -->
+<div class="planner-pane off" id="recurring-manager">
+    <div class="rm-wrap">
+      <div class="rm-inner">
+        <div class="rm-top">
+            <input class="rm-search" id="rm-search" type="text" placeholder="Search recurring tasks…" oninput="rmSetQuery(this.value)">
+            <div class="rm-chips">
+                <button class="rm-chip active" data-f="all" onclick="setRmFilter('all')">All</button>
+                <button class="rm-chip" data-f="active" onclick="setRmFilter('active')">Active</button>
+                <button class="rm-chip" data-f="paused" onclick="setRmFilter('paused')">Paused</button>
+                <button class="rm-chip" data-f="ended" onclick="setRmFilter('ended')">Ended</button>
+            </div>
+            <button class="icon-btn" onclick="openPlannerAddModal()" title="New recurring task" style="color:var(--accent)"><i class="fa-solid fa-plus"></i></button>
+        </div>
+        <div class="rm-bulk">
+            <button class="rm-btn" onclick="recBulk('pause_all')"><i class="fa-solid fa-pause"></i> Pause all</button>
+            <button class="rm-btn" onclick="recBulk('resume_all')"><i class="fa-solid fa-play"></i> Resume all</button>
+            <button class="rm-btn danger" onclick="recBulk('delete_ended')"><i class="fa-solid fa-broom"></i> Remove ended</button>
+        </div>
+        <div class="rm-summary" id="rm-summary"></div>
+        <div id="rm-list"></div>
+      </div>
+    </div>
+</div>
+</div><!-- /planner-shell -->
+
 <!-- ── Mobile bottom sheet ── -->
 <div class="planner-sheet-backdrop" id="planner-sheet-backdrop" onclick="closePlannerSheet()"></div>
 <div class="planner-mobile-sheet" id="planner-mobile-sheet">
@@ -2493,7 +2745,7 @@
             <!-- TAB 1: LOG HISTORY -->
             <div id="settings-log-tab" class="p-5">
                 <div class="flex justify-between items-center mb-4">
-                    <p class="text-xs text-zinc-400">Active &amp; past sessions</p>
+                    <p class="text-xs text-zinc-400">One entry per device &mdash; logging in again on the same device never adds a new session</p>
                     <button onclick="clearLogHistory()" class="text-red-400 hover:text-red-500 text-xs flex items-center gap-1">
                         <i class="fa-solid fa-trash"></i> Clear History
                     </button>
@@ -2693,7 +2945,7 @@
                     <i class="fa-solid fa-database" style="font-size: 24px; color: var(--accent);"></i>
                     <div>
                         <div style="font-size: 13px; font-weight: 600;">System Information</div>
-                        <div style="font-size: 11px; color: var(--text3);">Version 7.4.2 | By Irshad Hossain</div>
+                        <div style="font-size: 11px; color: var(--text3);">Version {{ version }} | By Irshad Hossain</div>
                     </div>
                 </div>
                 <div id="system-stats" style="font-size: 11px; color: var(--text2);">
@@ -2771,6 +3023,9 @@ let sectionState = { tasks: true, projects: true }; // true = expanded
 let tlFilterTag = null;
 let tlSearchQuery = '';
 let nodeTags = []; // tags for current node being edited
+let recurDone = new Set();   // "taskId|YYYY-MM-DD" of completed recurring occurrences
+let showFutureRecurring = false;
+try { showFutureRecurring = localStorage.getItem('kaeru-show-rec') === '1'; } catch (e) {}
 
 
 
@@ -2797,8 +3052,9 @@ function copyText(text) {
     });
 }
 
-function copyTaskName(id) {
+function copyTaskName(key) {
     closeAllMenus();
+    const id = parseInt(key, 10);
     const t = tasks.find(x => x.id === id);
     if (!t) return;
     copyText(t.title).then(() => toast('Copied')).catch(() => toast('Copy failed'));
@@ -2852,6 +3108,7 @@ async function loadSessionHistory() {
     try {
         const res = await fetch('/api/settings/sessions');
         const sessions = await res.json();
+        const dbTime = v => v ? new Date(String(v).replace(' ', 'T') + 'Z').toLocaleString() : '—';
         
         // Store current session ID for later use
         const currentSession = sessions.find(s => s.is_current === 1);
@@ -2877,14 +3134,14 @@ async function loadSessionHistory() {
             </div>
             
             <div class="text-sm text-[var(--text2)] mt-1">
-                ${s.os_name} • ${s.browser_name}
+                ${s.os_name} • ${s.browser_name}${s.ip_address ? ' • ' + s.ip_address : ''}
             </div>
             
             <div class="text-xs text-[var(--text3)] mt-3 space-y-1">
-                <div>Logged in: ${new Date(s.login_time).toLocaleString()}</div>
-                ${s.logout_time ? 
-                    `<div>Logged out: ${new Date(s.logout_time).toLocaleString()}</div>` : 
-                    ''}
+                <div>Last login: ${dbTime(s.login_time)}</div>
+                ${isActive ? `<div>Last active: ${dbTime(s.last_active)}</div>` : ''}
+                ${s.logout_time ? `<div>Logged out: ${dbTime(s.logout_time)}</div>` : ''}
+                <div>Logged in ${s.login_count || 1} time${(s.login_count || 1) > 1 ? 's' : ''} on this device</div>
             </div>
         </div>
 
@@ -2971,7 +3228,7 @@ async function endSpecificSession(sessionId) {
 let currentSessionId = null;
 
 async function clearLogHistory() {
-    if (!confirm('Clear ALL login history?')) return;
+    if (!confirm('Clear logged-out devices from history? (active devices stay)')) return;
     try {
         await fetch('/api/settings/sessions/clear', { method: 'POST' });
         toast('History cleared');
@@ -3123,62 +3380,99 @@ function refreshClock() {
 // ACCURATE SYNC SYSTEM - Zero CPU usage, event-driven only
 // ============================================================
 
+const rawFetch = window.fetch.bind(window);
+
 class SyncManager {
     constructor() {
         this.isOnline = navigator.onLine;
         this.isServerReachable = true;
         this.isSaving = false;
+        this.pending = 0;
+        this.failed = false;
+        this.state = 'synced';
         this.lastSyncTime = null;
         this.localDataHash = null;
-        
+
         // DOM elements
         this.dot = document.getElementById('sync-dot');
+        if (this.dot) this.dot.classList.add('synced');
         this.label = document.getElementById('sync-label');
-        
-        // NO INTERVALS - Initialize with event listeners only
+        this.bar = document.getElementById('topbar');
+
+        this._labelT = null;
+        this._idleT = null;
+        this._recheckT = null;
+        this._retryT = null;
+
         this.init();
     }
-    
+
     init() {
-        // Listen to online/offline events (browser native - no CPU cost)
         window.addEventListener('online', () => this.handleConnectionChange(true));
         window.addEventListener('offline', () => this.handleConnectionChange(false));
-        
-        // Listen to page visibility (browser native - no CPU cost)
+
         document.addEventListener('visibilitychange', () => {
-            if (!document.hidden) {
-                // Only check when tab becomes visible again
-                this.checkFullStatus();
-            }
+            if (!document.hidden) this.checkFullStatus();
         });
-        
-        // Initial check only once when page loads
+
+        // Light heartbeat (only while the tab is visible) -> detects backend loss quickly
+        setInterval(() => {
+            if (!document.hidden && !this.pending) this.ping();
+        }, 30000);
+
         this.checkFullStatus();
     }
-    
+
     handleConnectionChange(isOnline) {
         this.isOnline = isOnline;
         if (!isOnline) {
             this.updateUI('offline', 'Offline');
         } else {
-            // Only check when connection is restored
             this.checkServerReachability();
         }
     }
-    
+
+    // very cheap backend check
+    async ping() {
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+            const response = await rawFetch('/api/health', { signal: controller.signal, cache: 'no-store' });
+            clearTimeout(timeoutId);
+            if (response.status === 401) { window.location.href = '/login'; return; }
+            if (!response.ok) throw new Error('health ' + response.status);
+            this.isServerReachable = true;
+            if (this.state === 'error' || this.state === 'offline') await this.checkSyncStatus();
+        } catch (e) {
+            this.isServerReachable = false;
+            this.markDown();
+        }
+    }
+
+    markDown() {
+        if (this.pending) return;
+        if (navigator.onLine) this.updateUI('error', 'Server offline');
+        else this.updateUI('offline', 'Offline');
+        clearTimeout(this._retryT);
+        this._retryT = setTimeout(() => this.ping(), 5000);
+    }
+
+    recover() {
+        clearTimeout(this._recheckT);
+        this._recheckT = setTimeout(() => this.checkSyncStatus(), 400);
+    }
+
     async checkServerReachability() {
         try {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 5000);
-            
-            const response = await fetch('/api/health', { 
-                method: 'GET',
-                signal: controller.signal
-            });
-            
+
+            const response = await rawFetch('/api/health', { method: 'GET', signal: controller.signal });
+
             clearTimeout(timeoutId);
+            if (response.status === 401) { window.location.href = '/login'; return; }
             this.isServerReachable = response.ok;
-            
+
             if (this.isServerReachable && this.isOnline) {
                 await this.checkSyncStatus();
             } else if (!this.isServerReachable) {
@@ -3187,22 +3481,20 @@ class SyncManager {
         } catch (error) {
             this.isServerReachable = false;
             this.updateUI('error', 'Server Offline');
-            console.error('Server reachability check failed:', error);
         }
     }
-    
+
     async checkSyncStatus() {
         if (!this.isOnline || !this.isServerReachable) return;
-        
         try {
-            const response = await fetch('/api/sync/status');
+            const response = await rawFetch('/api/sync/status');
             const serverData = await response.json();
-            
+
             if (serverData.database_accessible) {
                 const isInSync = await this.compareWithServer(serverData);
-                
                 if (isInSync) {
-                    this.updateUI('synced', 'Synced');
+                    if (this.state !== 'synced') this.updateUI('synced', 'Synced');
+                    else this.settleIdle();
                     this.lastSyncTime = new Date();
                 } else {
                     this.updateUI('warning', 'Sync Needed');
@@ -3211,15 +3503,14 @@ class SyncManager {
                 this.updateUI('error', 'DB Error');
             }
         } catch (error) {
-            console.error('Sync status check failed:', error);
             this.updateUI('error', 'Sync Error');
         }
     }
-    
+
     async compareWithServer(serverData) {
         if (this.localDataHash) {
             try {
-                const verifyResponse = await fetch('/api/sync/verify', {
+                const verifyResponse = await rawFetch('/api/sync/verify', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -3236,106 +3527,225 @@ class SyncManager {
         }
         return true;
     }
-    
+
     async checkFullStatus() {
         this.isOnline = navigator.onLine;
-        
         if (!this.isOnline) {
             this.updateUI('offline', 'Offline');
             return;
         }
-        
         await this.checkServerReachability();
     }
-    
+
+    // Counter based: many parallel requests => one "saving" phase
     startSaving() {
+        this.pending++;
         this.isSaving = true;
-        this.updateUI('saving', 'Saving...');
+        if (this.pending === 1) this.updateUI('saving', 'Saving…');
     }
-    
+
     endSaving(success = true) {
+        this.pending = Math.max(0, this.pending - 1);
+        if (!success) this.failed = true;
+        if (this.pending > 0) return;
         this.isSaving = false;
-        if (success) {
-            // Re-check sync status after successful save
-            setTimeout(() => this.checkSyncStatus(), 500);
+        if (this.failed) {
+            this.failed = false;
+            this.updateUI(navigator.onLine ? 'error' : 'offline', navigator.onLine ? 'Save failed' : 'Offline');
+            clearTimeout(this._retryT);
+            this._retryT = setTimeout(() => this.checkFullStatus(), 3000);
         } else {
-            this.updateUI('error', 'Save Failed');
-            setTimeout(() => this.checkSyncStatus(), 3000);
+            this.updateUI('synced', 'Saved');
+            clearTimeout(this._recheckT);
+            this._recheckT = setTimeout(() => this.checkSyncStatus(), 600);
         }
     }
-    
+
+    // after a short "synced" flash the line goes back to calm idle (green/blue)
+    settleIdle() {
+        clearTimeout(this._idleT);
+        this._idleT = setTimeout(() => {
+            if (this.state === 'synced' && this.bar) this.bar.dataset.sync = 'idle';
+        }, 2200);
+    }
+
     updateUI(status, message) {
-        if (!this.dot || !this.label) return;
-        
-        this.dot.className = 'sync-dot';
-        
-        switch(status) {
-            case 'synced':
-                this.dot.classList.add('synced');
-                // this.label.textContent = 'Synced';
-                break;
-            case 'saving':
-                this.dot.classList.add('saving');
-                // this.label.textContent = 'Saving...';
-                break;
-            case 'warning':
-                this.dot.classList.add('warning');
-                // this.label.textContent = 'Sync Needed';
-                break;
-            case 'error':
-                this.dot.classList.add('error');
-                // this.label.textContent = 'Error';
-                break;
-            case 'offline':
-                this.dot.classList.add('offline');
-                // this.label.textContent = 'Offline';
-                break;
+        if (!this.dot) return;
+        this.state = status;
+        this.dot.classList.remove('synced', 'saving', 'warning', 'error', 'offline');
+        this.dot.classList.add(status);
+        if (this.bar) this.bar.dataset.sync = status;
+        this.dot.title = message || '';
+
+        if (this.label) {
+            clearTimeout(this._labelT);
+            this.label.textContent = message || '';
+            if (status === 'synced' || status === 'saving') {
+                this._labelT = setTimeout(() => { this.label.textContent = ''; }, 2000);
+            }
         }
+        if (status === 'synced') this.settleIdle();
+        if (window.dotPet) window.dotPet.onState(status);
     }
-    
-    // Manual refresh - call this on user interaction
+
     async refresh() {
         await this.checkFullStatus();
-        await this.checkSyncStatus();
     }
 }
 
-// Initialize the sync manager (NO INTERVALS RUNNING)
+// Initialize the sync manager
 const syncManager = new SyncManager();
+
+// Every /api request now feeds the status line + dot pet automatically
+window.fetch = function (input, init) {
+    const url = typeof input === 'string' ? input : ((input && input.url) || '');
+    const isApi = url.indexOf('/api/') === 0 || url.indexOf(location.origin + '/api/') === 0;
+    if (!isApi) return rawFetch(input, init);
+
+    const method = ((init && init.method) || (input && input.method) || 'GET').toUpperCase();
+    const track = method !== 'GET';
+    if (track) syncManager.startSaving();
+
+    return rawFetch(input, init).then(res => {
+        if (res.status === 401) { window.location.href = '/login'; }
+        if (track) syncManager.endSaving(res.ok);
+        else if (res.ok && (syncManager.state === 'error' || syncManager.state === 'offline')) syncManager.recover();
+        return res;
+    }).catch(err => {
+        if (track) syncManager.endSaving(false);
+        else syncManager.markDown();
+        throw err;
+    });
+};
+
+// ------------------------------------------------------------
+// DOT PET - the sync dot with a bit of personality
+// ------------------------------------------------------------
+window.dotPet = {
+    el: null, sleeping: false, _act: null, _sleep: null, _last: 0, _pokes: [], _mx: 0, _my: 0, _tick: false,
+    init() {
+        this.el = document.getElementById('sync-dot');
+        if (!this.el) return;
+        this.el.innerHTML = '<i class="pet-eye l"></i><i class="pet-eye r"></i><i class="pet-mouth"></i><i class="pet-z">z</i>';
+        this.el.addEventListener('click', () => this.poke());
+        this.el.addEventListener('dblclick', () => { this.flag('spin', 800); this.fx('✨'); });
+        // eyes follow the cursor
+        window.addEventListener('mousemove', e => {
+            this._mx = e.clientX; this._my = e.clientY;
+            if (this._tick) return;
+            this._tick = true;
+            requestAnimationFrame(() => { this._tick = false; this.look(); });
+        }, { passive: true });
+        ['mousemove', 'keydown', 'touchstart', 'scroll', 'click'].forEach(ev =>
+            window.addEventListener(ev, () => this.wake(), { passive: true }));
+        this.scheduleAct();
+        this.scheduleSleep();
+    },
+    look() {
+        if (!this.el || this.sleeping || document.hidden) return;
+        const r = this.el.getBoundingClientRect();
+        const dx = this._mx - (r.left + r.width / 2), dy = this._my - (r.top + r.height / 2);
+        const d = Math.hypot(dx, dy) || 1, k = Math.min(1, d / 140);
+        this.el.style.setProperty('--lx', (dx / d * 2.2 * k).toFixed(2) + 'px');
+        this.el.style.setProperty('--ly', (dy / d * 1.6 * k).toFixed(2) + 'px');
+    },
+    flag(cls, ms) {
+        if (!this.el) return;
+        this.el.classList.remove('pet-' + cls);
+        void this.el.offsetWidth;
+        this.el.classList.add('pet-' + cls);
+        setTimeout(() => this.el && this.el.classList.remove('pet-' + cls), ms);
+    },
+    fx(ch) {
+        if (!this.el) return;
+        const s = document.createElement('span');
+        s.className = 'pet-fx';
+        s.textContent = ch;
+        s.style.setProperty('--dx', (Math.random() * 24 - 12).toFixed(0) + 'px');
+        this.el.appendChild(s);
+        setTimeout(() => s.remove(), 1000);
+    },
+    calm() { return !syncManager.pending && (syncManager.state === 'synced' || syncManager.state === 'warning'); },
+    scheduleAct() {
+        clearTimeout(this._act);
+        this._act = setTimeout(() => { this.act(); this.scheduleAct(); }, 5000 + Math.random() * 6000);
+    },
+    act() {
+        if (document.hidden || this.sleeping || !this.calm()) return;
+        const moves = [['look', 1600], ['hop', 600], ['wave', 1200], ['wink', 1000], ['bounce', 1200], ['yawn', 1800], ['spin', 800]];
+        const m = moves[Math.floor(Math.random() * moves.length)];
+        this.flag(m[0], m[1]);
+        if (m[0] === 'bounce') this.fx('♪');
+        if (m[0] === 'yawn') this.fx('…');
+    },
+    scheduleSleep() {
+        clearTimeout(this._sleep);
+        this._sleep = setTimeout(() => {
+            if (!document.hidden && this.calm() && this.el) { this.sleeping = true; this.el.classList.add('pet-sleep'); }
+            else this.scheduleSleep();
+        }, 45000);
+    },
+    wake(force) {
+        const now = Date.now();
+        if (!force && now - this._last < 1000) return;
+        this._last = now;
+        if (this.sleeping && this.el) {
+            this.sleeping = false;
+            this.el.classList.remove('pet-sleep');
+            this.flag('hop', 600);
+            this.fx('!');
+        }
+        this.scheduleSleep();
+    },
+    poke() {
+        this.wake(true);
+        const now = Date.now();
+        this._pokes = this._pokes.filter(t => now - t < 2000);
+        this._pokes.push(now);
+        if (this._pokes.length >= 5) {           // poked too much -> dizzy
+            this._pokes = [];
+            this.flag('dizzy', 2200);
+            this.fx('💫');
+            return;
+        }
+        this.flag('poke', 700);
+        this.fx(['❤', '✨', '★'][Math.floor(Math.random() * 3)]);
+        syncManager.refresh().catch(() => {});
+    },
+    onState(status) {
+        if (status === 'saving' || status === 'error' || status === 'offline') this.wake(true);
+        if (status === 'synced') { this.flag('hop', 600); this.fx('✓'); }
+        if (status === 'error' || status === 'offline') this.fx('!');
+    }
+};
+window.dotPet.init();
 
 // Modified api function
 async function api(url, method = 'GET', body = null) {
-    syncManager.startSaving();
-    
     try {
-        const opts = { 
-            method, 
+        const opts = {
+            method,
             headers: { 'Content-Type': 'application/json' },
             signal: AbortSignal.timeout(30000)
         };
         if (body) opts.body = JSON.stringify(body);
-        
+
         const response = await fetch(url, opts);
-        
+
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
         }
-        
+
         const data = await response.json();
-        syncManager.endSaving(true);
-        
+
         if (data.tasks || data.projects) {
             window.taskData = data.tasks || window.taskData;
             window.projectData = data.projects || window.projectData;
         }
-        
-        // Refresh clock after any API operation
-        // refreshClock();
-        
+
         return data;
     } catch (error) {
         console.error('API Error:', error);
-        syncManager.endSaving(false);
         throw error;
     }
 }
@@ -3490,15 +3900,19 @@ function toggleTaskMenu(taskId, e) {
     }
 }
 
-function startEditTaskFromMenu(id) {
+function startEditTaskFromMenu(key) {
     closeAllMenus();
-    const el = document.querySelector(`#task-${id} .task-title`);
+    const id = parseInt(key, 10);
+    const el = document.querySelector(`#task-${key} .task-title`);
     if (el) startEditTask(el, id);
 }
 
-async function deleteTaskFromMenu(id) {
+async function deleteTaskFromMenu(key) {
     closeAllMenus();
-    if (confirm('Delete this task?')) {
+    const id = parseInt(key, 10);
+    const t = tasks.find(x => x.id === id);
+    const msg = (t && t.recurring) ? 'Delete this recurring task and ALL its repeats?\n(Use Pause to stop it temporarily)' : 'Delete this task?';
+    if (confirm(msg)) {
         await deleteTask(id);
     }
 }
@@ -3558,15 +3972,81 @@ let currentToday = null;
 let currentTomorrow = null;
 let isUpcomingExpanded = true;
 
+// ---------- Recurring helpers (shared by Tasks tab, Planner and Recurring Manager) ----------
+function addDaysStr(str, n) {
+    const d = parseLocalDate(str);
+    d.setDate(d.getDate() + n);
+    return formatDate(d);
+}
+
+// All occurrence dates (YYYY-MM-DD) of a recurring task between `from` and `limit` (inclusive)
+function recurDates(t, limitStr, fromStr) {
+    const out = [];
+    if (!t.due_date) return out;
+    const freq = t.recurring_freq || 'weekly';
+    const endStr = (t.recurring_end && t.recurring_end < limitStr) ? t.recurring_end : limitStr;
+    let c = parseLocalDate(t.due_date);
+
+    // fast-forward for daily / weekly series that started long ago
+    if (fromStr && fromStr > t.due_date && (freq === 'daily' || freq === 'weekly')) {
+        const step = freq === 'daily' ? 1 : 7;
+        const diff = Math.round((parseLocalDate(fromStr) - c) / 86400000);
+        c.setDate(c.getDate() + Math.floor(diff / step) * step);
+    }
+
+    let guard = 0;
+    while (guard++ < 1500) {
+        const ds = formatDate(c);
+        if (ds > endStr) break;
+        if (!fromStr || ds >= fromStr) out.push(ds);
+        c = new Date(c);
+        if (freq === 'daily') c.setDate(c.getDate() + 1);
+        else if (freq === 'monthly') c.setMonth(c.getMonth() + 1);
+        else c.setDate(c.getDate() + 7);
+    }
+    return out;
+}
+
+// Tasks tab: normal tasks as-is + recurring occurrences (Today & Tomorrow; future only if toggled on)
+function buildOccurrences(today, tomorrow) {
+    const out = [];
+    const limit = showFutureRecurring ? addDaysStr(today, 45) : tomorrow;
+    for (const t of tasks) {
+        if (!t.recurring) { out.push(t); continue; }
+        if (t.recurring_paused || !t.due_date) continue;       // paused series live in the Recurring Manager
+        for (const d of recurDates(t, limit, today)) {
+            out.push({ ...t, due_date: d, occDate: d, completed: recurDone.has(t.id + '|' + d) ? 1 : 0 });
+        }
+    }
+    return out;
+}
+
+function toggleFutureRecurring() {
+    showFutureRecurring = !showFutureRecurring;
+    try { localStorage.setItem('kaeru-show-rec', showFutureRecurring ? '1' : '0'); } catch (e) {}
+    syncRecToggleBtn();
+    renderTimeline();
+    toast(showFutureRecurring ? 'Future recurring tasks shown' : 'Future recurring tasks hidden');
+}
+
+function syncRecToggleBtn() {
+    const b = document.getElementById('rec-toggle');
+    if (!b) return;
+    b.classList.toggle('on', showFutureRecurring);
+    b.title = showFutureRecurring ? 'Hide future recurring tasks' : 'Show future recurring tasks';
+}
+
 async function loadTasks() {
     try {
         const res = await fetch('/api/tasks');
         const data = await res.json();
-        
+
         tasks = data.tasks || [];
+        recurDone = new Set((data.recurring_done || []).map(r => r.task_id + '|' + r.date));
         currentToday = data.today;
         currentTomorrow = data.tomorrow;
-        
+
+        syncRecToggleBtn();
         renderTimeline();
     } catch (err) {
         console.error("Failed to load tasks:", err);
@@ -3582,10 +4062,11 @@ function renderTimeline() {
 
     if (!today || !tomorrow) return;
 
-    const todayTasks = tasks.filter(t => t.due_date === today);
-    const tomorrowTasks = tasks.filter(t => t.due_date === tomorrow);
-    const upcomingTasks = tasks.filter(t => t.due_date && t.due_date > tomorrow);
-    const pastTasks = tasks.filter(t => t.due_date && t.due_date < today && !t.completed);
+    const occ = buildOccurrences(today, tomorrow);
+    const todayTasks = occ.filter(t => t.due_date === today);
+    const tomorrowTasks = occ.filter(t => t.due_date === tomorrow);
+    const upcomingTasks = occ.filter(t => t.due_date && t.due_date > tomorrow);
+    const pastTasks = tasks.filter(t => !t.recurring && t.due_date && t.due_date < today && !t.completed);
 
     const done = todayTasks.filter(t => t.completed).length;
     const stat = document.getElementById('today-stat');
@@ -3619,6 +4100,20 @@ function renderTimeline() {
     html += `<div class="date-label">Tomorrow</div>`;
     tomorrowTasks.forEach(t => { html += taskRowHTML(t); });
     html += addRowHTML(tomorrow, 'Add task for tomorrow…');
+
+    // Hidden future recurring hint (default: hidden, toggle in the header)
+    if (!showFutureRecurring) {
+        const farLimit = addDaysStr(today, 45);
+        const after = addDaysStr(tomorrow, 1);
+        const hiddenSeries = tasks.filter(t => t.recurring && !t.recurring_paused && t.due_date &&
+            recurDates(t, farLimit, after).length).length;
+        if (hiddenSeries) {
+            html += `<div class="rec-hint" onclick="toggleFutureRecurring()">
+                <i class="fa-solid fa-repeat" style="font-size:9px"></i>
+                Future recurring hidden (${hiddenSeries} series) · <u>Show</u>
+            </div>`;
+        }
+    }
 
     // ==================== UPCOMING TASKS (COLLAPSIBLE) ====================
     if (upcomingTasks.length) {
@@ -3694,29 +4189,52 @@ function addRowHTML(date, placeholder) {
 }
 
 function taskRowHTML(t) {
+    const isOcc = !!t.occDate;
+    const key = isOcc ? `${t.id}_${t.occDate}` : `${t.id}`;
+    const kq = isOcc ? `'${key}'` : key;
     const done = t.completed ? 'done' : '';
     const checked = t.completed ? 'checked' : '';
-    return `<div class="task-row" id="task-${t.id}">
-        <input type="checkbox" class="task-check" ${checked} onchange="toggleTask(${t.id})">
+    const toggle = isOcc ? `toggleTask(${t.id},'${t.occDate}')` : `toggleTask(${t.id})`;
+    const freq = t.recurring_freq || 'weekly';
+    const badge = t.recurring
+        ? `<span class="rec-badge" title="Repeats ${freq}"><i class="fa-solid fa-repeat"></i>${freq}</span>` : '';
+    const recMenu = t.recurring ? `
+                <div class="task-menu-item" onclick="pauseRecurringFromTasks(${t.id}); event.stopImmediatePropagation()">
+                    <i class="fa-solid fa-pause" style="font-size:12px"></i> Pause recurring
+                </div>
+                <div class="task-menu-item" onclick="location.href='/planner#recurring'; event.stopImmediatePropagation()">
+                    <i class="fa-solid fa-repeat" style="font-size:12px"></i> Manage recurring
+                </div>` : '';
+    return `<div class="task-row${t.recurring ? ' rec-row' : ''}" id="task-${key}">
+        <input type="checkbox" class="task-check" ${checked} onchange="${toggle}">
         <span class="task-title ${done}" ondblclick="startEditTask(this, ${t.id})">${escH(t.title)}</span>
-        
+        ${badge}
         <div class="task-menu">
-            <button class="task-menu-btn icon-btn" onclick="toggleTaskMenu(${t.id}, event)">
+            <button class="task-menu-btn icon-btn" onclick="toggleTaskMenu(${kq}, event)">
                 <i class="fa-solid fa-ellipsis-vertical"></i>
             </button>
-            <div class="task-menu-content" id="menu-${t.id}">
-                <div class="task-menu-item" onclick="copyTaskName(${t.id}); event.stopImmediatePropagation()">
+            <div class="task-menu-content" id="menu-${key}">
+                <div class="task-menu-item" onclick="copyTaskName(${kq}); event.stopImmediatePropagation()">
                     <i class="fa-solid fa-copy" style="font-size:12px"></i> Copy name
                 </div>
-                <div class="task-menu-item" onclick="startEditTaskFromMenu(${t.id}); event.stopImmediatePropagation()">
+                <div class="task-menu-item" onclick="startEditTaskFromMenu(${kq}); event.stopImmediatePropagation()">
                     <i class="fa-solid fa-pen" style="font-size:12px"></i> Edit
-                </div>
-                <div class="task-menu-item danger" onclick="deleteTaskFromMenu(${t.id}); event.stopImmediatePropagation()">
-                    <i class="fa-solid fa-trash" style="font-size:12px"></i> Delete
+                </div>${recMenu}
+                <div class="task-menu-item danger" onclick="deleteTaskFromMenu(${kq}); event.stopImmediatePropagation()">
+                    <i class="fa-solid fa-trash" style="font-size:12px"></i> Delete${t.recurring ? ' series' : ''}
                 </div>
             </div>
         </div>
     </div>`;
+}
+
+async function pauseRecurringFromTasks(id) {
+    closeAllMenus();
+    try {
+        await api(`/api/planner/tasks/${id}/recurring`, 'PUT', { recurring_paused: 1 });
+        await loadTasks();
+        toast('Recurring paused · manage it in Planner › Recurring');
+    } catch (e) { toast('Failed to pause'); }
 }
 
 function focusDateInput(date) {
@@ -3793,9 +4311,23 @@ function quickTaskKey(e, inp, date) {
     if (e.key === 'Escape') { inp.value = ''; inp.blur(); }
 }
 
-async function toggleTask(id) {
-    await api(`/api/tasks/${id}/toggle`, 'POST');
-    await loadTasks();
+async function toggleTask(id, date) {
+    const t = tasks.find(x => x.id === id);
+    if (!t) return;
+    // optimistic update: the UI answers instantly, the server catches up
+    if (t.recurring && date) {
+        const k = id + '|' + date;
+        if (recurDone.has(k)) recurDone.delete(k); else recurDone.add(k);
+    } else {
+        t.completed = t.completed ? 0 : 1;
+    }
+    renderTimeline();
+    try {
+        await api(`/api/tasks/${id}/toggle`, 'POST', date ? { date } : null);
+    } catch (e) {
+        toast('Failed to save');
+        await loadTasks();
+    }
 }
 async function deleteTask(id) {
     await api(`/api/tasks/${id}`, 'DELETE');
@@ -5984,6 +6516,8 @@ async function initPlanner() {
 
     // Render
     renderPlannerCalendar();
+    renderRecurringManager();
+    if (location.hash === '#recurring') setPlannerPane('recurring');
 }
 
 // ── Load tasks ─────────────────────────────────────────────
@@ -5995,7 +6529,9 @@ async function loadPlannerTasks() {
         const raw = Array.isArray(data) ? data : (data.tasks || []);
 
         // Expand recurring tasks into virtual entries
+        recurDone = new Set((data.recurring_done || []).map(r => r.task_id + '|' + r.date));
         plannerAllTasks = expandRecurringTasks(raw);
+        renderRecurringManager();
     } catch (e) {
         console.error('Planner loadTasks error:', e);
     }
@@ -6064,6 +6600,10 @@ function expandRecurringTasks(tasks) {
         }
     }
 
+    // per-date completion for recurring occurrences
+    for (const r of result) {
+        if (r.recurring) r.completed = recurDone.has(r.id + '|' + r.due_date) ? 1 : 0;
+    }
     return result;
 }
 
@@ -6573,16 +7113,18 @@ async function plannerToggleTask(taskId, checked, dateStr) {
         const response = await fetch(`/api/planner/tasks/${taskId}/toggle`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ completed: checked ? 1 : 0 })
+            body: JSON.stringify({ completed: checked ? 1 : 0, date: dateStr })
         });
 
         if (!response.ok) throw new Error('Failed to save');
 
         // 3. Update in-memory state so it stays after re-render
         plannerAllTasks = plannerAllTasks.map(t => {
-            if (t.id === taskId) return { ...t, completed: checked ? 1 : 0 };
+            if (t.id === taskId && (!t.recurring || t.due_date === dateStr)) return { ...t, completed: checked ? 1 : 0 };
             return t;
         });
+        const rk = taskId + '|' + dateStr;
+        if (checked) recurDone.add(rk); else recurDone.delete(rk);
 
         // 4. Update UI
         renderPlannerCalendar();
@@ -6604,7 +7146,8 @@ async function plannerToggleTask(taskId, checked, dateStr) {
 }
 
 async function plannerDeleteTask(taskId, dateStr) {
-    if (!confirm('Delete this task?')) return;
+    const _t = plannerAllTasks.find(x => x.id === taskId);
+    if (!confirm(_t && _t.recurring ? 'Delete this recurring task and ALL its repeats?\n(Use Pause to stop it temporarily)' : 'Delete this task?')) return;
 
     try {
         await fetch(`/api/tasks/${taskId}`, { method: 'DELETE' });
@@ -6625,6 +7168,7 @@ async function plannerDeleteTask(taskId, dateStr) {
             try { await loadTasks(); } catch(_) {}
         }
 
+        renderRecurringManager();
         toast('Task deleted');
     } catch (e) {
         toast('Failed to delete task');
@@ -6695,6 +7239,7 @@ async function plannerToggleRecurring(taskId, pause, dateStr) {
             }
         }
 
+        renderRecurringManager();
         toast(pause ? 'Recurring paused' : 'Recurring resumed');
     } catch (e) {
         toast('Failed to update recurring setting');
@@ -6758,6 +7303,7 @@ async function savePlannerTask() {
         plannerCursor = parseLocalDate(dueDate);
         plannerSelectedDate = dueDate;
         plannerRefreshViews();
+        renderRecurringManager();
 
         if (typeof loadTasks === 'function') { try { await loadTasks(); } catch (_) {} }
         toast(taskId ? 'Task updated' : 'Task added');
@@ -6765,6 +7311,160 @@ async function savePlannerTask() {
         console.error(e);
         toast('Failed to save task');
     }
+}
+
+// ============================================================
+// RECURRING TASK MANAGER (inner tab of Planner)
+// ============================================================
+let rmFilter = 'all';
+let rmQuery = '';
+
+function rmSeries() {
+    return plannerAllTasks.filter(t => t.recurring === 1 && !t.isVirtual);
+}
+
+function rmStatus(t) {
+    if (t.recurring_end && t.recurring_end < todayStr()) return 'ended';
+    return t.recurring_paused ? 'paused' : 'active';
+}
+
+function rmFmt(d) {
+    if (!d) return '—';
+    return parseLocalDate(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function rmSetQuery(v) {
+    rmQuery = (v || '').trim().toLowerCase();
+    renderRecurringManager();
+}
+
+function setRmFilter(f) {
+    rmFilter = f;
+    document.querySelectorAll('.rm-chip').forEach(b => b.classList.toggle('active', b.dataset.f === f));
+    renderRecurringManager();
+}
+
+function renderRecurringManager() {
+    const list = document.getElementById('rm-list');
+    const all = rmSeries();
+
+    const cnt = document.getElementById('rm-count');
+    if (cnt) cnt.textContent = all.length;
+    if (!list) return;
+
+    const today = todayStr();
+    const far = addDaysStr(today, 400);
+    const doneCount = {};
+    recurDone.forEach(k => { const id = k.split('|')[0]; doneCount[id] = (doneCount[id] || 0) + 1; });
+
+    const stats = { active: 0, paused: 0, ended: 0 };
+    all.forEach(t => stats[rmStatus(t)]++);
+    const sum = document.getElementById('rm-summary');
+    if (sum) sum.textContent = `${all.length} recurring · ${stats.active} active · ${stats.paused} paused · ${stats.ended} ended`;
+
+    const order = { active: 0, paused: 1, ended: 2 };
+    const rows = all
+        .filter(t => (rmFilter === 'all' || rmStatus(t) === rmFilter) &&
+                     (!rmQuery || (t.title || '').toLowerCase().includes(rmQuery)))
+        .sort((a, b) => order[rmStatus(a)] - order[rmStatus(b)] || (a.title || '').localeCompare(b.title || ''));
+
+    if (!rows.length) {
+        list.innerHTML = `<div class="rm-empty"><i class="fa-solid fa-repeat"></i>${
+            all.length ? 'No recurring tasks match this filter' : 'No recurring tasks yet.<br>Add a task with “Recurring Task” switched on.'}</div>`;
+        return;
+    }
+
+    list.innerHTML = rows.map(t => {
+        const st = rmStatus(t);
+        const next = st === 'active' ? (recurDates(t, far, today)[0] || null) : null;
+        const nextTxt = st === 'active' ? rmFmt(next) : '—';
+        const stLabel = st === 'active' ? 'Active' : (st === 'paused' ? 'Paused' : 'Ended');
+        return `<div class="rm-card ${st}">
+            <div class="rm-main">
+                <div class="rm-title">${escapeHtml(t.title)}<span class="rm-badge ${st}">${stLabel}</span></div>
+                <div class="rm-meta">
+                    <span><i class="fa-solid fa-repeat" style="font-size:9px"></i> <b>${escapeHtml(t.recurring_freq || 'weekly')}</b></span>
+                    <span>Starts <b>${rmFmt(t.due_date)}</b></span>
+                    <span>Ends <b>${t.recurring_end ? rmFmt(t.recurring_end) : 'never'}</b></span>
+                    <span>Next <b>${nextTxt}</b></span>
+                    <span>Done <b>${doneCount[t.id] || 0}×</b></span>
+                </div>
+            </div>
+            <div class="rm-actions">
+                ${st !== 'ended' ? `<button class="icon-btn" title="${st === 'paused' ? 'Resume' : 'Pause'}" onclick="recPause(${t.id}, ${st === 'paused' ? 0 : 1})" style="${st === 'paused' ? 'color:var(--accent)' : ''}">
+                    <i class="fa-solid fa-${st === 'paused' ? 'play' : 'pause'}"></i></button>` : ''}
+                <button class="icon-btn" title="Edit" onclick="plannerEditTask(${t.id}, '${t.due_date || today}')"><i class="fa-solid fa-pen"></i></button>
+                ${st !== 'ended' ? `<button class="icon-btn" title="Stop repeating after today" onclick="recEndToday(${t.id})"><i class="fa-solid fa-flag-checkered"></i></button>` : ''}
+                <button class="icon-btn danger" title="Delete series" onclick="recDelete(${t.id})"><i class="fa-solid fa-trash"></i></button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+async function rmReload() {
+    await loadPlannerTasks();
+    plannerRefreshViews();
+    renderRecurringManager();
+}
+
+async function recPause(id, pause) {
+    try {
+        await api(`/api/planner/tasks/${id}/recurring`, 'PUT', { recurring_paused: pause });
+        await rmReload();
+        toast(pause ? 'Recurring paused' : 'Recurring resumed');
+    } catch (e) { toast('Failed to update'); }
+}
+
+async function recEndToday(id) {
+    const t = plannerAllTasks.find(x => x.id === id && !x.isVirtual);
+    if (!t) return;
+    if (!confirm(`Stop "${t.title}" from repeating after today?`)) return;
+    try {
+        await api(`/api/tasks/${id}`, 'PUT', {
+            title: t.title, recurring: 1,
+            recurring_freq: t.recurring_freq || 'weekly',
+            recurring_end: todayStr()
+        });
+        await rmReload();
+        toast('Series ended');
+    } catch (e) { toast('Failed to update'); }
+}
+
+async function recDelete(id) {
+    const t = plannerAllTasks.find(x => x.id === id && !x.isVirtual);
+    if (!confirm(`Delete "${t ? t.title : 'this task'}" and ALL its repeats?\nTip: use Pause to stop it temporarily.`)) return;
+    try {
+        await api(`/api/tasks/${id}`, 'DELETE');
+        await rmReload();
+        toast('Recurring task deleted');
+    } catch (e) { toast('Failed to delete'); }
+}
+
+async function recBulk(action) {
+    const msg = {
+        pause_all: 'Pause ALL recurring tasks?',
+        resume_all: 'Resume ALL paused recurring tasks?',
+        delete_ended: 'Delete all recurring tasks whose end date has passed?'
+    }[action];
+    if (!confirm(msg)) return;
+    try {
+        const r = await api('/api/recurring/bulk', 'POST', { action });
+        await rmReload();
+        toast(`${r.count || 0} updated`);
+    } catch (e) { toast('Failed'); }
+}
+
+function setPlannerPane(p) {
+    const cal = document.getElementById('planner-pane-calendar');
+    const rec = document.getElementById('recurring-manager');
+    if (!cal || !rec) return;
+    cal.classList.toggle('off', p !== 'calendar');
+    rec.classList.toggle('off', p !== 'recurring');
+    document.getElementById('psub-calendar').classList.toggle('active', p === 'calendar');
+    document.getElementById('psub-recurring').classList.toggle('active', p === 'recurring');
+    try { history.replaceState(null, '', p === 'recurring' ? '#recurring' : location.pathname); } catch (e) {}
+    if (p === 'recurring') renderRecurringManager();
+    else renderPlannerCalendar();
 }
 
 // ── Escape HTML helper ─────────────────────────────────────
@@ -6818,6 +7518,10 @@ window.addEventListener('load', async () => {
 });
 
 window.addEventListener('resize', initMobile);
+
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+}
 
 // Close tag suggestions when clicking outside
 document.addEventListener('click', e => {
