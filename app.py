@@ -914,6 +914,45 @@ def login():
         .owner-line b { color: #e4e4e7; font-weight: 600; }
         .owner-line .star { background: linear-gradient(90deg,#34d399,#fbbf24); -webkit-background-clip: text; background-clip: text; color: transparent; margin: 0 2px; }
         .switching-text { text-align: center; }
+
+        /* ===== DESKTOP: mascot stage on the left, login on the right (mobile layout untouched) ===== */
+        @media (min-width: 1024px) {
+            body .login-wrap { max-width: 1120px; display: grid; grid-template-columns: minmax(0, 1fr) 420px;
+                column-gap: 96px; align-items: center; }
+            .login-left { position: relative; margin-bottom: 0 !important; }
+            .login-left::before { content: ''; position: absolute; left: 50%; top: 38%; width: 520px; height: 520px;
+                transform: translate(-50%, -50%); border-radius: 50%; pointer-events: none; z-index: -1;
+                background: radial-gradient(circle, rgba(16,185,129,.13), transparent 65%); }
+            .login-left .mbox { width: 210px; height: 210px; border-radius: 58px; margin-bottom: 34px; }
+            .login-left .mascot { border-radius: 58px; }
+            .login-left .m-pet { --sz: 96px !important; }
+            .login-left .m-torii { width: 146px; height: 146px; }
+            .login-left .mascot::before, .login-left .mascot::after { inset: 34px; border-width: 3px; }
+            .login-left .kfx { font-size: 22px; }
+            .login-left .text-container { height: 84px !important; }
+            .login-left .switching-text h1 { font-size: 62px !important; line-height: 80px !important; }
+            /* thought bubble: decent big */
+            .login-left .thought { bottom: calc(100% + 30px); max-width: 440px; padding: 12px 22px; border-radius: 22px;
+                font-size: 15px; line-height: 1.5; }
+            .login-left .thought .t-text { min-height: 22px; }
+            .login-left .thought .caret { height: 15px; width: 2px; vertical-align: -2px; }
+            .login-left .t-dots i:nth-child(1) { width: 7px; height: 7px; left: -3.5px; top: 50px; }
+            .login-left .t-dots i:nth-child(2) { width: 10px; height: 10px; left: -5px; top: 22px; }
+            .login-left .t-dots i:nth-child(3) { width: 14px; height: 14px; left: -7px; top: -14px; }
+            .login-right { width: 100%; }
+            .owner-line { font-size: 13px; }
+        }
+        @media (min-width: 1024px) and (max-height: 700px) {
+            .login-left .mbox { width: 160px; height: 160px; border-radius: 46px; margin-bottom: 22px; }
+            .login-left .mascot { border-radius: 46px; }
+            .login-left .m-pet { --sz: 74px !important; }
+            .login-left .m-torii { width: 114px; height: 114px; }
+            .login-left .mascot::before, .login-left .mascot::after { inset: 26px; }
+            .login-left .text-container { height: 68px !important; }
+            .login-left .switching-text h1 { font-size: 50px !important; line-height: 64px !important; }
+            .login-left .thought { font-size: 13.5px; bottom: calc(100% + 24px); }
+            .login-left .t-dots i:nth-child(1) { top: 38px; } .login-left .t-dots i:nth-child(2) { top: 16px; } .login-left .t-dots i:nth-child(3) { top: -14px; }
+        }
     </style>
 </head>
 <body class="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
@@ -926,7 +965,7 @@ def login():
     <div class="bg-glare"></div>
     <div class="bg-grid"></div>
     <div class="bg-vignette"></div>
-    <div class="w-full max-w-sm z-10">
+    <div class="login-wrap w-full max-w-sm z-10">
         <div class="absolute top-4 right-4">
             <a href="https://github.com/Irshad-11/Kaeru" target="_blank" class="repo-link inline-flex items-center gap-2 text-zinc-400 hover:text-emerald-400 transition-all">
                 <i class="fa-brands fa-github text-sm"></i>
@@ -935,7 +974,7 @@ def login():
             </a>
         </div>
         
-        <div class="text-center mb-8">
+        <div class="login-left text-center mb-8">
             <div class="mbox" id="mbox">
                 <div id="mascot" class="mascot" title="Hi! Poke me">
                     <div class="m-petw"><div class="kpet m-pet" style="--sz:40px"><i class="e l"></i><i class="e r"></i><i class="mo"></i></div></div>
@@ -964,6 +1003,7 @@ def login():
         </div>
         
         
+<div class="login-right">
 <div class="login-card bg-zinc-900 border border-zinc-800 rounded-2xl p-6 pulse-border">
             <form method="post" class="space-y-4" id="login-form" autocomplete="off">
                 <div>
@@ -1050,6 +1090,7 @@ def login():
                 <span class="text-white/90 ver-wrap" id="ver-wrap"><span id="ver-pre" class="ver-pre">latest - v</span><span id="ver-num" class="ver-num"></span></span>
             </span>
         </div>
+        </div><!-- /login-right -->
 
     </div>
     
